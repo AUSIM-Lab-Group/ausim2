@@ -1,5 +1,13 @@
-This directory only contains vendored third-party dependencies.
+该目录仅包含供应商的第三方依赖项。
 
-`mujoco_simulate/` is the MuJoCo sample viewer implementation used by the
-project. Files such as `simulate.cc` are part of that dependency and are
-required to build the viewer-backed simulation path.
+`mujoco_simulate/` 是 MuJoCo 示例查看器实现，由
+项目。诸如“simulate.cc”之类的文件是该依赖项的一部分，并且是
+构建查看器支持的模拟路径所需的。
+
+# 模拟应用程序
+
+“simulate”是 MuJoCo 的功能齐全的交互式应用程序。它打开一个
+OpenGL窗口使用独立于平台的GLFW库，并渲染
+里面的模拟状态。有内置帮助、模拟统计、分析器、
+传感器数据图。模型文件可以指定为命令行参数，
+或使用拖放功能在运行时加载。
