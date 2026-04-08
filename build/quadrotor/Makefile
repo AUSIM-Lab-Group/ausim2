@@ -190,6 +190,34 @@ quadrotor_core/fast:
 .PHONY : quadrotor_core/fast
 
 # Convenience name for target.
+quadrotor/CMakeFiles/uninstall.dir/rule:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor/CMakeFiles/uninstall.dir/rule
+.PHONY : quadrotor/CMakeFiles/uninstall.dir/rule
+
+# Convenience name for target.
+uninstall: quadrotor/CMakeFiles/uninstall.dir/rule
+.PHONY : uninstall
+
+# fast build rule for target.
+uninstall/fast:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/uninstall.dir/build.make quadrotor/CMakeFiles/uninstall.dir/build
+.PHONY : uninstall/fast
+
+# Convenience name for target.
+quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir/rule:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir/rule
+.PHONY : quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir/rule
+
+# Convenience name for target.
+quadrotor_cpp_uninstall: quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir/rule
+.PHONY : quadrotor_cpp_uninstall
+
+# fast build rule for target.
+quadrotor_cpp_uninstall/fast:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir/build.make quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir/build
+.PHONY : quadrotor_cpp_uninstall/fast
+
+# Convenience name for target.
 quadrotor/CMakeFiles/quadrotor.dir/rule:
 	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor/CMakeFiles/quadrotor.dir/rule
 .PHONY : quadrotor/CMakeFiles/quadrotor.dir/rule
@@ -299,29 +327,77 @@ __/third_party/mujoco_simulate/simulate.cc.s:
 	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_mujoco_viewer.dir/build.make quadrotor/CMakeFiles/quadrotor_mujoco_viewer.dir/__/third_party/mujoco_simulate/simulate.cc.s
 .PHONY : __/third_party/mujoco_simulate/simulate.cc.s
 
-src/geometry.o: src/geometry.cpp.o
-.PHONY : src/geometry.o
+src/config/quadrotor_config.o: src/config/quadrotor_config.cpp.o
+.PHONY : src/config/quadrotor_config.o
 
 # target to build an object file
-src/geometry.cpp.o:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/geometry.cpp.o
-.PHONY : src/geometry.cpp.o
+src/config/quadrotor_config.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/config/quadrotor_config.cpp.o
+.PHONY : src/config/quadrotor_config.cpp.o
 
-src/geometry.i: src/geometry.cpp.i
-.PHONY : src/geometry.i
+src/config/quadrotor_config.i: src/config/quadrotor_config.cpp.i
+.PHONY : src/config/quadrotor_config.i
 
 # target to preprocess a source file
-src/geometry.cpp.i:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/geometry.cpp.i
-.PHONY : src/geometry.cpp.i
+src/config/quadrotor_config.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/config/quadrotor_config.cpp.i
+.PHONY : src/config/quadrotor_config.cpp.i
 
-src/geometry.s: src/geometry.cpp.s
-.PHONY : src/geometry.s
+src/config/quadrotor_config.s: src/config/quadrotor_config.cpp.s
+.PHONY : src/config/quadrotor_config.s
 
 # target to generate assembly for a file
-src/geometry.cpp.s:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/geometry.cpp.s
-.PHONY : src/geometry.cpp.s
+src/config/quadrotor_config.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/config/quadrotor_config.cpp.s
+.PHONY : src/config/quadrotor_config.cpp.s
+
+src/control/motor_mixer.o: src/control/motor_mixer.cpp.o
+.PHONY : src/control/motor_mixer.o
+
+# target to build an object file
+src/control/motor_mixer.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/control/motor_mixer.cpp.o
+.PHONY : src/control/motor_mixer.cpp.o
+
+src/control/motor_mixer.i: src/control/motor_mixer.cpp.i
+.PHONY : src/control/motor_mixer.i
+
+# target to preprocess a source file
+src/control/motor_mixer.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/control/motor_mixer.cpp.i
+.PHONY : src/control/motor_mixer.cpp.i
+
+src/control/motor_mixer.s: src/control/motor_mixer.cpp.s
+.PHONY : src/control/motor_mixer.s
+
+# target to generate assembly for a file
+src/control/motor_mixer.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/control/motor_mixer.cpp.s
+.PHONY : src/control/motor_mixer.cpp.s
+
+src/controller/se3_controller.o: src/controller/se3_controller.cpp.o
+.PHONY : src/controller/se3_controller.o
+
+# target to build an object file
+src/controller/se3_controller.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/controller/se3_controller.cpp.o
+.PHONY : src/controller/se3_controller.cpp.o
+
+src/controller/se3_controller.i: src/controller/se3_controller.cpp.i
+.PHONY : src/controller/se3_controller.i
+
+# target to preprocess a source file
+src/controller/se3_controller.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/controller/se3_controller.cpp.i
+.PHONY : src/controller/se3_controller.cpp.i
+
+src/controller/se3_controller.s: src/controller/se3_controller.cpp.s
+.PHONY : src/controller/se3_controller.s
+
+# target to generate assembly for a file
+src/controller/se3_controller.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/controller/se3_controller.cpp.s
+.PHONY : src/controller/se3_controller.cpp.s
 
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
@@ -347,77 +423,245 @@ src/main.cpp.s:
 	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor.dir/build.make quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
-src/motor_mixer.o: src/motor_mixer.cpp.o
-.PHONY : src/motor_mixer.o
+src/math/geometry.o: src/math/geometry.cpp.o
+.PHONY : src/math/geometry.o
 
 # target to build an object file
-src/motor_mixer.cpp.o:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/motor_mixer.cpp.o
-.PHONY : src/motor_mixer.cpp.o
+src/math/geometry.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/math/geometry.cpp.o
+.PHONY : src/math/geometry.cpp.o
 
-src/motor_mixer.i: src/motor_mixer.cpp.i
-.PHONY : src/motor_mixer.i
+src/math/geometry.i: src/math/geometry.cpp.i
+.PHONY : src/math/geometry.i
 
 # target to preprocess a source file
-src/motor_mixer.cpp.i:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/motor_mixer.cpp.i
-.PHONY : src/motor_mixer.cpp.i
+src/math/geometry.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/math/geometry.cpp.i
+.PHONY : src/math/geometry.cpp.i
 
-src/motor_mixer.s: src/motor_mixer.cpp.s
-.PHONY : src/motor_mixer.s
+src/math/geometry.s: src/math/geometry.cpp.s
+.PHONY : src/math/geometry.s
 
 # target to generate assembly for a file
-src/motor_mixer.cpp.s:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/motor_mixer.cpp.s
-.PHONY : src/motor_mixer.cpp.s
+src/math/geometry.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/math/geometry.cpp.s
+.PHONY : src/math/geometry.cpp.s
 
-src/quadrotor_sim.o: src/quadrotor_sim.cpp.o
-.PHONY : src/quadrotor_sim.o
+src/ros/ros2_bridge.o: src/ros/ros2_bridge.cpp.o
+.PHONY : src/ros/ros2_bridge.o
 
 # target to build an object file
-src/quadrotor_sim.cpp.o:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o
-.PHONY : src/quadrotor_sim.cpp.o
+src/ros/ros2_bridge.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/ros/ros2_bridge.cpp.o
+.PHONY : src/ros/ros2_bridge.cpp.o
 
-src/quadrotor_sim.i: src/quadrotor_sim.cpp.i
-.PHONY : src/quadrotor_sim.i
+src/ros/ros2_bridge.i: src/ros/ros2_bridge.cpp.i
+.PHONY : src/ros/ros2_bridge.i
 
 # target to preprocess a source file
-src/quadrotor_sim.cpp.i:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.i
-.PHONY : src/quadrotor_sim.cpp.i
+src/ros/ros2_bridge.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/ros/ros2_bridge.cpp.i
+.PHONY : src/ros/ros2_bridge.cpp.i
 
-src/quadrotor_sim.s: src/quadrotor_sim.cpp.s
-.PHONY : src/quadrotor_sim.s
+src/ros/ros2_bridge.s: src/ros/ros2_bridge.cpp.s
+.PHONY : src/ros/ros2_bridge.s
 
 # target to generate assembly for a file
-src/quadrotor_sim.cpp.s:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.s
-.PHONY : src/quadrotor_sim.cpp.s
+src/ros/ros2_bridge.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/ros/ros2_bridge.cpp.s
+.PHONY : src/ros/ros2_bridge.cpp.s
 
-src/se3_controller.o: src/se3_controller.cpp.o
-.PHONY : src/se3_controller.o
+src/runtime/command_mailbox.o: src/runtime/command_mailbox.cpp.o
+.PHONY : src/runtime/command_mailbox.o
 
 # target to build an object file
-src/se3_controller.cpp.o:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/se3_controller.cpp.o
-.PHONY : src/se3_controller.cpp.o
+src/runtime/command_mailbox.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/command_mailbox.cpp.o
+.PHONY : src/runtime/command_mailbox.cpp.o
 
-src/se3_controller.i: src/se3_controller.cpp.i
-.PHONY : src/se3_controller.i
+src/runtime/command_mailbox.i: src/runtime/command_mailbox.cpp.i
+.PHONY : src/runtime/command_mailbox.i
 
 # target to preprocess a source file
-src/se3_controller.cpp.i:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/se3_controller.cpp.i
-.PHONY : src/se3_controller.cpp.i
+src/runtime/command_mailbox.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/command_mailbox.cpp.i
+.PHONY : src/runtime/command_mailbox.cpp.i
 
-src/se3_controller.s: src/se3_controller.cpp.s
-.PHONY : src/se3_controller.s
+src/runtime/command_mailbox.s: src/runtime/command_mailbox.cpp.s
+.PHONY : src/runtime/command_mailbox.s
 
 # target to generate assembly for a file
-src/se3_controller.cpp.s:
-	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/se3_controller.cpp.s
-.PHONY : src/se3_controller.cpp.s
+src/runtime/command_mailbox.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/command_mailbox.cpp.s
+.PHONY : src/runtime/command_mailbox.cpp.s
+
+src/runtime/goal_provider.o: src/runtime/goal_provider.cpp.o
+.PHONY : src/runtime/goal_provider.o
+
+# target to build an object file
+src/runtime/goal_provider.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/goal_provider.cpp.o
+.PHONY : src/runtime/goal_provider.cpp.o
+
+src/runtime/goal_provider.i: src/runtime/goal_provider.cpp.i
+.PHONY : src/runtime/goal_provider.i
+
+# target to preprocess a source file
+src/runtime/goal_provider.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/goal_provider.cpp.i
+.PHONY : src/runtime/goal_provider.cpp.i
+
+src/runtime/goal_provider.s: src/runtime/goal_provider.cpp.s
+.PHONY : src/runtime/goal_provider.s
+
+# target to generate assembly for a file
+src/runtime/goal_provider.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/goal_provider.cpp.s
+.PHONY : src/runtime/goal_provider.cpp.s
+
+src/runtime/telemetry_cache.o: src/runtime/telemetry_cache.cpp.o
+.PHONY : src/runtime/telemetry_cache.o
+
+# target to build an object file
+src/runtime/telemetry_cache.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/telemetry_cache.cpp.o
+.PHONY : src/runtime/telemetry_cache.cpp.o
+
+src/runtime/telemetry_cache.i: src/runtime/telemetry_cache.cpp.i
+.PHONY : src/runtime/telemetry_cache.i
+
+# target to preprocess a source file
+src/runtime/telemetry_cache.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/telemetry_cache.cpp.i
+.PHONY : src/runtime/telemetry_cache.cpp.i
+
+src/runtime/telemetry_cache.s: src/runtime/telemetry_cache.cpp.s
+.PHONY : src/runtime/telemetry_cache.s
+
+# target to generate assembly for a file
+src/runtime/telemetry_cache.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/telemetry_cache.cpp.s
+.PHONY : src/runtime/telemetry_cache.cpp.s
+
+src/runtime/vehicle_runtime.o: src/runtime/vehicle_runtime.cpp.o
+.PHONY : src/runtime/vehicle_runtime.o
+
+# target to build an object file
+src/runtime/vehicle_runtime.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/vehicle_runtime.cpp.o
+.PHONY : src/runtime/vehicle_runtime.cpp.o
+
+src/runtime/vehicle_runtime.i: src/runtime/vehicle_runtime.cpp.i
+.PHONY : src/runtime/vehicle_runtime.i
+
+# target to preprocess a source file
+src/runtime/vehicle_runtime.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/vehicle_runtime.cpp.i
+.PHONY : src/runtime/vehicle_runtime.cpp.i
+
+src/runtime/vehicle_runtime.s: src/runtime/vehicle_runtime.cpp.s
+.PHONY : src/runtime/vehicle_runtime.s
+
+# target to generate assembly for a file
+src/runtime/vehicle_runtime.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/runtime/vehicle_runtime.cpp.s
+.PHONY : src/runtime/vehicle_runtime.cpp.s
+
+src/sim/mujoco_actuator_writer.o: src/sim/mujoco_actuator_writer.cpp.o
+.PHONY : src/sim/mujoco_actuator_writer.o
+
+# target to build an object file
+src/sim/mujoco_actuator_writer.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/mujoco_actuator_writer.cpp.o
+.PHONY : src/sim/mujoco_actuator_writer.cpp.o
+
+src/sim/mujoco_actuator_writer.i: src/sim/mujoco_actuator_writer.cpp.i
+.PHONY : src/sim/mujoco_actuator_writer.i
+
+# target to preprocess a source file
+src/sim/mujoco_actuator_writer.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/mujoco_actuator_writer.cpp.i
+.PHONY : src/sim/mujoco_actuator_writer.cpp.i
+
+src/sim/mujoco_actuator_writer.s: src/sim/mujoco_actuator_writer.cpp.s
+.PHONY : src/sim/mujoco_actuator_writer.s
+
+# target to generate assembly for a file
+src/sim/mujoco_actuator_writer.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/mujoco_actuator_writer.cpp.s
+.PHONY : src/sim/mujoco_actuator_writer.cpp.s
+
+src/sim/mujoco_bindings.o: src/sim/mujoco_bindings.cpp.o
+.PHONY : src/sim/mujoco_bindings.o
+
+# target to build an object file
+src/sim/mujoco_bindings.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/mujoco_bindings.cpp.o
+.PHONY : src/sim/mujoco_bindings.cpp.o
+
+src/sim/mujoco_bindings.i: src/sim/mujoco_bindings.cpp.i
+.PHONY : src/sim/mujoco_bindings.i
+
+# target to preprocess a source file
+src/sim/mujoco_bindings.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/mujoco_bindings.cpp.i
+.PHONY : src/sim/mujoco_bindings.cpp.i
+
+src/sim/mujoco_bindings.s: src/sim/mujoco_bindings.cpp.s
+.PHONY : src/sim/mujoco_bindings.s
+
+# target to generate assembly for a file
+src/sim/mujoco_bindings.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/mujoco_bindings.cpp.s
+.PHONY : src/sim/mujoco_bindings.cpp.s
+
+src/sim/mujoco_state_reader.o: src/sim/mujoco_state_reader.cpp.o
+.PHONY : src/sim/mujoco_state_reader.o
+
+# target to build an object file
+src/sim/mujoco_state_reader.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/mujoco_state_reader.cpp.o
+.PHONY : src/sim/mujoco_state_reader.cpp.o
+
+src/sim/mujoco_state_reader.i: src/sim/mujoco_state_reader.cpp.i
+.PHONY : src/sim/mujoco_state_reader.i
+
+# target to preprocess a source file
+src/sim/mujoco_state_reader.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/mujoco_state_reader.cpp.i
+.PHONY : src/sim/mujoco_state_reader.cpp.i
+
+src/sim/mujoco_state_reader.s: src/sim/mujoco_state_reader.cpp.s
+.PHONY : src/sim/mujoco_state_reader.s
+
+# target to generate assembly for a file
+src/sim/mujoco_state_reader.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/mujoco_state_reader.cpp.s
+.PHONY : src/sim/mujoco_state_reader.cpp.s
+
+src/sim/quadrotor_sim.o: src/sim/quadrotor_sim.cpp.o
+.PHONY : src/sim/quadrotor_sim.o
+
+# target to build an object file
+src/sim/quadrotor_sim.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/quadrotor_sim.cpp.o
+.PHONY : src/sim/quadrotor_sim.cpp.o
+
+src/sim/quadrotor_sim.i: src/sim/quadrotor_sim.cpp.i
+.PHONY : src/sim/quadrotor_sim.i
+
+# target to preprocess a source file
+src/sim/quadrotor_sim.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/quadrotor_sim.cpp.i
+.PHONY : src/sim/quadrotor_sim.cpp.i
+
+src/sim/quadrotor_sim.s: src/sim/quadrotor_sim.cpp.s
+.PHONY : src/sim/quadrotor_sim.s
+
+# target to generate assembly for a file
+src/sim/quadrotor_sim.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/src/sim/quadrotor_sim.cpp.s
+.PHONY : src/sim/quadrotor_sim.cpp.s
 
 # Help Target
 help:
@@ -431,6 +675,8 @@ help:
 	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
+	@echo "... quadrotor_cpp_uninstall"
+	@echo "... uninstall"
 	@echo "... quadrotor"
 	@echo "... quadrotor_core"
 	@echo "... quadrotor_mujoco_viewer"
@@ -446,21 +692,48 @@ help:
 	@echo "... __/third_party/mujoco_simulate/simulate.o"
 	@echo "... __/third_party/mujoco_simulate/simulate.i"
 	@echo "... __/third_party/mujoco_simulate/simulate.s"
-	@echo "... src/geometry.o"
-	@echo "... src/geometry.i"
-	@echo "... src/geometry.s"
+	@echo "... src/config/quadrotor_config.o"
+	@echo "... src/config/quadrotor_config.i"
+	@echo "... src/config/quadrotor_config.s"
+	@echo "... src/control/motor_mixer.o"
+	@echo "... src/control/motor_mixer.i"
+	@echo "... src/control/motor_mixer.s"
+	@echo "... src/controller/se3_controller.o"
+	@echo "... src/controller/se3_controller.i"
+	@echo "... src/controller/se3_controller.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
-	@echo "... src/motor_mixer.o"
-	@echo "... src/motor_mixer.i"
-	@echo "... src/motor_mixer.s"
-	@echo "... src/quadrotor_sim.o"
-	@echo "... src/quadrotor_sim.i"
-	@echo "... src/quadrotor_sim.s"
-	@echo "... src/se3_controller.o"
-	@echo "... src/se3_controller.i"
-	@echo "... src/se3_controller.s"
+	@echo "... src/math/geometry.o"
+	@echo "... src/math/geometry.i"
+	@echo "... src/math/geometry.s"
+	@echo "... src/ros/ros2_bridge.o"
+	@echo "... src/ros/ros2_bridge.i"
+	@echo "... src/ros/ros2_bridge.s"
+	@echo "... src/runtime/command_mailbox.o"
+	@echo "... src/runtime/command_mailbox.i"
+	@echo "... src/runtime/command_mailbox.s"
+	@echo "... src/runtime/goal_provider.o"
+	@echo "... src/runtime/goal_provider.i"
+	@echo "... src/runtime/goal_provider.s"
+	@echo "... src/runtime/telemetry_cache.o"
+	@echo "... src/runtime/telemetry_cache.i"
+	@echo "... src/runtime/telemetry_cache.s"
+	@echo "... src/runtime/vehicle_runtime.o"
+	@echo "... src/runtime/vehicle_runtime.i"
+	@echo "... src/runtime/vehicle_runtime.s"
+	@echo "... src/sim/mujoco_actuator_writer.o"
+	@echo "... src/sim/mujoco_actuator_writer.i"
+	@echo "... src/sim/mujoco_actuator_writer.s"
+	@echo "... src/sim/mujoco_bindings.o"
+	@echo "... src/sim/mujoco_bindings.i"
+	@echo "... src/sim/mujoco_bindings.s"
+	@echo "... src/sim/mujoco_state_reader.o"
+	@echo "... src/sim/mujoco_state_reader.i"
+	@echo "... src/sim/mujoco_state_reader.s"
+	@echo "... src/sim/quadrotor_sim.o"
+	@echo "... src/sim/quadrotor_sim.i"
+	@echo "... src/sim/quadrotor_sim.s"
 .PHONY : help
 
 

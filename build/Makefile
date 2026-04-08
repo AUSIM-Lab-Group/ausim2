@@ -188,6 +188,32 @@ quadrotor_core/fast:
 .PHONY : quadrotor_core/fast
 
 #=============================================================================
+# Target rules for targets named uninstall
+
+# Build rule for target.
+uninstall: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 uninstall
+.PHONY : uninstall
+
+# fast build rule for target.
+uninstall/fast:
+	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/uninstall.dir/build.make quadrotor/CMakeFiles/uninstall.dir/build
+.PHONY : uninstall/fast
+
+#=============================================================================
+# Target rules for targets named quadrotor_cpp_uninstall
+
+# Build rule for target.
+quadrotor_cpp_uninstall: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor_cpp_uninstall
+.PHONY : quadrotor_cpp_uninstall
+
+# fast build rule for target.
+quadrotor_cpp_uninstall/fast:
+	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir/build.make quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir/build
+.PHONY : quadrotor_cpp_uninstall/fast
+
+#=============================================================================
 # Target rules for targets named quadrotor
 
 # Build rule for target.
@@ -212,6 +238,8 @@ help:
 	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
+	@echo "... quadrotor_cpp_uninstall"
+	@echo "... uninstall"
 	@echo "... quadrotor"
 	@echo "... quadrotor_core"
 	@echo "... quadrotor_mujoco_viewer"

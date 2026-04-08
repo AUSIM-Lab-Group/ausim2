@@ -6,6 +6,8 @@
 /home/x/mujoco/ausim2/build/CMakeFiles/install/strip.dir
 /home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/quadrotor_mujoco_viewer.dir
 /home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/quadrotor_core.dir
+/home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/uninstall.dir
+/home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir
 /home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/quadrotor.dir
 /home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/edit_cache.dir
 /home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/rebuild_cache.dir

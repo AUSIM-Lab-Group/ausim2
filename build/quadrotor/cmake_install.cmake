@@ -47,15 +47,15 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/quadrotor")
     file(RPATH_CHECK
          FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/quadrotor"
-         RPATH "/opt/mujoco/lib")
+         RPATH "/opt/mujoco/lib:/opt/ros/humble/lib")
   endif()
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin" TYPE EXECUTABLE FILES "/home/x/mujoco/ausim2/build/bin/quadrotor")
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/quadrotor" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/quadrotor")
     file(RPATH_CHANGE
          FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/quadrotor"
-         OLD_RPATH "/opt/mujoco/lib:"
-         NEW_RPATH "/opt/mujoco/lib")
+         OLD_RPATH "/opt/mujoco/lib:/opt/ros/humble/lib:"
+         NEW_RPATH "/opt/mujoco/lib:/opt/ros/humble/lib")
     if(CMAKE_INSTALL_DO_STRIP)
       execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/quadrotor")
     endif()
@@ -75,9 +75,10 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/quadrotor" TYPE FILE FILES
-    "/home/x/mujoco/ausim2/quadrotor/README.md"
-    "/home/x/mujoco/ausim2/quadrotor/config.yaml"
-    )
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/quadrotor" TYPE FILE FILES "/home/x/mujoco/ausim2/quadrotor/README.md")
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/quadrotor" TYPE DIRECTORY FILES "/home/x/mujoco/ausim2/quadrotor/cfg")
 endif()
 

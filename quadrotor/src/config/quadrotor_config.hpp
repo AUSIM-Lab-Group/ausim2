@@ -1,0 +1,142 @@
+#pragma once
+
+#include <array>
+#include <filesystem>
+#include <string>
+#include <vector>
+
+#include <Eigen/Core>
+
+namespace quadrotor {
+
+struct VehicleIdentity {
+  std::string vehicle_id = "quadrotor";
+  std::string ros_namespace = "/quadrotor";
+  std::string frame_prefix = "quadrotor";
+};
+
+struct RobotConfig {
+  int count = 1;
+};
+
+struct VehicleParams {
+  double mass = 0.033;
+  double Ct = 3.25e-4;
+  double Cd = 7.9379e-6;
+  double arm_length = 0.065 / 2.0;
+  double max_thrust = 0.1573;
+  double max_torque = 3.842e-03;
+  double max_speed_krpm = 22.0;
+};
+
+struct ControllerGains {
+  double kx = 0.6;
+  double kv = 0.4;
+  double kR = 6.0;
+  double kw = 1.0;
+  double rate_hz = 250.0;
+};
+
+struct HoverGoal {
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  Eigen::Vector3d position = Eigen::Vector3d(0.0, 0.0, 0.3);
+  Eigen::Vector3d velocity = Eigen::Vector3d::Zero();
+  Eigen::Vector3d heading = Eigen::Vector3d(1.0, 0.0, 0.0);
+};
+
+struct CircleTrajectoryConfig {
+  double wait_time = 1.5;
+  double height = 0.3;
+  double radius = 0.5;
+  double speed_hz = 0.3;
+  double height_gain = 1.5;
+};
+
+struct SimulationConfig {
+  double duration = 0.0;
+  double dt = 0.001;
+  double print_interval = 0.5;
+  int control_mode = 2;
+  int example_mode = 1;
+};
+
+struct ViewerConfig {
+  bool enabled = true;
+  bool fallback_to_headless = true;
+  bool mjui_enabled = true;
+  bool vsync = true;
+};
+
+struct ModelConfig {
+  std::filesystem::path scene_xml = "../assets/crazyfile/scene.xml";
+  std::string vehicle_body_name = "cf2";
+  std::string track_camera_name = "track";
+};
+
+struct ActuatorBindingConfig {
+  std::array<std::string, 4> motor_names = {"motor1", "motor2", "motor3", "motor4"};
+};
+
+struct StateBindingConfig {
+  std::string gyro_sensor_name = "body_gyro";
+  std::string accelerometer_sensor_name = "body_linacc";
+  std::string quaternion_sensor_name = "body_quat";
+};
+
+struct Ros2Config {
+  std::string node_name = "sim_bridge";
+  bool use_sim_time = true;
+  double publish_rate_hz = 100.0;
+  double command_timeout = 0.5;
+  bool publish_tf = true;
+  bool publish_clock = true;
+};
+
+struct RosInterfaceConfig {
+  std::string cmd_vel_topic = "cmd_vel";
+  std::string odom_topic = "odom";
+  std::string imu_topic = "imu/data";
+  std::string clock_topic = "/clock";
+};
+
+struct RosFrameConfig {
+  std::string odom = "odom";
+  std::string base = "base_link";
+  std::string imu = "base_link";
+};
+
+struct SensorConfig {
+  std::string name;
+  std::string type;
+  bool enabled = false;
+  std::string frame_id;
+  std::string topic;
+  std::string source_name;
+};
+
+struct QuadrotorConfig {
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  RobotConfig robot;
+  VehicleIdentity identity;
+  ModelConfig model;
+  VehicleParams vehicle;
+  ControllerGains controller;
+  HoverGoal hover_goal;
+  CircleTrajectoryConfig circle_trajectory;
+  SimulationConfig simulation;
+  ViewerConfig viewer;
+  ActuatorBindingConfig actuators;
+  StateBindingConfig state;
+  Ros2Config ros2;
+  RosInterfaceConfig interfaces;
+  RosFrameConfig frames;
+  std::vector<SensorConfig> sensors;
+  double torque_scale = 0.001;
+};
+
+QuadrotorConfig LoadConfigFromYaml(const std::string& path);
+QuadrotorConfig LoadConfigFromYaml(
+    const std::string& sim_config_path,
+    const std::string& robot_config_path);
+
+}  // namespace quadrotor

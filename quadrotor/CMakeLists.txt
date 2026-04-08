@@ -10,6 +10,29 @@ find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(glfw3 REQUIRED)
 
+option(QUADROTOR_ENABLE_ROS2 "Build ROS2 bridge support" ON)
+
+foreach(_quadrotor_ros_prefix "/opt/ros/humble" "/opt/ros/humble_py311")
+  if(EXISTS "${_quadrotor_ros_prefix}")
+    list(APPEND CMAKE_PREFIX_PATH "${_quadrotor_ros_prefix}")
+    if(DEFINED ENV{AMENT_PREFIX_PATH} AND NOT "$ENV{AMENT_PREFIX_PATH}" STREQUAL "")
+      set(ENV{AMENT_PREFIX_PATH} "${_quadrotor_ros_prefix}:$ENV{AMENT_PREFIX_PATH}")
+    else()
+      set(ENV{AMENT_PREFIX_PATH} "${_quadrotor_ros_prefix}")
+    endif()
+  endif()
+endforeach()
+
+foreach(_quadrotor_ros_python "/opt/ros/humble/lib/python3.10/site-packages" "/opt/ros/humble_py311/lib/python3.11/site-packages")
+  if(EXISTS "${_quadrotor_ros_python}")
+    if(DEFINED ENV{PYTHONPATH} AND NOT "$ENV{PYTHONPATH}" STREQUAL "")
+      set(ENV{PYTHONPATH} "${_quadrotor_ros_python}:$ENV{PYTHONPATH}")
+    else()
+      set(ENV{PYTHONPATH} "${_quadrotor_ros_python}")
+    endif()
+  endif()
+endforeach()
+
 find_package(mujoco CONFIG QUIET)
 if(NOT mujoco_FOUND)
   set(_quadrotor_mujoco_hints)
@@ -53,15 +76,35 @@ target_link_libraries(quadrotor_mujoco_viewer
 )
 
 add_library(quadrotor_core STATIC
-  src/se3_controller.cpp
-  src/motor_mixer.cpp
-  src/geometry.cpp
-  src/quadrotor_sim.cpp
+  src/config/quadrotor_config.cpp
+  src/converts/data/clock.cpp
+  src/converts/data/cmd_vel.cpp
+  src/converts/data/common.cpp
+  src/converts/data/imu.cpp
+  src/converts/data/odom.cpp
+  src/converts/data/transform.cpp
+  src/control/motor_mixer.cpp
+  src/controller/se3_controller.cpp
+  src/math/geometry.cpp
+  src/ros/publisher/data/clock_data_publisher.cpp
+  src/ros/publisher/data/imu_data_publisher.cpp
+  src/ros/publisher/data/odom_data_publisher.cpp
+  src/ros/publisher/data/transform_data_publisher.cpp
+  src/ros/ros2_bridge.cpp
+  src/ros/subscriber/data/cmd_vel_command_subscriber.cpp
+  src/runtime/command_mailbox.cpp
+  src/runtime/goal_provider.cpp
+  src/runtime/telemetry_cache.cpp
+  src/runtime/vehicle_runtime.cpp
+  src/sim/mujoco_actuator_writer.cpp
+  src/sim/mujoco_bindings.cpp
+  src/sim/mujoco_state_reader.cpp
+  src/sim/quadrotor_sim.cpp
 )
 
 target_include_directories(quadrotor_core
   PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 target_compile_features(quadrotor_core PUBLIC cxx_std_17)
@@ -70,17 +113,43 @@ target_compile_definitions(quadrotor_core
     QUADROTOR_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+if(QUADROTOR_ENABLE_ROS2)
+  find_package(ament_cmake REQUIRED)
+  find_package(rclcpp REQUIRED)
+  find_package(geometry_msgs REQUIRED)
+  find_package(nav_msgs REQUIRED)
+  find_package(sensor_msgs REQUIRED)
+  find_package(rosgraph_msgs REQUIRED)
+  find_package(tf2 REQUIRED)
+  find_package(tf2_ros REQUIRED)
+
+  target_compile_definitions(quadrotor_core PUBLIC QUADROTOR_HAS_ROS2=1)
+  ament_target_dependencies(
+    quadrotor_core
+    rclcpp
+    geometry_msgs
+    nav_msgs
+    sensor_msgs
+    rosgraph_msgs
+    tf2
+    tf2_ros
+  )
+endif()
+
 target_link_libraries(quadrotor_core
-  PUBLIC
-    Eigen3::Eigen
-    yaml-cpp
-    quadrotor_mujoco_viewer
-    mujoco::mujoco
+  Eigen3::Eigen
+  yaml-cpp
+  quadrotor_mujoco_viewer
+  mujoco::mujoco
 )
 
 add_executable(quadrotor
   src/main.cpp
 )
+
+if(QUADROTOR_ENABLE_ROS2)
+  target_link_options(quadrotor PRIVATE "LINKER:--disable-new-dtags")
+endif()
 
 target_link_libraries(quadrotor PRIVATE quadrotor_core)
 
@@ -94,11 +163,22 @@ endif()
 if(NOT _quadrotor_mujoco_lib)
   get_target_property(_quadrotor_mujoco_lib mujoco::mujoco IMPORTED_LOCATION)
 endif()
+set(_quadrotor_runtime_rpaths)
 if(_quadrotor_mujoco_lib)
   get_filename_component(_quadrotor_mujoco_dir "${_quadrotor_mujoco_lib}" DIRECTORY)
+  list(APPEND _quadrotor_runtime_rpaths "${_quadrotor_mujoco_dir}")
+endif()
+if(QUADROTOR_ENABLE_ROS2)
+  foreach(_quadrotor_ros_libdir "/opt/ros/humble/lib" "/opt/ros/humble_py311/lib")
+    if(EXISTS "${_quadrotor_ros_libdir}")
+      list(APPEND _quadrotor_runtime_rpaths "${_quadrotor_ros_libdir}")
+    endif()
+  endforeach()
+endif()
+if(_quadrotor_runtime_rpaths)
   set_target_properties(quadrotor PROPERTIES
-    BUILD_RPATH "${_quadrotor_mujoco_dir}"
-    INSTALL_RPATH "${_quadrotor_mujoco_dir}"
+    BUILD_RPATH "${_quadrotor_runtime_rpaths}"
+    INSTALL_RPATH "${_quadrotor_runtime_rpaths}"
   )
 endif()
 
@@ -109,4 +189,5 @@ install(TARGETS quadrotor quadrotor_core quadrotor_mujoco_viewer
 )
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets" DESTINATION share)
-install(FILES README.md config.yaml DESTINATION share/quadrotor)
+install(FILES README.md DESTINATION share/quadrotor)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cfg" DESTINATION share/quadrotor)

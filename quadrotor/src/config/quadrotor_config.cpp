@@ -1,0 +1,201 @@
+#include "config/quadrotor_config.hpp"
+
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include <yaml-cpp/yaml.h>
+
+namespace fs = std::filesystem;
+
+namespace quadrotor {
+namespace {
+
+fs::path DefaultSceneXmlPath() {
+  return (fs::path(QUADROTOR_SOURCE_DIR).parent_path() / "assets" / "crazyfile" / "scene.xml")
+      .lexically_normal();
+}
+
+template <typename T>
+void AssignIfPresent(const YAML::Node& node, const char* key, T* value) {
+  if (node && node[key]) {
+    *value = node[key].as<T>();
+  }
+}
+
+Eigen::Vector3d LoadVector3(const YAML::Node& node, const Eigen::Vector3d& fallback) {
+  if (!node || !node.IsSequence() || node.size() != 3) {
+    return fallback;
+  }
+  return Eigen::Vector3d(node[0].as<double>(), node[1].as<double>(), node[2].as<double>());
+}
+
+fs::path ResolvePath(const fs::path& config_path, const fs::path& maybe_relative_path) {
+  if (maybe_relative_path.is_absolute()) {
+    return maybe_relative_path;
+  }
+  return (config_path.parent_path() / maybe_relative_path).lexically_normal();
+}
+
+void LoadSensors(const YAML::Node& sensors_node, std::vector<SensorConfig>* sensors) {
+  sensors->clear();
+  if (!sensors_node || !sensors_node.IsSequence()) {
+    return;
+  }
+
+  for (const YAML::Node& sensor_node : sensors_node) {
+    SensorConfig sensor;
+    AssignIfPresent(sensor_node, "name", &sensor.name);
+    AssignIfPresent(sensor_node, "type", &sensor.type);
+    AssignIfPresent(sensor_node, "enabled", &sensor.enabled);
+    AssignIfPresent(sensor_node, "frame_id", &sensor.frame_id);
+    AssignIfPresent(sensor_node, "topic", &sensor.topic);
+    AssignIfPresent(sensor_node, "source_name", &sensor.source_name);
+    sensors->push_back(std::move(sensor));
+  }
+}
+
+void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, QuadrotorConfig* config) {
+  if (!root || !root.IsMap()) {
+    return;
+  }
+
+  const YAML::Node robot_node = root["robot"];
+  AssignIfPresent(robot_node, "count", &config->robot.count);
+
+  const YAML::Node identity_node = root["identity"];
+  AssignIfPresent(identity_node, "vehicle_id", &config->identity.vehicle_id);
+  AssignIfPresent(identity_node, "namespace", &config->identity.ros_namespace);
+  AssignIfPresent(identity_node, "frame_prefix", &config->identity.frame_prefix);
+
+  const YAML::Node model_node = root["model"];
+  if (model_node && model_node["scene_xml"]) {
+    config->model.scene_xml = ResolvePath(config_path, model_node["scene_xml"].as<std::string>());
+  }
+  AssignIfPresent(model_node, "body_name", &config->model.vehicle_body_name);
+  AssignIfPresent(model_node, "track_camera_name", &config->model.track_camera_name);
+
+  const YAML::Node simulation_node = root["simulation"];
+  AssignIfPresent(simulation_node, "duration", &config->simulation.duration);
+  AssignIfPresent(simulation_node, "dt", &config->simulation.dt);
+  AssignIfPresent(simulation_node, "print_interval", &config->simulation.print_interval);
+  AssignIfPresent(simulation_node, "control_mode", &config->simulation.control_mode);
+  AssignIfPresent(simulation_node, "example_mode", &config->simulation.example_mode);
+
+  const YAML::Node vehicle_node = root["vehicle"];
+  AssignIfPresent(vehicle_node, "mass", &config->vehicle.mass);
+  AssignIfPresent(vehicle_node, "thrust_coefficient", &config->vehicle.Ct);
+  AssignIfPresent(vehicle_node, "drag_coefficient", &config->vehicle.Cd);
+  AssignIfPresent(vehicle_node, "arm_length", &config->vehicle.arm_length);
+  AssignIfPresent(vehicle_node, "max_thrust", &config->vehicle.max_thrust);
+  AssignIfPresent(vehicle_node, "max_torque", &config->vehicle.max_torque);
+  AssignIfPresent(vehicle_node, "max_speed_krpm", &config->vehicle.max_speed_krpm);
+
+  const YAML::Node controller_node = root["controller"];
+  AssignIfPresent(controller_node, "kx", &config->controller.kx);
+  AssignIfPresent(controller_node, "kv", &config->controller.kv);
+  AssignIfPresent(controller_node, "kR", &config->controller.kR);
+  AssignIfPresent(controller_node, "kw", &config->controller.kw);
+  AssignIfPresent(controller_node, "rate_hz", &config->controller.rate_hz);
+  AssignIfPresent(controller_node, "torque_scale", &config->torque_scale);
+
+  const YAML::Node goal_node = root["goal"];
+  if (goal_node) {
+    config->hover_goal.position = LoadVector3(goal_node["position"], config->hover_goal.position);
+    config->hover_goal.velocity = LoadVector3(goal_node["velocity"], config->hover_goal.velocity);
+    config->hover_goal.heading = LoadVector3(goal_node["heading"], config->hover_goal.heading);
+  }
+
+  const YAML::Node trajectory_node = root["trajectory"];
+  AssignIfPresent(trajectory_node, "wait_time", &config->circle_trajectory.wait_time);
+  AssignIfPresent(trajectory_node, "height", &config->circle_trajectory.height);
+  AssignIfPresent(trajectory_node, "radius", &config->circle_trajectory.radius);
+  AssignIfPresent(trajectory_node, "speed_hz", &config->circle_trajectory.speed_hz);
+  AssignIfPresent(trajectory_node, "height_gain", &config->circle_trajectory.height_gain);
+
+  const YAML::Node viewer_node = root["viewer"];
+  AssignIfPresent(viewer_node, "enabled", &config->viewer.enabled);
+  AssignIfPresent(viewer_node, "fallback_to_headless", &config->viewer.fallback_to_headless);
+  AssignIfPresent(viewer_node, "mjui_enabled", &config->viewer.mjui_enabled);
+  AssignIfPresent(viewer_node, "vsync", &config->viewer.vsync);
+
+  const YAML::Node bindings_node = root["bindings"];
+  const YAML::Node actuators_node = bindings_node ? bindings_node["actuators"] : YAML::Node{};
+  const YAML::Node state_node = bindings_node ? bindings_node["state"] : YAML::Node{};
+  if (actuators_node && actuators_node["motor_names"] && actuators_node["motor_names"].IsSequence() &&
+      actuators_node["motor_names"].size() == config->actuators.motor_names.size()) {
+    for (std::size_t i = 0; i < config->actuators.motor_names.size(); ++i) {
+      config->actuators.motor_names[i] = actuators_node["motor_names"][i].as<std::string>();
+    }
+  }
+  AssignIfPresent(state_node, "gyro_sensor", &config->state.gyro_sensor_name);
+  AssignIfPresent(state_node, "accel_sensor", &config->state.accelerometer_sensor_name);
+  AssignIfPresent(state_node, "quat_sensor", &config->state.quaternion_sensor_name);
+
+  const YAML::Node ros2_node = root["ros2"];
+  AssignIfPresent(ros2_node, "node_name", &config->ros2.node_name);
+  AssignIfPresent(ros2_node, "use_sim_time", &config->ros2.use_sim_time);
+  AssignIfPresent(ros2_node, "publish_rate_hz", &config->ros2.publish_rate_hz);
+  AssignIfPresent(ros2_node, "command_timeout", &config->ros2.command_timeout);
+  AssignIfPresent(ros2_node, "publish_tf", &config->ros2.publish_tf);
+  AssignIfPresent(ros2_node, "publish_clock", &config->ros2.publish_clock);
+
+  const YAML::Node interfaces_node = root["interfaces"];
+  AssignIfPresent(interfaces_node, "cmd_vel_topic", &config->interfaces.cmd_vel_topic);
+  AssignIfPresent(interfaces_node, "odom_topic", &config->interfaces.odom_topic);
+  AssignIfPresent(interfaces_node, "imu_topic", &config->interfaces.imu_topic);
+  AssignIfPresent(interfaces_node, "clock_topic", &config->interfaces.clock_topic);
+
+  const YAML::Node frames_node = root["frames"];
+  AssignIfPresent(frames_node, "odom", &config->frames.odom);
+  AssignIfPresent(frames_node, "base", &config->frames.base);
+  AssignIfPresent(frames_node, "imu", &config->frames.imu);
+
+  if (root["sensors"]) {
+    LoadSensors(root["sensors"], &config->sensors);
+  }
+}
+
+QuadrotorConfig LoadConfigNode(const YAML::Node& root, const fs::path& config_path) {
+  QuadrotorConfig config;
+  config.model.scene_xml = DefaultSceneXmlPath();
+  ApplyConfigRoot(root, config_path, &config);
+  return config;
+}
+
+QuadrotorConfig LoadConfigFile(const fs::path& path) {
+  const fs::path config_path = fs::absolute(path);
+  if (!fs::exists(config_path)) {
+    throw std::runtime_error("Config file does not exist: " + config_path.string());
+  }
+  return LoadConfigNode(YAML::LoadFile(config_path.string()), config_path);
+}
+
+}  // namespace
+
+QuadrotorConfig LoadConfigFromYaml(const std::string& path) {
+  return LoadConfigFile(path);
+}
+
+QuadrotorConfig LoadConfigFromYaml(
+    const std::string& sim_config_path,
+    const std::string& robot_config_path) {
+  const fs::path sim_path = fs::absolute(sim_config_path);
+  const fs::path robot_path = fs::absolute(robot_config_path);
+
+  if (!fs::exists(sim_path)) {
+    throw std::runtime_error("Simulation config file does not exist: " + sim_path.string());
+  }
+  if (!fs::exists(robot_path)) {
+    throw std::runtime_error("Robot config file does not exist: " + robot_path.string());
+  }
+
+  QuadrotorConfig config;
+  config.model.scene_xml = DefaultSceneXmlPath();
+  ApplyConfigRoot(YAML::LoadFile(sim_path.string()), sim_path, &config);
+  ApplyConfigRoot(YAML::LoadFile(robot_path.string()), robot_path, &config);
+  return config;
+}
+
+}  // namespace quadrotor

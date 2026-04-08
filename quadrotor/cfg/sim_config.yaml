@@ -1,0 +1,22 @@
+model:
+  scene_xml: ../../assets/crazyfile/scene.xml
+  track_camera_name: track
+
+simulation:
+  duration: 0.0
+  dt: 0.001
+  print_interval: 0.0
+
+viewer:
+  enabled: true
+  fallback_to_headless: false
+  mjui_enabled: true
+  vsync: true
+
+ros2:
+  node_name: sim_bridge
+  use_sim_time: true
+  publish_rate_hz: 100.0
+  command_timeout: 0.5
+  publish_tf: true
+  publish_clock: true

@@ -2,7 +2,7 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /home/x/mujoco/ausim2/quadrotor/src/quadrotor_sim.cpp \
  /usr/include/stdc-predef.h \
  /home/x/mujoco/ausim2/quadrotor/include/sim/quadrotor_sim.hpp \
- /usr/include/c++/11/array /usr/include/c++/11/utility \
+ /usr/include/c++/11/atomic /usr/include/c++/11/bits/atomic_base.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
  /usr/include/features.h /usr/include/features-time64.h \
@@ -14,24 +14,6 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/cpu_defines.h \
  /usr/include/c++/11/pstl/pstl_config.h \
- /usr/include/c++/11/bits/stl_relops.h \
- /usr/include/c++/11/bits/stl_pair.h /usr/include/c++/11/bits/move.h \
- /usr/include/c++/11/type_traits /usr/include/c++/11/initializer_list \
- /usr/include/c++/11/bits/functexcept.h \
- /usr/include/c++/11/bits/exception_defines.h \
- /usr/include/c++/11/bits/stl_algobase.h \
- /usr/include/c++/11/bits/cpp_type_traits.h \
- /usr/include/c++/11/ext/type_traits.h \
- /usr/include/c++/11/ext/numeric_traits.h \
- /usr/include/c++/11/bits/stl_iterator_base_types.h \
- /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
- /usr/include/c++/11/bits/concept_check.h \
- /usr/include/c++/11/debug/assertions.h \
- /usr/include/c++/11/bits/stl_iterator.h \
- /usr/include/c++/11/bits/ptr_traits.h /usr/include/c++/11/debug/debug.h \
- /usr/include/c++/11/bits/predefined_ops.h \
- /usr/include/c++/11/bits/range_access.h /usr/include/c++/11/atomic \
- /usr/include/c++/11/bits/atomic_base.h \
  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h /usr/include/stdint.h \
  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
  /usr/include/x86_64-linux-gnu/bits/types.h \
@@ -41,6 +23,7 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
  /usr/include/c++/11/bits/atomic_lockfree_defines.h \
+ /usr/include/c++/11/bits/move.h /usr/include/c++/11/type_traits \
  /usr/include/c++/11/chrono /usr/include/c++/11/ratio \
  /usr/include/c++/11/cstdint /usr/include/c++/11/limits \
  /usr/include/c++/11/ctime /usr/include/time.h \
@@ -59,7 +42,10 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h \
  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
- /usr/include/c++/11/bits/parse_numbers.h /usr/include/c++/11/filesystem \
+ /usr/include/c++/11/bits/parse_numbers.h \
+ /usr/include/c++/11/ext/numeric_traits.h \
+ /usr/include/c++/11/bits/cpp_type_traits.h \
+ /usr/include/c++/11/ext/type_traits.h /usr/include/c++/11/filesystem \
  /usr/include/c++/11/bits/fs_fwd.h /usr/include/c++/11/system_error \
  /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h \
  /usr/include/c++/11/cerrno /usr/include/errno.h \
@@ -82,10 +68,21 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /usr/include/c++/11/stdexcept /usr/include/c++/11/exception \
  /usr/include/c++/11/bits/exception.h \
  /usr/include/c++/11/bits/exception_ptr.h \
+ /usr/include/c++/11/bits/exception_defines.h \
  /usr/include/c++/11/bits/cxxabi_init_exception.h \
  /usr/include/c++/11/typeinfo /usr/include/c++/11/bits/hash_bytes.h \
  /usr/include/c++/11/new /usr/include/c++/11/bits/nested_exception.h \
  /usr/include/c++/11/string /usr/include/c++/11/bits/char_traits.h \
+ /usr/include/c++/11/bits/stl_algobase.h \
+ /usr/include/c++/11/bits/functexcept.h \
+ /usr/include/c++/11/bits/stl_pair.h \
+ /usr/include/c++/11/bits/stl_iterator_base_types.h \
+ /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
+ /usr/include/c++/11/bits/concept_check.h \
+ /usr/include/c++/11/debug/assertions.h \
+ /usr/include/c++/11/bits/stl_iterator.h \
+ /usr/include/c++/11/bits/ptr_traits.h /usr/include/c++/11/debug/debug.h \
+ /usr/include/c++/11/bits/predefined_ops.h \
  /usr/include/c++/11/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++allocator.h \
  /usr/include/c++/11/ext/new_allocator.h \
@@ -97,6 +94,8 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /usr/include/c++/11/bits/cxxabi_forced.h \
  /usr/include/c++/11/bits/stl_function.h \
  /usr/include/c++/11/backward/binders.h \
+ /usr/include/c++/11/bits/range_access.h \
+ /usr/include/c++/11/initializer_list \
  /usr/include/c++/11/bits/basic_string.h \
  /usr/include/c++/11/ext/atomicity.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
@@ -145,7 +144,8 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
  /usr/include/c++/11/bits/charconv.h \
  /usr/include/c++/11/bits/basic_string.tcc \
- /usr/include/c++/11/bits/fs_path.h /usr/include/c++/11/locale \
+ /usr/include/c++/11/bits/fs_path.h /usr/include/c++/11/utility \
+ /usr/include/c++/11/bits/stl_relops.h /usr/include/c++/11/locale \
  /usr/include/c++/11/bits/locale_classes.h \
  /usr/include/c++/11/bits/locale_classes.tcc \
  /usr/include/c++/11/bits/locale_facets.h /usr/include/c++/11/cwctype \
@@ -163,7 +163,7 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /usr/include/c++/11/bits/locale_facets_nonio.tcc \
  /usr/include/c++/11/bits/locale_conv.h \
  /usr/include/c++/11/bits/unique_ptr.h /usr/include/c++/11/tuple \
- /usr/include/c++/11/bits/uses_allocator.h \
+ /usr/include/c++/11/array /usr/include/c++/11/bits/uses_allocator.h \
  /usr/include/c++/11/bits/invoke.h /usr/include/c++/11/iomanip \
  /usr/include/c++/11/bits/quoted_string.h /usr/include/c++/11/sstream \
  /usr/include/c++/11/istream /usr/include/c++/11/ios \
@@ -383,12 +383,16 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /opt/mujoco/include/mujoco/mjvisualize.h \
  /opt/mujoco/include/mujoco/mjrender.h /opt/mujoco/include/mujoco/mjsan.h \
  /opt/mujoco/include/mujoco/mjspec.h /opt/mujoco/include/mujoco/mjui.h \
- /home/x/mujoco/ausim2/quadrotor/include/control/motor_mixer.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/config/quadrotor_config.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/ros/ros2_bridge.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/runtime/command_mailbox.hpp \
+ /usr/include/c++/11/mutex /usr/include/c++/11/bits/std_mutex.h \
+ /usr/include/c++/11/bits/unique_lock.h /usr/include/c++/11/optional \
+ /home/x/mujoco/ausim2/quadrotor/include/runtime/runtime_types.hpp \
  /home/x/mujoco/ausim2/quadrotor/include/controller/se3_controller.hpp \
- /usr/include/c++/11/optional /usr/include/eigen3/Eigen/Geometry \
- /usr/include/eigen3/Eigen/Core /usr/include/eigen3/Eigen/SVD \
- /usr/include/eigen3/Eigen/QR /usr/include/eigen3/Eigen/Cholesky \
- /usr/include/eigen3/Eigen/Jacobi \
+ /usr/include/eigen3/Eigen/Geometry /usr/include/eigen3/Eigen/Core \
+ /usr/include/eigen3/Eigen/SVD /usr/include/eigen3/Eigen/QR \
+ /usr/include/eigen3/Eigen/Cholesky /usr/include/eigen3/Eigen/Jacobi \
  /usr/include/eigen3/Eigen/src/Jacobi/Jacobi.h \
  /usr/include/eigen3/Eigen/src/Cholesky/LLT.h \
  /usr/include/eigen3/Eigen/src/Cholesky/LDLT.h \
@@ -428,6 +432,13 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /usr/include/eigen3/Eigen/src/Geometry/Umeyama.h \
  /usr/include/eigen3/Eigen/src/Geometry/arch/Geometry_SIMD.h \
  /home/x/mujoco/ausim2/quadrotor/include/controller/state.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/runtime/telemetry_cache.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/runtime/vehicle_runtime.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/control/motor_mixer.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/runtime/goal_provider.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/sim/mujoco_actuator_writer.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/sim/mujoco_bindings.hpp \
+ /home/x/mujoco/ausim2/quadrotor/include/sim/mujoco_state_reader.hpp \
  /usr/include/c++/11/csignal /usr/include/signal.h \
  /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
  /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
@@ -460,38 +471,8 @@ quadrotor/CMakeFiles/quadrotor_core.dir/src/quadrotor_sim.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/signal_ext.h \
  /usr/include/c++/11/iostream /usr/include/GLFW/glfw3.h \
  /usr/include/GL/gl.h /usr/include/GL/glext.h \
- /usr/include/KHR/khrplatform.h /usr/include/yaml-cpp/yaml.h \
- /usr/include/yaml-cpp/parser.h /usr/include/yaml-cpp/dll.h \
- /usr/include/yaml-cpp/emitter.h /usr/include/yaml-cpp/binary.h \
- /usr/include/yaml-cpp/emitterdef.h /usr/include/yaml-cpp/emittermanip.h \
- /usr/include/yaml-cpp/null.h /usr/include/yaml-cpp/ostream_wrapper.h \
- /usr/include/yaml-cpp/emitterstyle.h /usr/include/yaml-cpp/stlemitter.h \
- /usr/include/c++/11/list /usr/include/c++/11/bits/stl_list.h \
- /usr/include/c++/11/bits/list.tcc /usr/include/c++/11/set \
- /usr/include/c++/11/bits/stl_tree.h /usr/include/c++/11/bits/stl_set.h \
- /usr/include/c++/11/bits/stl_multiset.h /usr/include/c++/11/map \
- /usr/include/c++/11/bits/stl_map.h \
- /usr/include/c++/11/bits/stl_multimap.h \
- /usr/include/yaml-cpp/exceptions.h /usr/include/yaml-cpp/mark.h \
- /usr/include/yaml-cpp/noexcept.h /usr/include/yaml-cpp/traits.h \
- /usr/include/yaml-cpp/node/node.h \
- /usr/include/yaml-cpp/node/detail/iterator_fwd.h \
- /usr/include/yaml-cpp/node/ptr.h /usr/include/yaml-cpp/node/type.h \
- /usr/include/yaml-cpp/node/impl.h \
- /usr/include/yaml-cpp/node/detail/memory.h \
- /usr/include/yaml-cpp/node/detail/node.h \
- /usr/include/yaml-cpp/node/detail/node_ref.h \
- /usr/include/yaml-cpp/node/detail/node_data.h \
- /usr/include/yaml-cpp/node/detail/node_iterator.h \
- /usr/include/c++/11/iterator /usr/include/c++/11/bits/stream_iterator.h \
- /usr/include/yaml-cpp/node/iterator.h \
- /usr/include/yaml-cpp/node/detail/iterator.h \
- /usr/include/yaml-cpp/node/convert.h \
- /usr/include/yaml-cpp/node/detail/impl.h \
- /usr/include/yaml-cpp/node/parse.h /usr/include/yaml-cpp/node/emit.h \
+ /usr/include/KHR/khrplatform.h \
  /home/x/mujoco/ausim2/third_party/mujoco_simulate/glfw_adapter.h \
  /home/x/mujoco/ausim2/third_party/mujoco_simulate/platform_ui_adapter.h \
  /home/x/mujoco/ausim2/third_party/mujoco_simulate/simulate.h \
- /usr/include/c++/11/condition_variable \
- /usr/include/c++/11/bits/std_mutex.h \
- /usr/include/c++/11/bits/unique_lock.h /usr/include/c++/11/mutex
+ /usr/include/c++/11/condition_variable
