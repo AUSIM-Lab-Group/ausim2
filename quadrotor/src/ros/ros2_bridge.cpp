@@ -15,9 +15,12 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include "converts/data/image.hpp"
 #include "converts/ipc/bridge_packets.hpp"
 #include "ipc/socket_packet.hpp"
+#include "ipc/socket_stream.hpp"
 #include "ros/publisher/data/clock_data_publisher.hpp"
+#include "ros/publisher/data/image_data_publisher.hpp"
 #include "ros/publisher/data/imu_data_publisher.hpp"
 #include "ros/publisher/data/odom_data_publisher.hpp"
 #include "ros/publisher/data/transform_data_publisher.hpp"
@@ -162,10 +165,11 @@ std::vector<std::unique_ptr<ITelemetryPublisher>> BuildPublishers(
 
 class RosBridgeProcess {
  public:
-  RosBridgeProcess(RosBridgeConfig config, int telemetry_fd, int command_fd)
+  RosBridgeProcess(RosBridgeConfig config, int telemetry_fd, int command_fd, int image_fd)
       : config_(std::move(config)),
         telemetry_fd_(telemetry_fd),
-        command_fd_(command_fd) {}
+        command_fd_(command_fd),
+        image_fd_(image_fd) {}
 
   ~RosBridgeProcess() {
     Stop();
@@ -226,6 +230,12 @@ class RosBridgeProcess {
 
         if (sensor.type == "imu") {
           publishers_.push_back(std::make_unique<ImuDataPublisher>(node_, topic, frame));
+        } else if (sensor.type == "camera") {
+          image_publishers_.push_back(
+              std::make_unique<ImageDataPublisher>(node_, topic, frame));
+          latest_camera_frames_.push_back(nullptr);
+          last_published_camera_sequences_.push_back(0);
+          camera_frame_published_.push_back(false);
         } else {
           RCLCPP_WARN(
               node_->get_logger(),
@@ -242,9 +252,15 @@ class RosBridgeProcess {
           std::chrono::duration<double>(1.0 / config_.ros2.publish_rate_hz));
       telemetry_timer_ = node_->create_wall_timer(
           period,
-          [this]() { PublishTelemetry(); });
+          [this]() {
+            PublishTelemetry();
+            PublishCameraFrames();
+          });
 
       telemetry_thread_ = std::thread([this]() { TelemetryLoop(); });
+      if (!image_publishers_.empty()) {
+        image_thread_ = std::thread([this]() { ImageLoop(); });
+      }
       started_ = true;
       RosStartupDebugLog("ROS bridge child started");
     } catch (const std::exception& error) {
@@ -269,14 +285,22 @@ class RosBridgeProcess {
 
     ipc::ShutdownAndClose(&telemetry_fd_);
     ipc::ShutdownAndClose(&command_fd_);
+    ipc::ShutdownAndClose(&image_fd_);
 
     if (telemetry_thread_.joinable()) {
       telemetry_thread_.join();
+    }
+    if (image_thread_.joinable()) {
+      image_thread_.join();
     }
 
     telemetry_timer_.reset();
     subscribers_.clear();
     publishers_.clear();
+    image_publishers_.clear();
+    latest_camera_frames_.clear();
+    last_published_camera_sequences_.clear();
+    camera_frame_published_.clear();
 
     if (executor_ && node_) {
       executor_->remove_node(node_);
@@ -321,6 +345,48 @@ class RosBridgeProcess {
     ipc::SendPacket(command_fd_, packet, true);
   }
 
+  void ImageLoop() {
+    while (!stop_requested_.load()) {
+      ipc::CameraImageMetadataPacket metadata;
+      if (!ipc::ReadFully(image_fd_, &metadata, sizeof(metadata))) {
+        RequestStop();
+        return;
+      }
+
+      if (metadata.sensor_index >= latest_camera_frames_.size()) {
+        std::vector<std::uint8_t> discarded(metadata.data_size);
+        if (!discarded.empty() &&
+            !ipc::ReadFully(image_fd_, discarded.data(), discarded.size())) {
+          RequestStop();
+          return;
+        }
+        if (!stop_requested_.load()) {
+          std::cerr << "quadrotor_ros_bridge warning: received image for unknown sensor index "
+                    << metadata.sensor_index << '\n';
+        }
+        continue;
+      }
+
+      std::vector<std::uint8_t> pixels(metadata.data_size);
+      if (!pixels.empty() && !ipc::ReadFully(image_fd_, pixels.data(), pixels.size())) {
+        RequestStop();
+        return;
+      }
+      if (metadata.step != metadata.width * 3 ||
+          metadata.data_size != metadata.step * metadata.height) {
+        if (!stop_requested_.load()) {
+          std::cerr << "quadrotor_ros_bridge warning: received malformed image frame\n";
+        }
+        continue;
+      }
+
+      auto frame = std::make_shared<CameraFrame>(
+          converts::ToCameraFrame(metadata, std::move(pixels)));
+      std::lock_guard<std::mutex> lock(image_mutex_);
+      latest_camera_frames_[metadata.sensor_index] = std::move(frame);
+    }
+  }
+
   void PublishTelemetry() {
     std::optional<ipc::TelemetryPacket> packet;
     {
@@ -335,6 +401,27 @@ class RosBridgeProcess {
     }
   }
 
+  void PublishCameraFrames() {
+    std::vector<std::shared_ptr<CameraFrame>> frames;
+    {
+      std::lock_guard<std::mutex> lock(image_mutex_);
+      frames = latest_camera_frames_;
+    }
+
+    for (std::size_t i = 0; i < image_publishers_.size(); ++i) {
+      const std::shared_ptr<CameraFrame>& frame = frames[i];
+      if (frame == nullptr) {
+        continue;
+      }
+      if (camera_frame_published_[i] && frame->sequence == last_published_camera_sequences_[i]) {
+        continue;
+      }
+      image_publishers_[i]->Publish(*frame);
+      last_published_camera_sequences_[i] = frame->sequence;
+      camera_frame_published_[i] = true;
+    }
+  }
+
   void RequestStop() {
     stop_requested_.store(true);
     if (executor_) {
@@ -345,14 +432,21 @@ class RosBridgeProcess {
   RosBridgeConfig config_;
   int telemetry_fd_ = -1;
   int command_fd_ = -1;
+  int image_fd_ = -1;
   std::shared_ptr<rclcpp::Node> node_;
   std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
   std::vector<std::unique_ptr<ITelemetryPublisher>> publishers_;
+  std::vector<std::unique_ptr<ImageDataPublisher>> image_publishers_;
   std::vector<std::unique_ptr<ICommandSubscriber>> subscribers_;
   rclcpp::TimerBase::SharedPtr telemetry_timer_;
   std::thread telemetry_thread_;
+  std::thread image_thread_;
   std::mutex telemetry_mutex_;
+  std::mutex image_mutex_;
   std::optional<ipc::TelemetryPacket> latest_telemetry_;
+  std::vector<std::shared_ptr<CameraFrame>> latest_camera_frames_;
+  std::vector<std::uint32_t> last_published_camera_sequences_;
+  std::vector<bool> camera_frame_published_;
   std::atomic_bool stop_requested_ = false;
   bool owns_rclcpp_runtime_ = false;
   bool started_ = false;
@@ -360,8 +454,8 @@ class RosBridgeProcess {
 
 }  // namespace
 
-int RunRosBridgeProcess(const QuadrotorConfig& config, int telemetry_fd, int command_fd) {
-  RosBridgeProcess process(BuildRosBridgeConfig(config), telemetry_fd, command_fd);
+int RunRosBridgeProcess(const QuadrotorConfig& config, int telemetry_fd, int command_fd, int image_fd) {
+  RosBridgeProcess process(BuildRosBridgeConfig(config), telemetry_fd, command_fd, image_fd);
   return process.Run();
 }
 

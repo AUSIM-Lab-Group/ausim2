@@ -526,6 +526,30 @@ src/converts/data/common.cpp.s:
 	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/src/converts/data/common.cpp.s
 .PHONY : src/converts/data/common.cpp.s
 
+src/converts/data/image.o: src/converts/data/image.cpp.o
+.PHONY : src/converts/data/image.o
+
+# target to build an object file
+src/converts/data/image.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/src/converts/data/image.cpp.o
+.PHONY : src/converts/data/image.cpp.o
+
+src/converts/data/image.i: src/converts/data/image.cpp.i
+.PHONY : src/converts/data/image.i
+
+# target to preprocess a source file
+src/converts/data/image.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/src/converts/data/image.cpp.i
+.PHONY : src/converts/data/image.cpp.i
+
+src/converts/data/image.s: src/converts/data/image.cpp.s
+.PHONY : src/converts/data/image.s
+
+# target to generate assembly for a file
+src/converts/data/image.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/src/converts/data/image.cpp.s
+.PHONY : src/converts/data/image.cpp.s
+
 src/converts/data/imu.o: src/converts/data/imu.cpp.o
 .PHONY : src/converts/data/imu.o
 
@@ -720,6 +744,30 @@ src/ros/publisher/data/clock_data_publisher.s: src/ros/publisher/data/clock_data
 src/ros/publisher/data/clock_data_publisher.cpp.s:
 	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/src/ros/publisher/data/clock_data_publisher.cpp.s
 .PHONY : src/ros/publisher/data/clock_data_publisher.cpp.s
+
+src/ros/publisher/data/image_data_publisher.o: src/ros/publisher/data/image_data_publisher.cpp.o
+.PHONY : src/ros/publisher/data/image_data_publisher.o
+
+# target to build an object file
+src/ros/publisher/data/image_data_publisher.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/src/ros/publisher/data/image_data_publisher.cpp.o
+.PHONY : src/ros/publisher/data/image_data_publisher.cpp.o
+
+src/ros/publisher/data/image_data_publisher.i: src/ros/publisher/data/image_data_publisher.cpp.i
+.PHONY : src/ros/publisher/data/image_data_publisher.i
+
+# target to preprocess a source file
+src/ros/publisher/data/image_data_publisher.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/src/ros/publisher/data/image_data_publisher.cpp.i
+.PHONY : src/ros/publisher/data/image_data_publisher.cpp.i
+
+src/ros/publisher/data/image_data_publisher.s: src/ros/publisher/data/image_data_publisher.cpp.s
+.PHONY : src/ros/publisher/data/image_data_publisher.s
+
+# target to generate assembly for a file
+src/ros/publisher/data/image_data_publisher.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/src/ros/publisher/data/image_data_publisher.cpp.s
+.PHONY : src/ros/publisher/data/image_data_publisher.cpp.s
 
 src/ros/publisher/data/imu_data_publisher.o: src/ros/publisher/data/imu_data_publisher.cpp.o
 .PHONY : src/ros/publisher/data/imu_data_publisher.o
@@ -937,6 +985,30 @@ src/runtime/vehicle_runtime.cpp.s:
 	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_sim_core.dir/build.make quadrotor/CMakeFiles/quadrotor_sim_core.dir/src/runtime/vehicle_runtime.cpp.s
 .PHONY : src/runtime/vehicle_runtime.cpp.s
 
+src/sim/camera_renderer.o: src/sim/camera_renderer.cpp.o
+.PHONY : src/sim/camera_renderer.o
+
+# target to build an object file
+src/sim/camera_renderer.cpp.o:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_sim_core.dir/build.make quadrotor/CMakeFiles/quadrotor_sim_core.dir/src/sim/camera_renderer.cpp.o
+.PHONY : src/sim/camera_renderer.cpp.o
+
+src/sim/camera_renderer.i: src/sim/camera_renderer.cpp.i
+.PHONY : src/sim/camera_renderer.i
+
+# target to preprocess a source file
+src/sim/camera_renderer.cpp.i:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_sim_core.dir/build.make quadrotor/CMakeFiles/quadrotor_sim_core.dir/src/sim/camera_renderer.cpp.i
+.PHONY : src/sim/camera_renderer.cpp.i
+
+src/sim/camera_renderer.s: src/sim/camera_renderer.cpp.s
+.PHONY : src/sim/camera_renderer.s
+
+# target to generate assembly for a file
+src/sim/camera_renderer.cpp.s:
+	cd /home/x/mujoco/ausim2/build && $(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_sim_core.dir/build.make quadrotor/CMakeFiles/quadrotor_sim_core.dir/src/sim/camera_renderer.cpp.s
+.PHONY : src/sim/camera_renderer.cpp.s
+
 src/sim/mujoco_actuator_writer.o: src/sim/mujoco_actuator_writer.cpp.o
 .PHONY : src/sim/mujoco_actuator_writer.o
 
@@ -1085,6 +1157,9 @@ help:
 	@echo "... src/converts/data/common.o"
 	@echo "... src/converts/data/common.i"
 	@echo "... src/converts/data/common.s"
+	@echo "... src/converts/data/image.o"
+	@echo "... src/converts/data/image.i"
+	@echo "... src/converts/data/image.s"
 	@echo "... src/converts/data/imu.o"
 	@echo "... src/converts/data/imu.i"
 	@echo "... src/converts/data/imu.s"
@@ -1109,6 +1184,9 @@ help:
 	@echo "... src/ros/publisher/data/clock_data_publisher.o"
 	@echo "... src/ros/publisher/data/clock_data_publisher.i"
 	@echo "... src/ros/publisher/data/clock_data_publisher.s"
+	@echo "... src/ros/publisher/data/image_data_publisher.o"
+	@echo "... src/ros/publisher/data/image_data_publisher.i"
+	@echo "... src/ros/publisher/data/image_data_publisher.s"
 	@echo "... src/ros/publisher/data/imu_data_publisher.o"
 	@echo "... src/ros/publisher/data/imu_data_publisher.i"
 	@echo "... src/ros/publisher/data/imu_data_publisher.s"
@@ -1136,6 +1214,9 @@ help:
 	@echo "... src/runtime/vehicle_runtime.o"
 	@echo "... src/runtime/vehicle_runtime.i"
 	@echo "... src/runtime/vehicle_runtime.s"
+	@echo "... src/sim/camera_renderer.o"
+	@echo "... src/sim/camera_renderer.i"
+	@echo "... src/sim/camera_renderer.s"
 	@echo "... src/sim/mujoco_actuator_writer.o"
 	@echo "... src/sim/mujoco_actuator_writer.i"
 	@echo "... src/sim/mujoco_actuator_writer.s"

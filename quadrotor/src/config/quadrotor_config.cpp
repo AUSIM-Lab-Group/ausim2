@@ -53,6 +53,9 @@ void LoadSensors(const YAML::Node& sensors_node, std::vector<SensorConfig>* sens
     AssignIfPresent(sensor_node, "frame_id", &sensor.frame_id);
     AssignIfPresent(sensor_node, "topic", &sensor.topic);
     AssignIfPresent(sensor_node, "source_name", &sensor.source_name);
+    AssignIfPresent(sensor_node, "width", &sensor.width);
+    AssignIfPresent(sensor_node, "height", &sensor.height);
+    AssignIfPresent(sensor_node, "rate_hz", &sensor.rate_hz);
     sensors->push_back(std::move(sensor));
   }
 }

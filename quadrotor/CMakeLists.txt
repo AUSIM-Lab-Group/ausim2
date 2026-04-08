@@ -84,6 +84,7 @@ add_library(quadrotor_sim_core STATIC
   src/runtime/data_board_interface.cpp
   src/runtime/goal_provider.cpp
   src/runtime/vehicle_runtime.cpp
+  src/sim/camera_renderer.cpp
   src/sim/mujoco_actuator_writer.cpp
   src/sim/mujoco_bindings.cpp
   src/sim/mujoco_state_reader.cpp
@@ -106,11 +107,13 @@ add_library(quadrotor_ros_bridge_core STATIC
   src/converts/data/clock.cpp
   src/converts/data/cmd_vel.cpp
   src/converts/data/common.cpp
+  src/converts/data/image.cpp
   src/converts/data/imu.cpp
   src/converts/data/odom.cpp
   src/converts/data/transform.cpp
   src/converts/ipc/bridge_packets.cpp
   src/ros/publisher/data/clock_data_publisher.cpp
+  src/ros/publisher/data/image_data_publisher.cpp
   src/ros/publisher/data/imu_data_publisher.cpp
   src/ros/publisher/data/odom_data_publisher.cpp
   src/ros/publisher/data/transform_data_publisher.cpp
@@ -151,6 +154,7 @@ ament_target_dependencies(
 
 target_link_libraries(quadrotor_sim_core
   Eigen3::Eigen
+  glfw
   yaml-cpp
   quadrotor_mujoco_viewer
   mujoco::mujoco

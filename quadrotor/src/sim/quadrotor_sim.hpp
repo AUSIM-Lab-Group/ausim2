@@ -2,16 +2,19 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <Eigen/Core>
 #include <mujoco/mujoco.h>
 
 #include "config/quadrotor_config.hpp"
 #include "runtime/vehicle_runtime.hpp"
+#include "sim/camera_renderer.hpp"
 #include "sim/mujoco_actuator_writer.hpp"
 #include "sim/mujoco_bindings.hpp"
 #include "sim/mujoco_state_reader.hpp"
@@ -58,6 +61,10 @@ class QuadrotorSim {
       const std::filesystem::path& model_path,
       bool replace_existing);
   void ConfigureDefaultCamera();
+  void ResolveCameraSensors(const mjModel* model);
+  void InitializeCameraRendering();
+  void RefreshCameraRendering();
+  void RenderCameraFramesIfNeeded();
   void InitializeVisualizationState();
   std::string ValidateModel(const mjModel* candidate) const;
   int ComputeControlDecimation() const;
@@ -84,6 +91,19 @@ class QuadrotorSim {
   int control_step_count_ = 0;
   std::atomic_bool stop_requested_ = false;
   bool visualization_state_initialized_ = false;
+  struct CameraSensorRuntime {
+    std::string source_name;
+    int width = 320;
+    int height = 240;
+    double period_seconds = 1.0 / 30.0;
+    double next_render_time = 0.0;
+    int camera_id = -1;
+    std::uint32_t sequence = 0;
+  };
+  std::vector<CameraSensorRuntime> camera_sensors_;
+  CameraRenderer camera_renderer_;
+  bool camera_rendering_ready_ = false;
+  bool camera_rendering_failed_ = false;
 
   static QuadrotorSim* active_instance_;
 };

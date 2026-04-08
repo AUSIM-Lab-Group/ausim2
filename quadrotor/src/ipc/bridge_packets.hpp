@@ -23,7 +23,18 @@ struct TelemetryPacket {
   std::uint8_t imu_has_linear_acceleration = 0;
 };
 
+struct CameraImageMetadataPacket {
+  double sim_time = 0.0;
+  std::uint32_t sensor_index = 0;
+  std::uint32_t sequence = 0;
+  std::uint32_t width = 0;
+  std::uint32_t height = 0;
+  std::uint32_t step = 0;
+  std::uint32_t data_size = 0;
+};
+
 static_assert(std::is_trivially_copyable_v<VelocityCommandPacket>);
 static_assert(std::is_trivially_copyable_v<TelemetryPacket>);
+static_assert(std::is_trivially_copyable_v<CameraImageMetadataPacket>);
 
 }  // namespace quadrotor::ipc

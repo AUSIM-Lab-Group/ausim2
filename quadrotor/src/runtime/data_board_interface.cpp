@@ -6,6 +6,13 @@
 #include "runtime/data_board_channels.hpp"
 
 namespace quadrotor {
+namespace {
+
+std::string CameraFrameChannel(const std::string& sensor_source_name) {
+  return std::string(runtime_board::kCameraFramePrefix) + sensor_source_name;
+}
+
+}  // namespace
 
 db::SecurityDataRef<VelocityCommand, db::Permission::ReadOnly> VelocityCommandReader() {
   static auto reader = db::DataBoard().Read<VelocityCommand>(runtime_board::kVelocityCommand);
@@ -25,6 +32,16 @@ db::SecurityDataRef<TelemetrySnapshot, db::Permission::ReadOnly> TelemetrySnapsh
 db::SecurityDataRef<TelemetrySnapshot, db::Permission::ReadWrite> TelemetrySnapshotWriter() {
   static auto writer = db::DataBoard().Write<TelemetrySnapshot>(runtime_board::kTelemetrySnapshot);
   return writer;
+}
+
+db::SecurityDataRef<CameraFrame, db::Permission::ReadOnly> CameraFrameReader(
+    const std::string& sensor_source_name) {
+  return db::DataBoard().Read<CameraFrame>(CameraFrameChannel(sensor_source_name));
+}
+
+db::SecurityDataRef<CameraFrame, db::Permission::ReadWrite> CameraFrameWriter(
+    const std::string& sensor_source_name) {
+  return db::DataBoard().Write<CameraFrame>(CameraFrameChannel(sensor_source_name));
 }
 
 std::optional<VelocityCommand> ReadVelocityCommand() {
@@ -57,6 +74,14 @@ std::optional<TelemetrySnapshot> ReadTelemetrySnapshot() {
 
 void WriteTelemetrySnapshot(const TelemetrySnapshot& snapshot) {
   TelemetrySnapshotWriter() = snapshot;
+}
+
+std::optional<CameraFrame> ReadCameraFrame(const std::string& sensor_source_name) {
+  return CameraFrameReader(sensor_source_name).ReadOptional();
+}
+
+void WriteCameraFrame(const std::string& sensor_source_name, const CameraFrame& frame) {
+  CameraFrameWriter(sensor_source_name) = frame;
 }
 
 }  // namespace quadrotor

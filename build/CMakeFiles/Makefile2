@@ -132,12 +132,12 @@ quadrotor/CMakeFiles/quadrotor_mujoco_viewer.dir/clean:
 quadrotor/CMakeFiles/quadrotor_sim_core.dir/all: quadrotor/CMakeFiles/quadrotor_mujoco_viewer.dir/all
 	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_sim_core.dir/build.make quadrotor/CMakeFiles/quadrotor_sim_core.dir/depend
 	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_sim_core.dir/build.make quadrotor/CMakeFiles/quadrotor_sim_core.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/x/mujoco/ausim2/build/CMakeFiles --progress-num=25,26,27,28,29,30,31,32,33,34,35,36,37,38,39 "Built target quadrotor_sim_core"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/x/mujoco/ausim2/build/CMakeFiles --progress-num=27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42 "Built target quadrotor_sim_core"
 .PHONY : quadrotor/CMakeFiles/quadrotor_sim_core.dir/all
 
 # Build rule for subdir invocation for target.
 quadrotor/CMakeFiles/quadrotor_sim_core.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 20
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 21
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor/CMakeFiles/quadrotor_sim_core.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 0
 .PHONY : quadrotor/CMakeFiles/quadrotor_sim_core.dir/rule
@@ -158,12 +158,12 @@ quadrotor/CMakeFiles/quadrotor_sim_core.dir/clean:
 quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/all:
 	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/depend
 	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/x/mujoco/ausim2/build/CMakeFiles --progress-num=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24 "Built target quadrotor_ros_bridge_core"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/x/mujoco/ausim2/build/CMakeFiles --progress-num=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 "Built target quadrotor_ros_bridge_core"
 .PHONY : quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/all
 
 # Build rule for subdir invocation for target.
 quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 15
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 17
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 0
 .PHONY : quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/rule
@@ -242,7 +242,7 @@ quadrotor/CMakeFiles/quadrotor.dir/all: quadrotor/CMakeFiles/quadrotor_sim_core.
 
 # Build rule for subdir invocation for target.
 quadrotor/CMakeFiles/quadrotor.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 22
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 23
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor/CMakeFiles/quadrotor.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 0
 .PHONY : quadrotor/CMakeFiles/quadrotor.dir/rule
@@ -268,7 +268,7 @@ quadrotor/CMakeFiles/quadrotor_ros_bridge.dir/all: quadrotor/CMakeFiles/quadroto
 
 # Build rule for subdir invocation for target.
 quadrotor/CMakeFiles/quadrotor_ros_bridge.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 17
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 19
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor/CMakeFiles/quadrotor_ros_bridge.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/x/mujoco/ausim2/build/CMakeFiles 0
 .PHONY : quadrotor/CMakeFiles/quadrotor_ros_bridge.dir/rule

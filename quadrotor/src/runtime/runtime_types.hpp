@@ -1,7 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <string>
+#include <vector>
 
 #include <Eigen/Core>
 
@@ -58,6 +60,15 @@ struct TelemetrySnapshot {
   Eigen::Vector4d motor_speed_krpm = Eigen::Vector4d::Zero();
   std::string goal_source;
   bool has_goal = false;
+};
+
+struct CameraFrame {
+  double sim_time = 0.0;
+  std::uint32_t width = 0;
+  std::uint32_t height = 0;
+  std::uint32_t step = 0;
+  std::uint32_t sequence = 0;
+  std::vector<std::uint8_t> data;
 };
 
 }  // namespace quadrotor

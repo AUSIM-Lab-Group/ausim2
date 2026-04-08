@@ -112,6 +112,9 @@ struct SensorConfig {
   std::string frame_id;
   std::string topic;
   std::string source_name;
+  int width = 320;
+  int height = 240;
+  double rate_hz = 30.0;
 };
 
 struct QuadrotorConfig {

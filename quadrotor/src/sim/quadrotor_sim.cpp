@@ -173,6 +173,31 @@ QuadrotorSim::QuadrotorSim(QuadrotorConfig config)
     throw std::runtime_error(
         "robot.count > 1 is not implemented yet. Current runtime supports exactly one simulated vehicle.");
   }
+
+  for (const SensorConfig& sensor : config_.sensors) {
+    if (!sensor.enabled || sensor.type != "camera") {
+      continue;
+    }
+    if (sensor.source_name.empty()) {
+      throw std::runtime_error(
+          "Camera sensor '" + sensor.name + "' must define source_name to match an MJCF camera.");
+    }
+    if (sensor.width <= 0 || sensor.height <= 0) {
+      throw std::runtime_error(
+          "Camera sensor '" + sensor.name + "' must define positive width and height.");
+    }
+    if (sensor.rate_hz <= 0.0) {
+      throw std::runtime_error(
+          "Camera sensor '" + sensor.name + "' must define a positive rate_hz.");
+    }
+
+    CameraSensorRuntime camera_sensor;
+    camera_sensor.source_name = sensor.source_name;
+    camera_sensor.width = sensor.width;
+    camera_sensor.height = sensor.height;
+    camera_sensor.period_seconds = 1.0 / sensor.rate_hz;
+    camera_sensors_.push_back(std::move(camera_sensor));
+  }
 }
 
 QuadrotorSim::~QuadrotorSim() {
@@ -306,15 +331,21 @@ void QuadrotorSim::ResetSimulation() {
   next_log_time_ = 0.0;
   control_step_count_ = 0;
   runtime_.Reset();
+  for (auto& sensor : camera_sensors_) {
+    sensor.next_render_time = 0.0;
+    sensor.sequence = 0;
+  }
 }
 
 void QuadrotorSim::RunHeadless() {
   constexpr int kStepsPerCycle = 5;
+  InitializeCameraRendering();
 
   while (ShouldContinueHeadless()) {
     const auto step_start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < kStepsPerCycle && ShouldContinueHeadless(); ++i) {
       Step();
+      RenderCameraFramesIfNeeded();
     }
     SleepToMatchRealtime(step_start, model_->opt.timestep * kStepsPerCycle);
   }
@@ -399,6 +430,7 @@ void QuadrotorSim::PhysicsThreadMain() {
       return;
     }
 
+    InitializeCameraRendering();
     PhysicsLoop(*viewer_);
     viewer_->exitrequest.store(true);
   } catch (const std::exception& error) {
@@ -468,6 +500,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
           SetLoadError(sim, message);
         } else {
           stepped = true;
+          RenderCameraFramesIfNeeded();
         }
       } else {
         bool measured = false;
@@ -491,6 +524,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
           }
 
           stepped = true;
+          RenderCameraFramesIfNeeded();
           if (data_->time < previous_sim) {
             break;
           }
@@ -586,7 +620,9 @@ void QuadrotorSim::InstallModelPointers(
   config_.model.scene_xml = fs::absolute(model_path);
 
   bindings_.Resolve(model_);
+  ResolveCameraSensors(model_);
   ConfigureDefaultCamera();
+  RefreshCameraRendering();
 
   next_log_time_ = 0.0;
   control_step_count_ = 0;
@@ -594,6 +630,10 @@ void QuadrotorSim::InstallModelPointers(
   active_instance_ = this;
   mjcb_control = &QuadrotorSim::ControlCallback;
   mj_forward(model_, data_);
+  for (auto& sensor : camera_sensors_) {
+    sensor.next_render_time = 0.0;
+    sensor.sequence = 0;
+  }
 
   if (replace_existing) {
     if (old_data != nullptr && old_data != new_data) {
@@ -621,8 +661,105 @@ void QuadrotorSim::ConfigureDefaultCamera() {
   }
 }
 
+void QuadrotorSim::ResolveCameraSensors(const mjModel* model) {
+  for (auto& sensor : camera_sensors_) {
+    sensor.camera_id = mj_name2id(model, mjOBJ_CAMERA, sensor.source_name.c_str());
+  }
+}
+
+void QuadrotorSim::InitializeCameraRendering() {
+  if (camera_sensors_.empty() || camera_rendering_ready_ || camera_rendering_failed_ || model_ == nullptr) {
+    return;
+  }
+
+  int max_width = 1;
+  int max_height = 1;
+  for (const auto& sensor : camera_sensors_) {
+    max_width = std::max(max_width, sensor.width);
+    max_height = std::max(max_height, sensor.height);
+  }
+
+  std::string error;
+  if (!camera_renderer_.Initialize(model_, max_width, max_height, &error)) {
+    camera_rendering_failed_ = true;
+    std::cerr << "quadrotor warning: camera rendering is unavailable: " << error << '\n';
+    return;
+  }
+  camera_rendering_ready_ = true;
+}
+
+void QuadrotorSim::RefreshCameraRendering() {
+  if (!camera_rendering_ready_ || model_ == nullptr) {
+    return;
+  }
+
+  int max_width = 1;
+  int max_height = 1;
+  for (const auto& sensor : camera_sensors_) {
+    max_width = std::max(max_width, sensor.width);
+    max_height = std::max(max_height, sensor.height);
+  }
+
+  std::string error;
+  if (!camera_renderer_.RefreshModel(model_, max_width, max_height, &error)) {
+    camera_rendering_ready_ = false;
+    camera_rendering_failed_ = true;
+    std::cerr << "quadrotor warning: failed to refresh camera rendering after model reload: "
+              << error << '\n';
+  }
+}
+
+void QuadrotorSim::RenderCameraFramesIfNeeded() {
+  if (!camera_rendering_ready_ || model_ == nullptr || data_ == nullptr) {
+    return;
+  }
+
+  for (auto& sensor : camera_sensors_) {
+    if (sensor.camera_id < 0 || data_->time + 1e-9 < sensor.next_render_time) {
+      continue;
+    }
+
+    CameraFrame frame;
+    frame.sim_time = data_->time;
+    frame.width = static_cast<std::uint32_t>(sensor.width);
+    frame.height = static_cast<std::uint32_t>(sensor.height);
+    frame.step = static_cast<std::uint32_t>(sensor.width * 3);
+    frame.sequence = ++sensor.sequence;
+
+    std::string error;
+    if (!camera_renderer_.RenderRgb(
+            model_,
+            data_,
+            sensor.camera_id,
+            sensor.width,
+            sensor.height,
+            &frame.data,
+            &error)) {
+      camera_rendering_ready_ = false;
+      camera_rendering_failed_ = true;
+      std::cerr << "quadrotor warning: camera rendering stopped: " << error << '\n';
+      return;
+    }
+
+    WriteCameraFrame(sensor.source_name, frame);
+    sensor.next_render_time = data_->time + sensor.period_seconds;
+  }
+}
+
 std::string QuadrotorSim::ValidateModel(const mjModel* candidate) const {
-  return bindings_.ValidateModel(candidate);
+  const std::string bindings_error = bindings_.ValidateModel(candidate);
+  if (!bindings_error.empty()) {
+    return bindings_error;
+  }
+
+  for (const auto& sensor : camera_sensors_) {
+    if (mj_name2id(candidate, mjOBJ_CAMERA, sensor.source_name.c_str()) < 0) {
+      return "Model is incompatible with the configured camera sensor: missing camera '" +
+             sensor.source_name + "'";
+    }
+  }
+
+  return {};
 }
 
 int QuadrotorSim::ComputeControlDecimation() const {

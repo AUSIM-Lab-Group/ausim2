@@ -17,6 +17,7 @@ struct CliOptions {
   fs::path robot_config_path;
   int telemetry_fd = -1;
   int command_fd = -1;
+  int image_fd = -1;
 };
 
 fs::path ResolveExistingPath(const std::vector<fs::path>& candidates) {
@@ -40,7 +41,7 @@ fs::path ResolveDefaultConfigPath(const char* filename) {
 void PrintUsage(const char* program_name) {
   std::cout << "Usage: " << program_name
             << " [--sim-config <path>] [--robot-config <override-path>] [--config <legacy.yaml>] "
-               "--telemetry-fd <fd> --command-fd <fd>\n";
+               "--telemetry-fd <fd> --command-fd <fd> --image-fd <fd>\n";
 }
 
 quadrotor::QuadrotorConfig LoadConfig(const CliOptions& cli) {
@@ -97,6 +98,11 @@ int main(int argc, char** argv) {
           throw std::runtime_error("--command-fd requires a file descriptor.");
         }
         cli.command_fd = std::stoi(argv[++i]);
+      } else if (arg == "--image-fd") {
+        if (i + 1 >= argc) {
+          throw std::runtime_error("--image-fd requires a file descriptor.");
+        }
+        cli.image_fd = std::stoi(argv[++i]);
       } else {
         if (!cli.merged_config_path.empty()) {
           throw std::runtime_error("Only one positional legacy config path is supported.");
@@ -105,12 +111,13 @@ int main(int argc, char** argv) {
       }
     }
 
-    if (cli.telemetry_fd < 0 || cli.command_fd < 0) {
-      throw std::runtime_error("Both --telemetry-fd and --command-fd are required.");
+    if (cli.telemetry_fd < 0 || cli.command_fd < 0 || cli.image_fd < 0) {
+      throw std::runtime_error(
+          "--telemetry-fd, --command-fd, and --image-fd are all required.");
     }
 
     const quadrotor::QuadrotorConfig config = LoadConfig(cli);
-    return quadrotor::RunRosBridgeProcess(config, cli.telemetry_fd, cli.command_fd);
+    return quadrotor::RunRosBridgeProcess(config, cli.telemetry_fd, cli.command_fd, cli.image_fd);
   } catch (const std::exception& error) {
     std::cerr << "quadrotor_ros_bridge error: " << error.what() << '\n';
     return 1;

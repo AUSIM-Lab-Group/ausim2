@@ -100,6 +100,33 @@ ipc::TelemetryPacket ToTelemetryPacket(const TelemetrySnapshot& snapshot) {
   return packet;
 }
 
+ipc::CameraImageMetadataPacket ToCameraImageMetadataPacket(
+    const CameraFrame& frame,
+    std::uint32_t sensor_index) {
+  ipc::CameraImageMetadataPacket packet;
+  packet.sim_time = frame.sim_time;
+  packet.sensor_index = sensor_index;
+  packet.sequence = frame.sequence;
+  packet.width = frame.width;
+  packet.height = frame.height;
+  packet.step = frame.step;
+  packet.data_size = static_cast<std::uint32_t>(frame.data.size());
+  return packet;
+}
+
+CameraFrame ToCameraFrame(
+    const ipc::CameraImageMetadataPacket& packet,
+    std::vector<std::uint8_t> pixels) {
+  CameraFrame frame;
+  frame.sim_time = packet.sim_time;
+  frame.sequence = packet.sequence;
+  frame.width = packet.width;
+  frame.height = packet.height;
+  frame.step = packet.step;
+  frame.data = std::move(pixels);
+  return frame;
+}
+
 data::OdomData ToOdomData(
     const ipc::TelemetryPacket& packet,
     const std::string& frame_id,
@@ -139,6 +166,16 @@ data::TransformData ToTransformData(
 data::ClockData ToClockData(const ipc::TelemetryPacket& packet) {
   data::ClockData message;
   message.stamp_seconds = packet.sim_time;
+  return message;
+}
+
+data::ImageData ToImageData(const CameraFrame& frame, const std::string& frame_id) {
+  data::ImageData message;
+  message.header = BuildHeader(frame.sim_time, frame_id);
+  message.width = frame.width;
+  message.height = frame.height;
+  message.step = frame.step;
+  message.data = frame.data;
   return message;
 }
 
