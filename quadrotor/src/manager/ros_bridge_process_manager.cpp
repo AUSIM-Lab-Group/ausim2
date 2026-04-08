@@ -1,0 +1,219 @@
+#include "manager/ros_bridge_process_manager.hpp"
+
+#include <chrono>
+#include <csignal>
+#include <cstring>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <thread>
+#include <unistd.h>
+#include <utility>
+#include <vector>
+
+#include "converts/ipc/bridge_packets.hpp"
+#include "ipc/socket_packet.hpp"
+#include "runtime/data_board_interface.hpp"
+
+namespace quadrotor {
+namespace {
+
+constexpr std::chrono::milliseconds kStartupProbeDelay(300);
+constexpr std::chrono::milliseconds kShutdownPollDelay(50);
+constexpr int kShutdownPollCount = 20;
+
+std::runtime_error SystemError(const std::string& message) {
+  return std::runtime_error(message + ": " + std::strerror(errno));
+}
+
+}  // namespace
+
+RosBridgeProcessManager::RosBridgeProcessManager(
+    const QuadrotorConfig& config,
+    RosBridgeLaunchConfig launch_config)
+    : config_(config),
+      launch_config_(std::move(launch_config)) {}
+
+RosBridgeProcessManager::~RosBridgeProcessManager() {
+  Stop();
+}
+
+void RosBridgeProcessManager::Start() {
+  if (running_.load()) {
+    return;
+  }
+  if (launch_config_.executable_path.empty()) {
+    throw std::runtime_error("ROS bridge executable path is empty.");
+  }
+  if (!std::filesystem::exists(launch_config_.executable_path)) {
+    throw std::runtime_error(
+        "ROS bridge executable does not exist: " +
+        launch_config_.executable_path.string());
+  }
+
+  int telemetry_fds[2] = {-1, -1};
+  int command_fds[2] = {-1, -1};
+  if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, telemetry_fds) != 0) {
+    throw SystemError("Failed to create telemetry socketpair");
+  }
+  if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, command_fds) != 0) {
+    ipc::ShutdownAndClose(&telemetry_fds[0]);
+    ipc::ShutdownAndClose(&telemetry_fds[1]);
+    throw SystemError("Failed to create command socketpair");
+  }
+
+  telemetry_send_fd_ = telemetry_fds[0];
+  command_recv_fd_ = command_fds[0];
+  ipc::SetNonBlocking(telemetry_send_fd_);
+
+  child_pid_ = fork();
+  if (child_pid_ < 0) {
+    ipc::ShutdownAndClose(&telemetry_fds[0]);
+    ipc::ShutdownAndClose(&telemetry_fds[1]);
+    ipc::ShutdownAndClose(&command_fds[0]);
+    ipc::ShutdownAndClose(&command_fds[1]);
+    telemetry_send_fd_ = -1;
+    command_recv_fd_ = -1;
+    throw SystemError("Failed to fork ROS bridge process");
+  }
+
+  if (child_pid_ == 0) {
+    close(telemetry_fds[0]);
+    close(command_fds[0]);
+
+    std::vector<std::string> args;
+    args.push_back(launch_config_.executable_path.string());
+    args.insert(args.end(), launch_config_.config_arguments.begin(), launch_config_.config_arguments.end());
+    args.push_back("--telemetry-fd");
+    args.push_back(std::to_string(telemetry_fds[1]));
+    args.push_back("--command-fd");
+    args.push_back(std::to_string(command_fds[1]));
+
+    std::vector<char*> argv;
+    argv.reserve(args.size() + 1);
+    for (std::string& arg : args) {
+      argv.push_back(arg.data());
+    }
+    argv.push_back(nullptr);
+
+    execv(launch_config_.executable_path.c_str(), argv.data());
+    std::perror("execv quadrotor_ros_bridge");
+    _exit(127);
+  }
+
+  close(telemetry_fds[1]);
+  close(command_fds[1]);
+
+  running_.store(true);
+  command_thread_ = std::thread(&RosBridgeProcessManager::CommandLoop, this);
+  telemetry_thread_ = std::thread(&RosBridgeProcessManager::TelemetryLoop, this);
+
+  std::this_thread::sleep_for(kStartupProbeDelay);
+  EnsureChildStillRunning("startup");
+}
+
+void RosBridgeProcessManager::Stop() {
+  const bool was_running = running_.exchange(false);
+
+  ipc::ShutdownAndClose(&telemetry_send_fd_);
+  ipc::ShutdownAndClose(&command_recv_fd_);
+
+  if (telemetry_thread_.joinable()) {
+    telemetry_thread_.join();
+  }
+  if (command_thread_.joinable()) {
+    command_thread_.join();
+  }
+
+  if (child_pid_ > 0) {
+    int status = 0;
+    pid_t result = waitpid(child_pid_, &status, WNOHANG);
+    if (result == 0) {
+      kill(child_pid_, SIGTERM);
+      for (int i = 0; i < kShutdownPollCount; ++i) {
+        std::this_thread::sleep_for(kShutdownPollDelay);
+        result = waitpid(child_pid_, &status, WNOHANG);
+        if (result == child_pid_) {
+          break;
+        }
+      }
+      if (result == 0) {
+        kill(child_pid_, SIGKILL);
+        waitpid(child_pid_, &status, 0);
+      }
+    } else if (result < 0 && errno != ECHILD && was_running) {
+      std::cerr << "quadrotor warning: waitpid failed while stopping ROS bridge: "
+                << std::strerror(errno) << '\n';
+    }
+    child_pid_ = -1;
+  }
+}
+
+void RosBridgeProcessManager::TelemetryLoop() {
+  const auto period = std::chrono::duration<double>(1.0 / config_.ros2.publish_rate_hz);
+  auto next_tick = std::chrono::steady_clock::now();
+
+  while (running_.load()) {
+    next_tick += std::chrono::duration_cast<std::chrono::steady_clock::duration>(period);
+    const std::optional<TelemetrySnapshot> snapshot = ReadTelemetrySnapshot();
+    if (snapshot.has_value()) {
+      const ipc::TelemetryPacket packet = converts::ToTelemetryPacket(*snapshot);
+      ipc::SendPacket(telemetry_send_fd_, packet, true);
+    }
+    std::this_thread::sleep_until(next_tick);
+  }
+}
+
+void RosBridgeProcessManager::CommandLoop() {
+  while (running_.load()) {
+    ipc::VelocityCommandPacket packet;
+    switch (ipc::ReceivePacket(command_recv_fd_, &packet)) {
+      case ipc::PacketReceiveStatus::kPacket:
+        WriteVelocityCommand(converts::ToVelocityCommand(packet, std::chrono::steady_clock::now()));
+        break;
+      case ipc::PacketReceiveStatus::kClosed:
+        running_.store(false);
+        return;
+      case ipc::PacketReceiveStatus::kWouldBlock:
+        continue;
+      case ipc::PacketReceiveStatus::kError:
+        if (running_.load()) {
+          std::cerr << "quadrotor warning: command socket receive failed\n";
+        }
+        running_.store(false);
+        return;
+    }
+  }
+}
+
+void RosBridgeProcessManager::EnsureChildStillRunning(const char* stage) const {
+  if (child_pid_ <= 0) {
+    throw std::runtime_error("ROS bridge process was not started.");
+  }
+
+  int status = 0;
+  const pid_t result = waitpid(child_pid_, &status, WNOHANG);
+  if (result == 0) {
+    return;
+  }
+  if (result < 0) {
+    throw SystemError("Failed to probe ROS bridge process during " + std::string(stage));
+  }
+
+  if (WIFEXITED(status)) {
+    throw std::runtime_error(
+        "ROS bridge process exited during " + std::string(stage) +
+        " with code " + std::to_string(WEXITSTATUS(status)) + ".");
+  }
+  if (WIFSIGNALED(status)) {
+    throw std::runtime_error(
+        "ROS bridge process exited during " + std::string(stage) +
+        " with signal " + std::to_string(WTERMSIG(status)) + ".");
+  }
+
+  throw std::runtime_error("ROS bridge process exited unexpectedly during " + std::string(stage) + ".");
+}
+
+}  // namespace quadrotor

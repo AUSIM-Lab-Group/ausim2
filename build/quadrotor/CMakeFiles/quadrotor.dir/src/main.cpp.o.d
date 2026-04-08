@@ -180,18 +180,8 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: \
  /usr/include/c++/11/bits/stl_vector.h \
  /usr/include/c++/11/bits/stl_bvector.h \
  /usr/include/c++/11/bits/vector.tcc \
- /home/x/mujoco/ausim2/quadrotor/include/sim/quadrotor_sim.hpp \
- /usr/include/c++/11/atomic /usr/include/c++/11/bits/atomic_base.h \
- /usr/include/c++/11/bits/atomic_lockfree_defines.h \
- /usr/include/c++/11/memory /usr/include/c++/11/bits/stl_tempbuf.h \
- /usr/include/c++/11/bits/stl_raw_storage_iter.h \
- /usr/include/c++/11/bits/align.h /usr/include/c++/11/bit \
- /usr/include/c++/11/bits/shared_ptr_atomic.h \
- /usr/include/c++/11/backward/auto_ptr.h \
- /usr/include/c++/11/pstl/glue_memory_defs.h \
- /usr/include/c++/11/pstl/execution_defs.h /usr/include/c++/11/thread \
- /usr/include/c++/11/bits/std_thread.h \
- /usr/include/c++/11/bits/this_thread_sleep.h \
+ /home/x/mujoco/ausim2/quadrotor/src/app/quadrotor_app.hpp \
+ /home/x/mujoco/ausim2/quadrotor/src/config/quadrotor_config.hpp \
  /usr/include/eigen3/Eigen/Core \
  /usr/include/eigen3/Eigen/src/Core/util/DisableStupidWarnings.h \
  /usr/include/eigen3/Eigen/src/Core/util/Macros.h \
@@ -235,6 +225,7 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: \
  /usr/include/c++/11/bits/erase_if.h /usr/include/c++/11/bits/stl_algo.h \
  /usr/include/c++/11/bits/algorithmfwd.h \
  /usr/include/c++/11/bits/stl_heap.h \
+ /usr/include/c++/11/bits/stl_tempbuf.h \
  /usr/include/c++/11/bits/uniform_int_dist.h /usr/include/c++/11/cstring \
  /usr/include/string.h /usr/include/strings.h \
  /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
@@ -250,6 +241,7 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
  /usr/include/c++/11/algorithm \
  /usr/include/c++/11/pstl/glue_algorithm_defs.h \
+ /usr/include/c++/11/pstl/execution_defs.h \
  /usr/include/eigen3/Eigen/src/Core/util/Constants.h \
  /usr/include/eigen3/Eigen/src/Core/util/Meta.h \
  /usr/include/eigen3/Eigen/src/Core/util/ForwardDeclarations.h \
@@ -346,6 +338,8 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: \
  /usr/include/eigen3/Eigen/src/Core/SelfAdjointView.h \
  /usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h \
  /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h \
+ /usr/include/c++/11/atomic /usr/include/c++/11/bits/atomic_base.h \
+ /usr/include/c++/11/bits/atomic_lockfree_defines.h \
  /usr/include/eigen3/Eigen/src/Core/ProductEvaluators.h \
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h \
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h \
@@ -373,69 +367,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: \
  /usr/include/eigen3/Eigen/src/Core/StlIterators.h \
  /usr/include/eigen3/Eigen/src/Core/GlobalFunctions.h \
  /usr/include/eigen3/Eigen/src/Core/util/ReenableStupidWarnings.h \
- /opt/mujoco/include/mujoco/mujoco.h /usr/include/c++/11/math.h \
- /opt/mujoco/include/mujoco/mjdata.h /opt/mujoco/include/mujoco/mjtnum.h \
- /opt/mujoco/include/mujoco/mjmodel.h \
- /opt/mujoco/include/mujoco/mjthread.h \
- /opt/mujoco/include/mujoco/mjexport.h \
- /opt/mujoco/include/mujoco/mjmacro.h \
- /opt/mujoco/include/mujoco/mjplugin.h \
- /opt/mujoco/include/mujoco/mjvisualize.h \
- /opt/mujoco/include/mujoco/mjrender.h /opt/mujoco/include/mujoco/mjsan.h \
- /opt/mujoco/include/mujoco/mjspec.h /opt/mujoco/include/mujoco/mjui.h \
- /home/x/mujoco/ausim2/quadrotor/include/config/quadrotor_config.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/ros/ros2_bridge.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/runtime/command_mailbox.hpp \
- /usr/include/c++/11/mutex /usr/include/c++/11/bits/std_mutex.h \
- /usr/include/c++/11/bits/unique_lock.h /usr/include/c++/11/optional \
- /home/x/mujoco/ausim2/quadrotor/include/runtime/runtime_types.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/controller/se3_controller.hpp \
- /usr/include/eigen3/Eigen/Geometry /usr/include/eigen3/Eigen/Core \
- /usr/include/eigen3/Eigen/SVD /usr/include/eigen3/Eigen/QR \
- /usr/include/eigen3/Eigen/Cholesky /usr/include/eigen3/Eigen/Jacobi \
- /usr/include/eigen3/Eigen/src/Jacobi/Jacobi.h \
- /usr/include/eigen3/Eigen/src/Cholesky/LLT.h \
- /usr/include/eigen3/Eigen/src/Cholesky/LDLT.h \
- /usr/include/eigen3/Eigen/Householder \
- /usr/include/eigen3/Eigen/src/Householder/Householder.h \
- /usr/include/eigen3/Eigen/src/Householder/HouseholderSequence.h \
- /usr/include/eigen3/Eigen/src/Householder/BlockHouseholder.h \
- /usr/include/eigen3/Eigen/src/QR/HouseholderQR.h \
- /usr/include/eigen3/Eigen/src/QR/FullPivHouseholderQR.h \
- /usr/include/eigen3/Eigen/src/QR/ColPivHouseholderQR.h \
- /usr/include/eigen3/Eigen/src/QR/CompleteOrthogonalDecomposition.h \
- /usr/include/eigen3/Eigen/src/misc/RealSvd2x2.h \
- /usr/include/eigen3/Eigen/src/SVD/UpperBidiagonalization.h \
- /usr/include/eigen3/Eigen/src/SVD/SVDBase.h \
- /usr/include/eigen3/Eigen/src/SVD/JacobiSVD.h \
- /usr/include/eigen3/Eigen/src/SVD/BDCSVD.h /usr/include/eigen3/Eigen/LU \
- /usr/include/eigen3/Eigen/src/misc/Kernel.h \
- /usr/include/eigen3/Eigen/src/misc/Image.h \
- /usr/include/eigen3/Eigen/src/LU/FullPivLU.h \
- /usr/include/eigen3/Eigen/src/LU/PartialPivLU.h \
- /usr/include/eigen3/Eigen/src/LU/Determinant.h \
- /usr/include/eigen3/Eigen/src/LU/InverseImpl.h \
- /usr/include/eigen3/Eigen/src/LU/arch/InverseSize4.h \
- /usr/include/eigen3/Eigen/src/Geometry/OrthoMethods.h \
- /usr/include/eigen3/Eigen/src/Geometry/EulerAngles.h \
- /usr/include/eigen3/Eigen/src/Geometry/Homogeneous.h \
- /usr/include/eigen3/Eigen/src/Geometry/RotationBase.h \
- /usr/include/eigen3/Eigen/src/Geometry/Rotation2D.h \
- /usr/include/eigen3/Eigen/src/Geometry/Quaternion.h \
- /usr/include/eigen3/Eigen/src/Geometry/AngleAxis.h \
- /usr/include/eigen3/Eigen/src/Geometry/Transform.h \
- /usr/include/eigen3/Eigen/src/Geometry/Translation.h \
- /usr/include/eigen3/Eigen/src/Geometry/Scaling.h \
- /usr/include/eigen3/Eigen/src/Geometry/Hyperplane.h \
- /usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h \
- /usr/include/eigen3/Eigen/src/Geometry/AlignedBox.h \
- /usr/include/eigen3/Eigen/src/Geometry/Umeyama.h \
- /usr/include/eigen3/Eigen/src/Geometry/arch/Geometry_SIMD.h \
- /home/x/mujoco/ausim2/quadrotor/include/controller/state.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/runtime/telemetry_cache.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/runtime/vehicle_runtime.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/control/motor_mixer.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/runtime/goal_provider.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/sim/mujoco_actuator_writer.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/sim/mujoco_bindings.hpp \
- /home/x/mujoco/ausim2/quadrotor/include/sim/mujoco_state_reader.hpp
+ /home/x/mujoco/ausim2/quadrotor/src/manager/ros_bridge_process_manager.hpp \
+ /usr/include/c++/11/thread /usr/include/c++/11/bits/std_thread.h \
+ /usr/include/c++/11/bits/this_thread_sleep.h

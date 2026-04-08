@@ -228,22 +228,8 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
   /usr/include/c++/11/bits/stl_vector.h \
   /usr/include/c++/11/bits/stl_bvector.h \
   /usr/include/c++/11/bits/vector.tcc \
-  ../quadrotor/include/sim/quadrotor_sim.hpp \
-  /usr/include/c++/11/atomic \
-  /usr/include/c++/11/bits/atomic_base.h \
-  /usr/include/c++/11/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/11/memory \
-  /usr/include/c++/11/bits/stl_tempbuf.h \
-  /usr/include/c++/11/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/11/bits/align.h \
-  /usr/include/c++/11/bit \
-  /usr/include/c++/11/bits/shared_ptr_atomic.h \
-  /usr/include/c++/11/backward/auto_ptr.h \
-  /usr/include/c++/11/pstl/glue_memory_defs.h \
-  /usr/include/c++/11/pstl/execution_defs.h \
-  /usr/include/c++/11/thread \
-  /usr/include/c++/11/bits/std_thread.h \
-  /usr/include/c++/11/bits/this_thread_sleep.h \
+  ../quadrotor/src/app/quadrotor_app.hpp \
+  ../quadrotor/src/config/quadrotor_config.hpp \
   /usr/include/eigen3/Eigen/Core \
   /usr/include/eigen3/Eigen/src/Core/util/DisableStupidWarnings.h \
   /usr/include/eigen3/Eigen/src/Core/util/Macros.h \
@@ -294,6 +280,7 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
   /usr/include/c++/11/bits/stl_algo.h \
   /usr/include/c++/11/bits/algorithmfwd.h \
   /usr/include/c++/11/bits/stl_heap.h \
+  /usr/include/c++/11/bits/stl_tempbuf.h \
   /usr/include/c++/11/bits/uniform_int_dist.h \
   /usr/include/c++/11/cstring \
   /usr/include/string.h \
@@ -312,6 +299,7 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
   /usr/include/c++/11/algorithm \
   /usr/include/c++/11/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/11/pstl/execution_defs.h \
   /usr/include/eigen3/Eigen/src/Core/util/Constants.h \
   /usr/include/eigen3/Eigen/src/Core/util/Meta.h \
   /usr/include/eigen3/Eigen/src/Core/util/ForwardDeclarations.h \
@@ -408,6 +396,9 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
   /usr/include/eigen3/Eigen/src/Core/SelfAdjointView.h \
   /usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h \
   /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h \
+  /usr/include/c++/11/atomic \
+  /usr/include/c++/11/bits/atomic_base.h \
+  /usr/include/c++/11/bits/atomic_lockfree_defines.h \
   /usr/include/eigen3/Eigen/src/Core/ProductEvaluators.h \
   /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h \
   /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h \
@@ -435,147 +426,13 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
   /usr/include/eigen3/Eigen/src/Core/StlIterators.h \
   /usr/include/eigen3/Eigen/src/Core/GlobalFunctions.h \
   /usr/include/eigen3/Eigen/src/Core/util/ReenableStupidWarnings.h \
-  /opt/mujoco/include/mujoco/mujoco.h \
-  /usr/include/c++/11/math.h \
-  /opt/mujoco/include/mujoco/mjdata.h \
-  /opt/mujoco/include/mujoco/mjtnum.h \
-  /opt/mujoco/include/mujoco/mjmodel.h \
-  /opt/mujoco/include/mujoco/mjthread.h \
-  /opt/mujoco/include/mujoco/mjexport.h \
-  /opt/mujoco/include/mujoco/mjmacro.h \
-  /opt/mujoco/include/mujoco/mjplugin.h \
-  /opt/mujoco/include/mujoco/mjvisualize.h \
-  /opt/mujoco/include/mujoco/mjrender.h \
-  /opt/mujoco/include/mujoco/mjsan.h \
-  /opt/mujoco/include/mujoco/mjspec.h \
-  /opt/mujoco/include/mujoco/mjui.h \
-  ../quadrotor/include/config/quadrotor_config.hpp \
-  ../quadrotor/include/ros/ros2_bridge.hpp \
-  ../quadrotor/include/runtime/command_mailbox.hpp \
-  /usr/include/c++/11/mutex \
-  /usr/include/c++/11/bits/std_mutex.h \
-  /usr/include/c++/11/bits/unique_lock.h \
-  /usr/include/c++/11/optional \
-  ../quadrotor/include/runtime/runtime_types.hpp \
-  ../quadrotor/include/controller/se3_controller.hpp \
-  /usr/include/eigen3/Eigen/Geometry \
-  /usr/include/eigen3/Eigen/Core \
-  /usr/include/eigen3/Eigen/SVD \
-  /usr/include/eigen3/Eigen/QR \
-  /usr/include/eigen3/Eigen/Cholesky \
-  /usr/include/eigen3/Eigen/Jacobi \
-  /usr/include/eigen3/Eigen/src/Jacobi/Jacobi.h \
-  /usr/include/eigen3/Eigen/src/Cholesky/LLT.h \
-  /usr/include/eigen3/Eigen/src/Cholesky/LDLT.h \
-  /usr/include/eigen3/Eigen/Householder \
-  /usr/include/eigen3/Eigen/src/Householder/Householder.h \
-  /usr/include/eigen3/Eigen/src/Householder/HouseholderSequence.h \
-  /usr/include/eigen3/Eigen/src/Householder/BlockHouseholder.h \
-  /usr/include/eigen3/Eigen/src/QR/HouseholderQR.h \
-  /usr/include/eigen3/Eigen/src/QR/FullPivHouseholderQR.h \
-  /usr/include/eigen3/Eigen/src/QR/ColPivHouseholderQR.h \
-  /usr/include/eigen3/Eigen/src/QR/CompleteOrthogonalDecomposition.h \
-  /usr/include/eigen3/Eigen/src/misc/RealSvd2x2.h \
-  /usr/include/eigen3/Eigen/src/SVD/UpperBidiagonalization.h \
-  /usr/include/eigen3/Eigen/src/SVD/SVDBase.h \
-  /usr/include/eigen3/Eigen/src/SVD/JacobiSVD.h \
-  /usr/include/eigen3/Eigen/src/SVD/BDCSVD.h \
-  /usr/include/eigen3/Eigen/LU \
-  /usr/include/eigen3/Eigen/src/misc/Kernel.h \
-  /usr/include/eigen3/Eigen/src/misc/Image.h \
-  /usr/include/eigen3/Eigen/src/LU/FullPivLU.h \
-  /usr/include/eigen3/Eigen/src/LU/PartialPivLU.h \
-  /usr/include/eigen3/Eigen/src/LU/Determinant.h \
-  /usr/include/eigen3/Eigen/src/LU/InverseImpl.h \
-  /usr/include/eigen3/Eigen/src/LU/arch/InverseSize4.h \
-  /usr/include/eigen3/Eigen/src/Geometry/OrthoMethods.h \
-  /usr/include/eigen3/Eigen/src/Geometry/EulerAngles.h \
-  /usr/include/eigen3/Eigen/src/Geometry/Homogeneous.h \
-  /usr/include/eigen3/Eigen/src/Geometry/RotationBase.h \
-  /usr/include/eigen3/Eigen/src/Geometry/Rotation2D.h \
-  /usr/include/eigen3/Eigen/src/Geometry/Quaternion.h \
-  /usr/include/eigen3/Eigen/src/Geometry/AngleAxis.h \
-  /usr/include/eigen3/Eigen/src/Geometry/Transform.h \
-  /usr/include/eigen3/Eigen/src/Geometry/Translation.h \
-  /usr/include/eigen3/Eigen/src/Geometry/Scaling.h \
-  /usr/include/eigen3/Eigen/src/Geometry/Hyperplane.h \
-  /usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h \
-  /usr/include/eigen3/Eigen/src/Geometry/AlignedBox.h \
-  /usr/include/eigen3/Eigen/src/Geometry/Umeyama.h \
-  /usr/include/eigen3/Eigen/src/Geometry/arch/Geometry_SIMD.h \
-  ../quadrotor/include/controller/state.hpp \
-  ../quadrotor/include/runtime/telemetry_cache.hpp \
-  ../quadrotor/include/runtime/vehicle_runtime.hpp \
-  ../quadrotor/include/control/motor_mixer.hpp \
-  ../quadrotor/include/runtime/goal_provider.hpp \
-  ../quadrotor/include/sim/mujoco_actuator_writer.hpp \
-  ../quadrotor/include/sim/mujoco_bindings.hpp \
-  ../quadrotor/include/sim/mujoco_state_reader.hpp
+  ../quadrotor/src/manager/ros_bridge_process_manager.hpp \
+  /usr/include/c++/11/thread \
+  /usr/include/c++/11/bits/std_thread.h \
+  /usr/include/c++/11/bits/this_thread_sleep.h
 
 
-/usr/include/eigen3/Eigen/src/Geometry/arch/Geometry_SIMD.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/Umeyama.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/AlignedBox.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/ParametrizedLine.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/Hyperplane.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/Scaling.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/AngleAxis.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/Quaternion.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/RotationBase.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/Homogeneous.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/EulerAngles.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/OrthoMethods.h:
-
-/usr/include/eigen3/Eigen/src/LU/InverseImpl.h:
-
-/usr/include/eigen3/Eigen/src/misc/Kernel.h:
-
-/usr/include/eigen3/Eigen/src/SVD/BDCSVD.h:
-
-/usr/include/eigen3/Eigen/src/SVD/SVDBase.h:
-
-/usr/include/eigen3/Eigen/src/QR/HouseholderQR.h:
-
-/usr/include/eigen3/Eigen/src/Householder/BlockHouseholder.h:
-
-/usr/include/eigen3/Eigen/src/Householder/Householder.h:
-
-/usr/include/eigen3/Eigen/src/Cholesky/LLT.h:
-
-/usr/include/eigen3/Eigen/Jacobi:
-
-/usr/include/eigen3/Eigen/Cholesky:
-
-../quadrotor/include/runtime/runtime_types.hpp:
-
-/usr/include/c++/11/optional:
-
-../quadrotor/include/config/quadrotor_config.hpp:
-
-/opt/mujoco/include/mujoco/mjui.h:
-
-/opt/mujoco/include/mujoco/mjsan.h:
-
-/opt/mujoco/include/mujoco/mjvisualize.h:
-
-/opt/mujoco/include/mujoco/mjtnum.h:
-
-/opt/mujoco/include/mujoco/mjthread.h:
-
-/opt/mujoco/include/mujoco/mjdata.h:
-
-/opt/mujoco/include/mujoco/mujoco.h:
+../quadrotor/src/manager/ros_bridge_process_manager.hpp:
 
 /usr/include/eigen3/Eigen/src/Core/util/ReenableStupidWarnings.h:
 
@@ -593,8 +450,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/eigen3/Eigen/src/Core/CoreIterators.h:
 
-/usr/include/eigen3/Eigen/src/Geometry/Rotation2D.h:
-
 /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverVector.h:
 
 /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector.h:
@@ -605,17 +460,17 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector.h:
 
-../quadrotor/include/runtime/telemetry_cache.hpp:
-
 /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h:
 
 /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h:
 
-/usr/include/eigen3/Eigen/src/SVD/JacobiSVD.h:
-
-/usr/include/eigen3/Eigen/src/SVD/UpperBidiagonalization.h:
-
 /usr/include/eigen3/Eigen/src/Core/ProductEvaluators.h:
+
+/usr/include/c++/11/bits/atomic_lockfree_defines.h:
+
+/usr/include/c++/11/bits/atomic_base.h:
+
+/usr/include/c++/11/atomic:
 
 /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h:
 
@@ -635,8 +490,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/eigen3/Eigen/src/Core/Reshaped.h:
 
-/usr/include/eigen3/Eigen/src/Geometry/Transform.h:
-
 /usr/include/eigen3/Eigen/src/Core/Block.h:
 
 /usr/include/eigen3/Eigen/src/Core/Ref.h:
@@ -647,8 +500,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/eigen3/Eigen/src/Core/Stride.h:
 
-/usr/include/c++/11/math.h:
-
 /usr/include/eigen3/Eigen/src/Core/Dot.h:
 
 /usr/include/eigen3/Eigen/src/Core/SelfCwiseBinaryOp.h:
@@ -656,6 +507,8 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 /usr/include/eigen3/Eigen/src/Core/CwiseNullaryOp.h:
 
 /usr/include/eigen3/Eigen/src/Core/CwiseUnaryOp.h:
+
+/usr/include/eigen3/Eigen/src/Core/CwiseBinaryOp.h:
 
 /usr/include/eigen3/Eigen/src/Core/NoAlias.h:
 
@@ -693,8 +546,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/eigen3/Eigen/src/Core/functors/UnaryFunctors.h:
 
-/opt/mujoco/include/mujoco/mjrender.h:
-
 /usr/include/eigen3/Eigen/src/Core/MapBase.h:
 
 /usr/include/eigen3/Eigen/src/Core/arch/Default/GenericPacketMathFunctions.h:
@@ -721,8 +572,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/eigen3/Eigen/src/Core/arch/Default/ConjHelper.h:
 
-/usr/include/eigen3/Eigen/Geometry:
-
 /usr/include/eigen3/Eigen/src/Core/MathFunctionsImpl.h:
 
 /usr/include/eigen3/Eigen/src/Core/MathFunctions.h:
@@ -739,17 +588,11 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/eigen3/Eigen/src/Core/util/StaticAssert.h:
 
-/usr/include/c++/11/mutex:
-
 /usr/include/eigen3/Eigen/src/Core/util/ForwardDeclarations.h:
 
 /usr/include/eigen3/Eigen/src/Core/util/Meta.h:
 
-/usr/include/eigen3/Eigen/src/Geometry/Translation.h:
-
 /usr/include/eigen3/Eigen/src/Core/util/Constants.h:
-
-/usr/include/eigen3/Eigen/src/misc/RealSvd2x2.h:
 
 /usr/include/c++/11/algorithm:
 
@@ -759,13 +602,17 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/local_lim.h:
 
-/usr/include/eigen3/Eigen/src/Householder/HouseholderSequence.h:
-
 /usr/include/x86_64-linux-gnu/bits/posix1_lim.h:
+
+/usr/include/x86_64-linux-gnu/bits/string_fortified.h:
 
 /usr/include/x86_64-linux-gnu/bits/strings_fortified.h:
 
 /usr/include/strings.h:
+
+/usr/include/c++/11/pstl/execution_defs.h:
+
+/usr/include/c++/11/bits/algorithmfwd.h:
 
 /usr/include/eigen3/Eigen/src/Core/BooleanRedux.h:
 
@@ -781,12 +628,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/unordered_map:
 
-/usr/include/eigen3/Eigen/src/QR/FullPivHouseholderQR.h:
-
-/usr/include/eigen3/Eigen/Householder:
-
-/opt/mujoco/include/mujoco/mjexport.h:
-
 /usr/include/eigen3/Eigen/src/Core/DenseBase.h:
 
 /usr/include/assert.h:
@@ -794,8 +635,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 /usr/include/c++/11/cassert:
 
 /usr/include/eigen3/Eigen/src/Core/util/MKL_support.h:
-
-/opt/mujoco/include/mujoco/mjmacro.h:
 
 /usr/include/eigen3/Eigen/src/Core/CwiseUnaryView.h:
 
@@ -807,41 +646,9 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h:
 
-/usr/include/eigen3/Eigen/src/Core/util/ConfigureVectorization.h:
-
-/usr/include/c++/11/tr1/riemann_zeta.tcc:
-
-/usr/include/c++/11/bits/std_mutex.h:
-
-/usr/include/c++/11/tr1/poly_laguerre.tcc:
-
-/usr/include/c++/11/tr1/poly_hermite.tcc:
-
-/usr/include/c++/11/tr1/modified_bessel_func.tcc:
-
-/usr/include/eigen3/Eigen/src/QR/ColPivHouseholderQR.h:
-
-/usr/include/c++/11/tr1/hypergeometric.tcc:
-
-/opt/mujoco/include/mujoco/mjspec.h:
-
-/usr/include/c++/11/tr1/exp_integral.tcc:
-
-/usr/include/c++/11/tr1/ell_integral.tcc:
-
-/usr/include/c++/11/tr1/bessel_function.tcc:
-
-/usr/include/c++/11/tr1/special_function_util.h:
-
-/usr/include/eigen3/Eigen/src/Core/functors/TernaryFunctors.h:
-
-/usr/include/c++/11/bits/specfun.h:
-
 /usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h:
 
 /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h:
-
-/usr/include/eigen3/Eigen/src/Cholesky/LDLT.h:
 
 /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h:
 
@@ -867,8 +674,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/time.h:
 
-/usr/include/eigen3/Eigen/src/misc/Image.h:
-
 /usr/include/eigen3/Eigen/src/Core/StlIterators.h:
 
 /usr/include/pthread.h:
@@ -883,15 +688,17 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/bits/basic_string.h:
 
+/usr/include/x86_64-linux-gnu/bits/endian.h:
+
 /usr/include/eigen3/Eigen/src/plugins/IndexedViewMethods.h:
 
 /usr/include/x86_64-linux-gnu/gnu/stubs.h:
 
-../quadrotor/include/ros/ros2_bridge.hpp:
-
 /usr/include/x86_64-linux-gnu/bits/endianness.h:
 
 /usr/include/libintl.h:
+
+/usr/include/c++/11/tr1/modified_bessel_func.tcc:
 
 /usr/include/x86_64-linux-gnu/bits/locale.h:
 
@@ -900,6 +707,8 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h:
 
 /usr/include/c++/11/bits/localefwd.h:
+
+/usr/include/c++/11/tr1/hypergeometric.tcc:
 
 /usr/include/eigen3/Eigen/src/Core/DiagonalMatrix.h:
 
@@ -919,8 +728,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/types.h:
 
-/usr/include/eigen3/Eigen/src/LU/PartialPivLU.h:
-
 /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix.h:
 
 /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h:
@@ -939,6 +746,12 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/new:
 
+/usr/include/c++/11/bits/std_thread.h:
+
+/usr/include/c++/11/bits/cpp_type_traits.h:
+
+/usr/include/c++/11/bits/stl_iterator_base_funcs.h:
+
 /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
@@ -947,7 +760,7 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/cstdlib:
 
-/usr/include/c++/11/bit:
+/usr/include/c++/11/tr1/poly_laguerre.tcc:
 
 /usr/include/eigen3/Eigen/src/plugins/CommonCwiseUnaryOps.h:
 
@@ -960,8 +773,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 /usr/include/c++/11/streambuf:
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h:
-
-../quadrotor/include/sim/mujoco_state_reader.hpp:
 
 /usr/include/c++/11/bits/stl_algobase.h:
 
@@ -976,12 +787,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 /usr/include/c++/11/bits/stringfwd.h:
 
 /usr/include/c++/11/ext/type_traits.h:
-
-/usr/include/eigen3/Eigen/src/Core/CwiseBinaryOp.h:
-
-/usr/include/c++/11/pstl/glue_memory_defs.h:
-
-../quadrotor/include/controller/state.hpp:
 
 /usr/include/c++/11/functional:
 
@@ -1009,7 +814,9 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/filesystem:
 
-../quadrotor/include/sim/mujoco_actuator_writer.hpp:
+/usr/include/eigen3/Eigen/src/Core/functors/TernaryFunctors.h:
+
+/usr/include/c++/11/bits/specfun.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
 
@@ -1023,23 +830,13 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/asm-generic/errno.h:
 
-/usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h:
-
-/usr/include/eigen3/Eigen/src/Core/arch/SSE/PacketMath.h:
-
-/usr/include/c++/11/tr1/legendre_function.tcc:
-
-/usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h:
-
-/usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h:
+/usr/include/c++/11/tr1/ell_integral.tcc:
 
 /usr/include/x86_64-linux-gnu/asm/errno.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdlib.h:
-
-/usr/include/eigen3/Eigen/LU:
 
 /usr/include/eigen3/Eigen/src/Core/Transpositions.h:
 
@@ -1055,8 +852,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/sys/cdefs.h:
 
-../quadrotor/include/runtime/vehicle_runtime.hpp:
-
 /usr/include/c++/11/bits/memoryfwd.h:
 
 /usr/include/c++/11/bits/stl_function.h:
@@ -1064,8 +859,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h:
 
 /usr/include/c++/11/system_error:
-
-/opt/mujoco/include/mujoco/mjplugin.h:
 
 /usr/include/c++/11/cstddef:
 
@@ -1095,10 +888,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/iosfwd:
 
-/usr/include/c++/11/tr1/gamma.tcc:
-
-/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
-
 /usr/lib/gcc/x86_64-linux-gnu/11/include/limits.h:
 
 ../quadrotor/src/main.cpp:
@@ -1111,19 +900,19 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/wchar.h:
 
-/usr/include/c++/11/ext/numeric_traits.h:
+/usr/include/c++/11/bits/stl_tempbuf.h:
 
-/usr/include/c++/11/bits/atomic_base.h:
+/usr/include/c++/11/bits/std_function.h:
+
+../quadrotor/src/config/quadrotor_config.hpp:
+
+/usr/include/c++/11/ext/numeric_traits.h:
 
 /usr/include/features.h:
 
 /usr/include/c++/11/bits/fs_dir.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/FILE.h:
-
-/usr/include/c++/11/bits/algorithmfwd.h:
-
-/usr/include/c++/11/pstl/execution_defs.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/locale_t.h:
 
@@ -1147,6 +936,8 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/waitstatus.h:
 
+/usr/include/c++/11/tr1/special_function_util.h:
+
 /usr/include/eigen3/Eigen/src/Core/Solve.h:
 
 /usr/include/x86_64-linux-gnu/bits/timesize.h:
@@ -1154,8 +945,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 /usr/include/c++/11/complex:
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/cpu_defines.h:
-
-/opt/mujoco/include/mujoco/mjmodel.h:
 
 /usr/include/eigen3/Eigen/src/Core/IO.h:
 
@@ -1197,19 +986,11 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h:
 
-../quadrotor/include/runtime/command_mailbox.hpp:
-
 /usr/include/c++/11/bits/nested_exception.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/clock_t.h:
 
-/usr/include/c++/11/bits/std_function.h:
-
-/usr/include/c++/11/bits/stl_tempbuf.h:
-
 /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
-
-../quadrotor/include/controller/se3_controller.hpp:
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h:
 
@@ -1241,12 +1022,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/bits/exception_defines.h:
 
-../quadrotor/include/runtime/goal_provider.hpp:
-
-/usr/include/eigen3/Eigen/QR:
-
-/usr/include/c++/11/atomic:
-
 /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h:
 
 /usr/include/c++/11/typeinfo:
@@ -1266,6 +1041,8 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 /usr/include/stdc-predef.h:
 
 /usr/include/c++/11/bits/alloc_traits.h:
+
+/usr/include/c++/11/tr1/exp_integral.tcc:
 
 /usr/include/c++/11/bits/functional_hash.h:
 
@@ -1313,8 +1090,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/alloca.h:
 
-/usr/include/eigen3/Eigen/src/LU/arch/InverseSize4.h:
-
 /usr/include/c++/11/cwctype:
 
 /usr/include/c++/11/bits/stl_heap.h:
@@ -1327,6 +1102,8 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/wordsize.h:
 
+../quadrotor/src/app/quadrotor_app.hpp:
+
 /usr/include/c++/11/chrono:
 
 /usr/include/stdio.h:
@@ -1335,11 +1112,9 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/stdio2.h:
 
-../quadrotor/include/control/motor_mixer.hpp:
+/usr/include/c++/11/bits/this_thread_sleep.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h:
-
-/usr/include/c++/11/bits/this_thread_sleep.h:
 
 /usr/include/c++/11/bits/locale_facets.tcc:
 
@@ -1349,10 +1124,6 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/bits/basic_string.tcc:
 
-/usr/include/x86_64-linux-gnu/bits/endian.h:
-
-../quadrotor/include/sim/quadrotor_sim.hpp:
-
 /usr/include/c++/11/thread:
 
 /usr/include/c++/11/ratio:
@@ -1361,17 +1132,15 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/bits/parse_numbers.h:
 
-/usr/include/c++/11/bits/shared_ptr_atomic.h:
-
-/usr/include/eigen3/Eigen/src/QR/CompleteOrthogonalDecomposition.h:
-
 /usr/include/limits.h:
 
 /usr/include/c++/11/bits/stl_relops.h:
 
-/usr/include/eigen3/Eigen/SVD:
-
 /usr/include/c++/11/bits/locale_classes.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
+
+/usr/include/c++/11/tr1/gamma.tcc:
 
 /usr/include/c++/11/bits/locale_classes.tcc:
 
@@ -1385,13 +1154,13 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/bits/locale_facets.h:
 
+/usr/include/c++/11/tr1/poly_hermite.tcc:
+
 /usr/include/c++/11/bits/ios_base.h:
 
 /usr/include/x86_64-linux-gnu/bits/wchar2.h:
 
 /usr/include/x86_64-linux-gnu/bits/fp-logb.h:
-
-../quadrotor/include/sim/mujoco_bindings.hpp:
 
 /usr/include/string.h:
 
@@ -1399,7 +1168,7 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/bits/streambuf.tcc:
 
-/usr/include/c++/11/bits/atomic_lockfree_defines.h:
+/usr/include/c++/11/tr1/bessel_function.tcc:
 
 /usr/include/c++/11/bits/streambuf_iterator.h:
 
@@ -1423,19 +1192,11 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/ostream:
 
-/usr/include/c++/11/tr1/beta_function.tcc:
-
-/usr/include/c++/11/array:
-
-/usr/include/c++/11/bits/unique_lock.h:
-
 /usr/include/eigen3/Eigen/src/Core/AssignEvaluator.h:
 
 /usr/include/c++/11/bits/uses_allocator.h:
 
 /usr/include/c++/11/bits/quoted_string.h:
-
-/usr/include/eigen3/Eigen/src/LU/FullPivLU.h:
 
 /usr/include/c++/11/cstring:
 
@@ -1465,15 +1226,19 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/bits/fs_ops.h:
 
-/usr/include/eigen3/Eigen/src/Jacobi/Jacobi.h:
+/usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h:
+
+/usr/include/eigen3/Eigen/src/Core/arch/SSE/PacketMath.h:
+
+/usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h:
+
+/usr/include/c++/11/tr1/legendre_function.tcc:
 
 /usr/include/c++/11/vector:
 
-/usr/include/c++/11/bits/align.h:
-
 /usr/include/c++/11/bits/stl_uninitialized.h:
-
-/usr/include/c++/11/backward/auto_ptr.h:
 
 /usr/include/eigen3/Eigen/src/Core/util/BlasUtil.h:
 
@@ -1489,25 +1254,11 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 
 /usr/include/c++/11/bits/vector.tcc:
 
-/usr/include/x86_64-linux-gnu/bits/string_fortified.h:
-
-/usr/include/c++/11/memory:
-
-/usr/include/c++/11/bits/stl_raw_storage_iter.h:
-
-/usr/include/c++/11/bits/cpp_type_traits.h:
-
-/usr/include/c++/11/bits/stl_iterator_base_funcs.h:
-
-/usr/include/c++/11/bits/std_thread.h:
-
 /usr/include/eigen3/Eigen/src/Core/products/SelfadjointRank2Update.h:
 
 /usr/include/eigen3/Eigen/src/Core/util/DisableStupidWarnings.h:
 
 /usr/include/x86_64-linux-gnu/bits/math-vector.h:
-
-/usr/include/eigen3/Eigen/src/LU/Determinant.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h:
 
@@ -1526,3 +1277,11 @@ quadrotor/CMakeFiles/quadrotor.dir/src/main.cpp.o: ../quadrotor/src/main.cpp \
 /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h:
 
 /usr/include/x86_64-linux-gnu/bits/iscanonical.h:
+
+/usr/include/c++/11/array:
+
+/usr/include/c++/11/tr1/beta_function.tcc:
+
+/usr/include/c++/11/tr1/riemann_zeta.tcc:
+
+/usr/include/eigen3/Eigen/src/Core/util/ConfigureVectorization.h:

@@ -1,9 +1,6 @@
 #pragma once
 
-#include <memory>
-
 #include "config/quadrotor_config.hpp"
-#include "runtime/command_mailbox.hpp"
 #include "runtime/runtime_types.hpp"
 
 namespace quadrotor {
@@ -33,16 +30,16 @@ class DemoGoalProvider : public GoalProvider {
 
 class CommandGoalProvider : public GoalProvider {
  public:
-  CommandGoalProvider(
-      const QuadrotorConfig& config,
-      std::shared_ptr<CommandMailbox> command_mailbox);
+  explicit CommandGoalProvider(const QuadrotorConfig& config);
 
   GoalReference Evaluate(const GoalContext& context) override;
- void Reset() override;
+  void Reset() override;
 
  private:
-  std::shared_ptr<CommandMailbox> command_mailbox_;
-  bool yaw_initialized_ = false;
+  double command_timeout_seconds_ = 0.5;
+  SE3Controller::ControlMode control_mode_ = SE3Controller::ControlMode::kVelocity;
+  bool initialized_ = false;
+  Eigen::Vector3d spawn_position_ = Eigen::Vector3d::Zero();
   double desired_yaw_ = 0.0;
   double last_sim_time_ = 0.0;
 };

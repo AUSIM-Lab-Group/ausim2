@@ -13,7 +13,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
 
 # Targets to which this target links.
 set(CMAKE_TARGET_LINKED_INFO_FILES
-  "/home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/quadrotor_core.dir/DependInfo.cmake"
+  "/home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/quadrotor_sim_core.dir/DependInfo.cmake"
   "/home/x/mujoco/ausim2/build/quadrotor/CMakeFiles/quadrotor_mujoco_viewer.dir/DependInfo.cmake"
   )
 

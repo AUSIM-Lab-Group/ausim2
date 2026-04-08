@@ -1,24 +1,31 @@
 #include "ros/ros2_bridge.hpp"
-#include "ros/publisher/data/clock_data_publisher.hpp"
-#include "ros/publisher/data/imu_data_publisher.hpp"
-#include "ros/publisher/data/odom_data_publisher.hpp"
-#include "ros/publisher/data/transform_data_publisher.hpp"
-#include "ros/subscriber/data/cmd_vel_command_subscriber.hpp"
 
+#include <atomic>
 #include <cstdlib>
 #include <filesystem>
+#include <iostream>
+#include <memory>
+#include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
-#if defined(QUADROTOR_HAS_ROS2)
 #include <rclcpp/rclcpp.hpp>
-#endif
+
+#include "converts/ipc/bridge_packets.hpp"
+#include "ipc/socket_packet.hpp"
+#include "ros/publisher/data/clock_data_publisher.hpp"
+#include "ros/publisher/data/imu_data_publisher.hpp"
+#include "ros/publisher/data/odom_data_publisher.hpp"
+#include "ros/publisher/data/transform_data_publisher.hpp"
+#include "ros/publisher/i_telemetry_publisher.hpp"
+#include "ros/subscriber/data/cmd_vel_command_subscriber.hpp"
+#include "ros/subscriber/i_command_subscriber.hpp"
 
 namespace quadrotor {
-
-#if defined(QUADROTOR_HAS_ROS2)
 namespace {
 
 namespace fs = std::filesystem;
@@ -102,45 +109,77 @@ void EnsureWritableRosHome() {
 #endif
 }
 
-bool CycloneDdsAvailable() {
-  static const fs::path kCandidates[] = {
-      fs::path("/opt/ros/humble/share/rmw_cyclonedds_cpp"),
-      fs::path("/opt/ros/humble_py311/share/rmw_cyclonedds_cpp"),
-  };
-  for (const fs::path& candidate : kCandidates) {
-    if (fs::exists(candidate)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-void EnsurePreferredRmwImplementation() {
-#if defined(__linux__)
-  if (std::getenv("RMW_IMPLEMENTATION") == nullptr && CycloneDdsAvailable()) {
-    setenv("RMW_IMPLEMENTATION", "rmw_cyclonedds_cpp", 0);
-  }
-#endif
-}
-
 std::string ActiveRmwImplementation() {
   const char* value = std::getenv("RMW_IMPLEMENTATION");
   return value == nullptr ? std::string("<unset>") : std::string(value);
 }
 
-class Ros2BridgeImpl final : public Ros2Bridge {
+bool RosStartupDebugEnabled() {
+  const char* value = std::getenv("QUADROTOR_DEBUG_ROS2_STARTUP");
+  return value != nullptr && std::string(value) != "0" && std::string(value) != "false";
+}
+
+void RosStartupDebugLog(const std::string& message) {
+  if (RosStartupDebugEnabled()) {
+    std::cerr << "[quadrotor][ros2-child] " << message << std::endl;
+  }
+}
+
+// Builds the fixed set of telemetry publishers from config.
+// Each publisher captures its own frame strings and handles conversion internally.
+std::vector<std::unique_ptr<ITelemetryPublisher>> BuildPublishers(
+    const std::shared_ptr<rclcpp::Node>& node,
+    const RosBridgeConfig& config,
+    const std::string& odom_frame,
+    const std::string& base_frame,
+    const std::string& imu_frame) {
+  std::vector<std::unique_ptr<ITelemetryPublisher>> publishers;
+
+  publishers.push_back(std::make_unique<OdomDataPublisher>(
+      node,
+      ResolveTopicName(config, config.interfaces.odom_topic),
+      odom_frame,
+      base_frame));
+
+  publishers.push_back(std::make_unique<ImuDataPublisher>(
+      node,
+      ResolveTopicName(config, config.interfaces.imu_topic),
+      imu_frame));
+
+  if (config.ros2.publish_clock) {
+    publishers.push_back(std::make_unique<ClockDataPublisher>(
+        node,
+        ResolveTopicName(config, config.interfaces.clock_topic)));
+  }
+
+  if (config.ros2.publish_tf) {
+    publishers.push_back(
+        std::make_unique<TransformDataPublisher>(node, odom_frame, base_frame));
+  }
+
+  return publishers;
+}
+
+class RosBridgeProcess {
  public:
-  Ros2BridgeImpl(
-      RosBridgeConfig config,
-      std::shared_ptr<CommandMailbox> command_mailbox,
-      std::shared_ptr<TelemetryCache> telemetry_cache)
+  RosBridgeProcess(RosBridgeConfig config, int telemetry_fd, int command_fd)
       : config_(std::move(config)),
-        command_mailbox_(std::move(command_mailbox)),
-        telemetry_cache_(std::move(telemetry_cache)) {}
+        telemetry_fd_(telemetry_fd),
+        command_fd_(command_fd) {}
 
-  ~Ros2BridgeImpl() override { Stop(); }
+  ~RosBridgeProcess() {
+    Stop();
+  }
 
-  void Start() override {
+  int Run() {
+    Start();
+    executor_->spin();
+    Stop();
+    return 0;
+  }
+
+ private:
+  void Start() {
     if (started_) {
       return;
     }
@@ -149,62 +188,48 @@ class Ros2BridgeImpl final : public Ros2Bridge {
     }
 
     EnsureWritableRosHome();
-    EnsurePreferredRmwImplementation();
 
     try {
+      RosStartupDebugLog("starting ROS bridge child");
       if (!rclcpp::ok()) {
         int argc = 1;
-        char program_name[] = "quadrotor_ros2_bridge";
+        char program_name[] = "quadrotor_ros_bridge";
         char* argv[] = {program_name, nullptr};
         rclcpp::init(argc, argv);
         owns_rclcpp_runtime_ = true;
       }
 
+      RosStartupDebugLog("creating rclcpp::Node");
       node_ = std::make_shared<rclcpp::Node>(config_.ros2.node_name);
 
-      const std::string odom_topic = ResolveTopicName(config_, config_.interfaces.odom_topic);
-      const std::string imu_topic = ResolveTopicName(config_, config_.interfaces.imu_topic);
-      const std::string clock_topic = ResolveTopicName(config_, config_.interfaces.clock_topic);
-      const std::string cmd_vel_topic =
-          ResolveTopicName(config_, config_.interfaces.cmd_vel_topic);
       const std::string odom_frame = ResolveFrameId(config_, config_.frames.odom);
       const std::string base_frame = ResolveFrameId(config_, config_.frames.base);
       const std::string imu_frame = ResolveFrameId(config_, config_.frames.imu);
+      const std::string cmd_vel_topic =
+          ResolveTopicName(config_, config_.interfaces.cmd_vel_topic);
 
-      odom_publisher_ = std::make_unique<OdomDataPublisher>(
+      publishers_ = BuildPublishers(node_, config_, odom_frame, base_frame, imu_frame);
+
+      subscribers_.push_back(std::make_unique<CmdVelCommandSubscriber>(
           node_,
-          odom_topic,
-          odom_frame,
-          base_frame);
-      imu_publisher_ = std::make_unique<ImuDataPublisher>(
-          node_,
-          imu_topic,
-          imu_frame);
+          cmd_vel_topic,
+          [this](const data::CmdVelData& message) { PublishCommand(message); }));
 
-      if (config_.ros2.publish_clock) {
-        clock_publisher_ = std::make_unique<ClockDataPublisher>(node_, clock_topic);
-      }
-      if (config_.ros2.publish_tf) {
-        transform_publisher_ =
-            std::make_unique<TransformDataPublisher>(node_, odom_frame, base_frame);
-      }
-
-      cmd_vel_subscription_ =
-          std::make_unique<CmdVelCommandSubscriber>(node_, cmd_vel_topic, command_mailbox_);
-
-      const auto period = std::chrono::duration_cast<std::chrono::nanoseconds>(
-          std::chrono::duration<double>(1.0 / config_.ros2.publish_rate_hz));
-      telemetry_timer_ = node_->create_wall_timer(
-          period,
-          [this]() {
-            PublishTelemetry();
-          });
-
+      // Sensor publishers driven by sensors[] config.
+      // Add a new else-if branch here when implementing a new sensor type.
       for (const SensorConfig& sensor : config_.sensors) {
-        if (sensor.enabled) {
+        if (!sensor.enabled) {
+          continue;
+        }
+        const std::string topic = ResolveTopicName(config_, sensor.topic);
+        const std::string frame = ResolveFrameId(config_, sensor.frame_id);
+
+        if (sensor.type == "imu") {
+          publishers_.push_back(std::make_unique<ImuDataPublisher>(node_, topic, frame));
+        } else {
           RCLCPP_WARN(
               node_->get_logger(),
-              "Configured ROS sensor bridge '%s' of type '%s' is not implemented yet.",
+              "Sensor '%s' of type '%s' is not implemented yet.",
               sensor.name.c_str(),
               sensor.type.c_str());
         }
@@ -212,52 +237,50 @@ class Ros2BridgeImpl final : public Ros2Bridge {
 
       executor_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
       executor_->add_node(node_);
-      spin_thread_ = std::thread([this]() { executor_->spin(); });
-      started_ = true;
-    } catch (const std::exception& error) {
-      if (executor_ && node_) {
-        executor_->remove_node(node_);
-      }
-      telemetry_timer_.reset();
-      cmd_vel_subscription_.reset();
-      odom_publisher_.reset();
-      imu_publisher_.reset();
-      clock_publisher_.reset();
-      transform_publisher_.reset();
-      executor_.reset();
-      node_.reset();
-      if (owns_rclcpp_runtime_ && rclcpp::ok()) {
-        rclcpp::shutdown();
-      }
-      owns_rclcpp_runtime_ = false;
 
+      const auto period = std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::duration<double>(1.0 / config_.ros2.publish_rate_hz));
+      telemetry_timer_ = node_->create_wall_timer(
+          period,
+          [this]() { PublishTelemetry(); });
+
+      telemetry_thread_ = std::thread([this]() { TelemetryLoop(); });
+      started_ = true;
+      RosStartupDebugLog("ROS bridge child started");
+    } catch (const std::exception& error) {
+      Stop();
       throw std::runtime_error(
-          "Failed to start ROS2 bridge (RMW_IMPLEMENTATION=" + ActiveRmwImplementation() +
-          "): " + error.what());
+          "Failed to start ROS bridge child (RMW_IMPLEMENTATION=" +
+          ActiveRmwImplementation() + "): " + error.what());
     }
   }
 
-  void Stop() override {
-    if (!started_) {
+  void Stop() {
+    if (!started_ && !owns_rclcpp_runtime_) {
+      ipc::ShutdownAndClose(&telemetry_fd_);
+      ipc::ShutdownAndClose(&command_fd_);
       return;
     }
 
+    stop_requested_.store(true);
     if (executor_) {
       executor_->cancel();
     }
-    if (spin_thread_.joinable()) {
-      spin_thread_.join();
-    }
-    if (executor_ && node_) {
-      executor_->remove_node(node_);
+
+    ipc::ShutdownAndClose(&telemetry_fd_);
+    ipc::ShutdownAndClose(&command_fd_);
+
+    if (telemetry_thread_.joinable()) {
+      telemetry_thread_.join();
     }
 
     telemetry_timer_.reset();
-    cmd_vel_subscription_.reset();
-    odom_publisher_.reset();
-    imu_publisher_.reset();
-    clock_publisher_.reset();
-    transform_publisher_.reset();
+    subscribers_.clear();
+    publishers_.clear();
+
+    if (executor_ && node_) {
+      executor_->remove_node(node_);
+    }
     executor_.reset();
     node_.reset();
 
@@ -269,70 +292,77 @@ class Ros2BridgeImpl final : public Ros2Bridge {
     started_ = false;
   }
 
- private:
+  void TelemetryLoop() {
+    while (!stop_requested_.load()) {
+      ipc::TelemetryPacket packet;
+      switch (ipc::ReceivePacket(telemetry_fd_, &packet)) {
+        case ipc::PacketReceiveStatus::kPacket: {
+          std::lock_guard<std::mutex> lock(telemetry_mutex_);
+          latest_telemetry_ = packet;
+          break;
+        }
+        case ipc::PacketReceiveStatus::kClosed:
+          RequestStop();
+          return;
+        case ipc::PacketReceiveStatus::kWouldBlock:
+          continue;
+        case ipc::PacketReceiveStatus::kError:
+          if (!stop_requested_.load()) {
+            std::cerr << "quadrotor_ros_bridge warning: telemetry socket receive failed\n";
+          }
+          RequestStop();
+          return;
+      }
+    }
+  }
+
+  void PublishCommand(const data::CmdVelData& message) {
+    const ipc::VelocityCommandPacket packet = converts::ToVelocityCommandPacket(message);
+    ipc::SendPacket(command_fd_, packet, true);
+  }
+
   void PublishTelemetry() {
-    const std::optional<TelemetrySnapshot> snapshot = telemetry_cache_->ReadLatest();
-    if (!snapshot.has_value()) {
+    std::optional<ipc::TelemetryPacket> packet;
+    {
+      std::lock_guard<std::mutex> lock(telemetry_mutex_);
+      packet = latest_telemetry_;
+    }
+    if (!packet.has_value()) {
       return;
     }
-
-    odom_publisher_->Publish(*snapshot);
-    imu_publisher_->Publish(*snapshot);
-
-    if (transform_publisher_) {
-      transform_publisher_->Publish(*snapshot);
+    for (auto& pub : publishers_) {
+      pub->Publish(*packet);
     }
+  }
 
-    if (clock_publisher_) {
-      clock_publisher_->Publish(snapshot->sim_time);
+  void RequestStop() {
+    stop_requested_.store(true);
+    if (executor_) {
+      executor_->cancel();
     }
   }
 
   RosBridgeConfig config_;
-  std::shared_ptr<CommandMailbox> command_mailbox_;
-  std::shared_ptr<TelemetryCache> telemetry_cache_;
+  int telemetry_fd_ = -1;
+  int command_fd_ = -1;
   std::shared_ptr<rclcpp::Node> node_;
   std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
-  std::unique_ptr<CmdVelCommandSubscriber> cmd_vel_subscription_;
-  std::unique_ptr<OdomDataPublisher> odom_publisher_;
-  std::unique_ptr<ImuDataPublisher> imu_publisher_;
-  std::unique_ptr<ClockDataPublisher> clock_publisher_;
-  std::unique_ptr<TransformDataPublisher> transform_publisher_;
+  std::vector<std::unique_ptr<ITelemetryPublisher>> publishers_;
+  std::vector<std::unique_ptr<ICommandSubscriber>> subscribers_;
   rclcpp::TimerBase::SharedPtr telemetry_timer_;
-  std::thread spin_thread_;
+  std::thread telemetry_thread_;
+  std::mutex telemetry_mutex_;
+  std::optional<ipc::TelemetryPacket> latest_telemetry_;
+  std::atomic_bool stop_requested_ = false;
   bool owns_rclcpp_runtime_ = false;
   bool started_ = false;
 };
 
 }  // namespace
 
-bool Ros2BridgeAvailable() {
-  return true;
+int RunRosBridgeProcess(const QuadrotorConfig& config, int telemetry_fd, int command_fd) {
+  RosBridgeProcess process(BuildRosBridgeConfig(config), telemetry_fd, command_fd);
+  return process.Run();
 }
-
-std::unique_ptr<Ros2Bridge> CreateRos2Bridge(
-    const QuadrotorConfig& config,
-    std::shared_ptr<CommandMailbox> command_mailbox,
-    std::shared_ptr<TelemetryCache> telemetry_cache) {
-  return std::make_unique<Ros2BridgeImpl>(
-      BuildRosBridgeConfig(config),
-      std::move(command_mailbox),
-      std::move(telemetry_cache));
-}
-
-#else
-
-bool Ros2BridgeAvailable() {
-  return false;
-}
-
-std::unique_ptr<Ros2Bridge> CreateRos2Bridge(
-    const QuadrotorConfig&,
-    std::shared_ptr<CommandMailbox>,
-    std::shared_ptr<TelemetryCache>) {
-  return nullptr;
-}
-
-#endif
 
 }  // namespace quadrotor

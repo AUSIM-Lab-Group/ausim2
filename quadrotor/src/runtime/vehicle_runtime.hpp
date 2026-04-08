@@ -10,9 +10,7 @@ namespace quadrotor {
 
 class VehicleRuntime {
  public:
-  VehicleRuntime(
-      const QuadrotorConfig& config,
-      std::shared_ptr<CommandMailbox> command_mailbox);
+  explicit VehicleRuntime(const QuadrotorConfig& config);
 
   RuntimeOutput Step(const RuntimeInput& input, bool recompute_control, double control_dt);
   void Reset();

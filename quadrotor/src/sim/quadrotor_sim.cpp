@@ -20,6 +20,7 @@
 
 #include "mujoco_simulate/glfw_adapter.h"
 #include "mujoco_simulate/simulate.h"
+#include "runtime/data_board_interface.hpp"
 
 namespace fs = std::filesystem;
 
@@ -160,14 +161,9 @@ const char* Diverged(int disableflags, const mjData* data) {
 
 QuadrotorSim::QuadrotorSim(QuadrotorConfig config)
     : config_(std::move(config)),
-      command_mailbox_(std::make_shared<CommandMailbox>(config_.ros2.command_timeout)),
-      telemetry_cache_(std::make_shared<TelemetryCache>()),
-      runtime_(config_, command_mailbox_),
+      runtime_(config_),
       bindings_(config_),
       actuator_writer_(config_.vehicle) {
-  mjv_defaultCamera(&camera_);
-  mjv_defaultOption(&visualization_options_);
-  mjv_defaultPerturb(&perturbation_);
   control_decimation_ = ComputeControlDecimation();
 
   if (config_.robot.count <= 0) {
@@ -177,25 +173,12 @@ QuadrotorSim::QuadrotorSim(QuadrotorConfig config)
     throw std::runtime_error(
         "robot.count > 1 is not implemented yet. Current runtime supports exactly one simulated vehicle.");
   }
-
-  if (Ros2BridgeAvailable()) {
-    ros_bridge_ = CreateRos2Bridge(config_, command_mailbox_, telemetry_cache_);
-    if (!ros_bridge_) {
-      throw std::runtime_error("Failed to construct ROS2 bridge.");
-    }
-  } else if (config_.simulation.example_mode == 0) {
-    throw std::runtime_error(
-        "simulation.example_mode=0 requires a binary built with ROS2 bridge support.");
-  }
 }
 
 QuadrotorSim::~QuadrotorSim() {
   if (active_instance_ == this) {
     mjcb_control = nullptr;
     active_instance_ = nullptr;
-  }
-  if (ros_bridge_) {
-    ros_bridge_->Stop();
   }
   CleanupViewer();
   if (data_ != nullptr) {
@@ -245,9 +228,7 @@ void QuadrotorSim::Step() {
 
 void QuadrotorSim::Run() {
   stop_requested_.store(false);
-  if (ros_bridge_) {
-    ros_bridge_->Start();
-  }
+  InitializeVisualizationState();
 
   if (config_.viewer.enabled) {
     std::string viewer_error;
@@ -275,10 +256,6 @@ void QuadrotorSim::Run() {
   }
 
   std::signal(SIGINT, SIG_DFL);
-
-  if (ros_bridge_) {
-    ros_bridge_->Stop();
-  }
 
   if (data_ != nullptr) {
     const RuntimeInput final_input = state_reader_.Read(model_, data_, bindings_);
@@ -311,7 +288,7 @@ void QuadrotorSim::ApplyControl(const mjModel* model, mjData* data) {
   snapshot.motor_speed_krpm = output.motor_speed_krpm;
   snapshot.goal_source = output.goal.source;
   snapshot.has_goal = true;
-  telemetry_cache_->Write(snapshot);
+  WriteTelemetrySnapshot(snapshot);
 
   if (recompute_control) {
     LogStateIfNeeded(snapshot);
@@ -380,6 +357,17 @@ void QuadrotorSim::InitializeViewer() {
   }
 
   viewer_->vsync = config_.viewer.vsync ? 1 : 0;
+}
+
+void QuadrotorSim::InitializeVisualizationState() {
+  if (visualization_state_initialized_) {
+    return;
+  }
+
+  mjv_defaultCamera(&camera_);
+  mjv_defaultOption(&visualization_options_);
+  mjv_defaultPerturb(&perturbation_);
+  visualization_state_initialized_ = true;
 }
 
 void QuadrotorSim::CleanupViewer() {

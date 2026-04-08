@@ -2,9 +2,7 @@
 
 namespace quadrotor {
 
-VehicleRuntime::VehicleRuntime(
-    const QuadrotorConfig& config,
-    std::shared_ptr<CommandMailbox> command_mailbox)
+VehicleRuntime::VehicleRuntime(const QuadrotorConfig& config)
     : config_(config),
       mixer_(MixerParams{
           config_.vehicle.Ct,
@@ -21,7 +19,7 @@ VehicleRuntime::VehicleRuntime(
       static_cast<SE3Controller::ControlMode>(config_.simulation.control_mode);
 
   if (config_.simulation.example_mode == 0) {
-    goal_provider_ = std::make_unique<CommandGoalProvider>(config_, std::move(command_mailbox));
+    goal_provider_ = std::make_unique<CommandGoalProvider>(config_);
   } else {
     goal_provider_ = std::make_unique<DemoGoalProvider>(config_);
   }

@@ -1,6 +1,4 @@
-model:
-  scene_xml: ../../assets/crazyfile/scene.xml
-  track_camera_name: track
+robot_config: robot/crazyfile_config.yaml
 
 simulation:
   duration: 0.0

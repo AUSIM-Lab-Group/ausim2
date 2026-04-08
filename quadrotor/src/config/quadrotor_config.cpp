@@ -1,6 +1,7 @@
 #include "config/quadrotor_config.hpp"
 
 #include <filesystem>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -157,19 +158,56 @@ void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, Quadro
   }
 }
 
-QuadrotorConfig LoadConfigNode(const YAML::Node& root, const fs::path& config_path) {
-  QuadrotorConfig config;
-  config.model.scene_xml = DefaultSceneXmlPath();
-  ApplyConfigRoot(root, config_path, &config);
-  return config;
+std::optional<fs::path> ResolveRobotConfigPath(
+    const YAML::Node& root,
+    const fs::path& config_path,
+    const fs::path& explicit_robot_path,
+    bool require_robot_config) {
+  if (!explicit_robot_path.empty()) {
+    return fs::absolute(explicit_robot_path);
+  }
+
+  const YAML::Node robot_config_node = root["robot_config"];
+  if (robot_config_node && robot_config_node.IsScalar()) {
+    return ResolvePath(config_path, robot_config_node.as<std::string>());
+  }
+
+  if (require_robot_config) {
+    throw std::runtime_error(
+        "Simulation config must define 'robot_config' to select the robot model.");
+  }
+  return std::nullopt;
 }
 
-QuadrotorConfig LoadConfigFile(const fs::path& path) {
+QuadrotorConfig LoadConfigFile(
+    const fs::path& path,
+    const fs::path& explicit_robot_path = {},
+    bool require_robot_config = false) {
   const fs::path config_path = fs::absolute(path);
   if (!fs::exists(config_path)) {
     throw std::runtime_error("Config file does not exist: " + config_path.string());
   }
-  return LoadConfigNode(YAML::LoadFile(config_path.string()), config_path);
+
+  const YAML::Node root = YAML::LoadFile(config_path.string());
+  QuadrotorConfig config;
+  config.model.scene_xml = DefaultSceneXmlPath();
+  ApplyConfigRoot(root, config_path, &config);
+
+  const std::optional<fs::path> robot_config_path =
+      ResolveRobotConfigPath(root, config_path, explicit_robot_path, require_robot_config);
+  if (robot_config_path.has_value()) {
+    const fs::path resolved_robot_config_path = fs::absolute(*robot_config_path);
+    if (!fs::exists(resolved_robot_config_path)) {
+      throw std::runtime_error(
+          "Robot config file does not exist: " + resolved_robot_config_path.string());
+    }
+    ApplyConfigRoot(
+        YAML::LoadFile(resolved_robot_config_path.string()),
+        resolved_robot_config_path,
+        &config);
+  }
+
+  return config;
 }
 
 }  // namespace
@@ -181,21 +219,7 @@ QuadrotorConfig LoadConfigFromYaml(const std::string& path) {
 QuadrotorConfig LoadConfigFromYaml(
     const std::string& sim_config_path,
     const std::string& robot_config_path) {
-  const fs::path sim_path = fs::absolute(sim_config_path);
-  const fs::path robot_path = fs::absolute(robot_config_path);
-
-  if (!fs::exists(sim_path)) {
-    throw std::runtime_error("Simulation config file does not exist: " + sim_path.string());
-  }
-  if (!fs::exists(robot_path)) {
-    throw std::runtime_error("Robot config file does not exist: " + robot_path.string());
-  }
-
-  QuadrotorConfig config;
-  config.model.scene_xml = DefaultSceneXmlPath();
-  ApplyConfigRoot(YAML::LoadFile(sim_path.string()), sim_path, &config);
-  ApplyConfigRoot(YAML::LoadFile(robot_path.string()), robot_path, &config);
-  return config;
+  return LoadConfigFile(sim_config_path, robot_config_path, true);
 }
 
 }  // namespace quadrotor

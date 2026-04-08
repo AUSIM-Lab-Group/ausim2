@@ -7,6 +7,8 @@ identity:
   frame_prefix: uav1
 
 model:
+  scene_xml: ../../../assets/crazyfile/scene.xml
+  track_camera_name: track
   body_name: cf2
 
 simulation:

@@ -134,14 +134,6 @@ ros2 topic pub /uav1/cmd_vel geometry_msgs/msg/Twist \
   "{linear: {x: 0.3, y: 0.0, z: 0.0}, angular: {z: 0.4}}" --once
 ```
 
-## RMW 说明
-
-在当前实现里，如果环境变量 `RMW_IMPLEMENTATION` 没有显式设置，程序会优先使用 `rmw_cyclonedds_cpp`。
-
-这样做的原因是：在我们的验证环境里，`libmujoco` 与 `rmw_fastrtps_cpp` 同进程启动时会在 ROS2 节点构造阶段触发段错误，而 `rmw_cyclonedds_cpp` 不会出现这个问题。
-
-如果你已经有自己的 RMW 设置，程序会尊重现有环境变量，不会覆盖。
-
 ## 详细说明
 
 更完整的架构、线程模型、源码目录和扩展方式见：

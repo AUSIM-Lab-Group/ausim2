@@ -1,9 +1,9 @@
 #include "ros/publisher/data/clock_data_publisher.hpp"
 
-#if defined(QUADROTOR_HAS_ROS2)
 #include <utility>
 
 #include "converts/data/clock.hpp"
+#include "converts/ipc/bridge_packets.hpp"
 
 namespace quadrotor {
 
@@ -12,9 +12,8 @@ ClockDataPublisher::ClockDataPublisher(
     std::string topic_name)
     : publisher_(node->create_publisher<rosgraph_msgs::msg::Clock>(std::move(topic_name), 10)) {}
 
-void ClockDataPublisher::Publish(double stamp_seconds) const {
-  publisher_->publish(converts::ToRosMessage(converts::ToClockData(stamp_seconds)));
+void ClockDataPublisher::Publish(const ipc::TelemetryPacket& packet) {
+  publisher_->publish(converts::ToRosMessage(converts::ToClockData(packet)));
 }
 
 }  // namespace quadrotor
-#endif

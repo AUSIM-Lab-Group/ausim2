@@ -4,17 +4,6 @@
 
 namespace quadrotor::converts {
 
-data::ImuData ToImuData(const TelemetrySnapshot& snapshot, const std::string& frame_id) {
-  data::ImuData out;
-  out.header = BuildHeader(snapshot.sim_time, frame_id);
-  out.orientation = ToQuaternion(snapshot.imu.orientation);
-  out.angular_velocity = ToVector3(snapshot.imu.angular_velocity);
-  out.linear_acceleration = ToVector3(snapshot.imu.linear_acceleration);
-  out.has_linear_acceleration = snapshot.imu.has_linear_acceleration;
-  return out;
-}
-
-#if defined(QUADROTOR_HAS_ROS2)
 void Convert(sensor_msgs::msg::Imu& out, const data::ImuData& in) {
   out.header.stamp = ToRosTime(in.header.stamp_seconds);
   out.header.frame_id = in.header.frame_id;
@@ -30,6 +19,5 @@ sensor_msgs::msg::Imu ToRosMessage(const data::ImuData& in) {
   Convert(out, in);
   return out;
 }
-#endif
 
 }  // namespace quadrotor::converts

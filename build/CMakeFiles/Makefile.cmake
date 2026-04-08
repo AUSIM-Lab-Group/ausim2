@@ -837,8 +837,10 @@ set(CMAKE_MAKEFILE_PRODUCTS
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "quadrotor/CMakeFiles/quadrotor_mujoco_viewer.dir/DependInfo.cmake"
-  "quadrotor/CMakeFiles/quadrotor_core.dir/DependInfo.cmake"
+  "quadrotor/CMakeFiles/quadrotor_sim_core.dir/DependInfo.cmake"
+  "quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/DependInfo.cmake"
   "quadrotor/CMakeFiles/uninstall.dir/DependInfo.cmake"
   "quadrotor/CMakeFiles/quadrotor_cpp_uninstall.dir/DependInfo.cmake"
   "quadrotor/CMakeFiles/quadrotor.dir/DependInfo.cmake"
+  "quadrotor/CMakeFiles/quadrotor_ros_bridge.dir/DependInfo.cmake"
   )

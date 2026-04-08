@@ -2,17 +2,6 @@
 
 namespace quadrotor::converts {
 
-VelocityCommand ToVelocityCommand(
-    const data::CmdVelData& in,
-    std::chrono::steady_clock::time_point received_time) {
-  VelocityCommand command;
-  command.linear = Eigen::Vector3d(in.twist.linear.x, in.twist.linear.y, in.twist.linear.z);
-  command.angular = Eigen::Vector3d(in.twist.angular.x, in.twist.angular.y, in.twist.angular.z);
-  command.received_time = received_time;
-  return command;
-}
-
-#if defined(QUADROTOR_HAS_ROS2)
 void Convert(data::CmdVelData& out, const geometry_msgs::msg::Twist& in) {
   out.twist.linear.x = in.linear.x;
   out.twist.linear.y = in.linear.y;
@@ -42,6 +31,5 @@ geometry_msgs::msg::Twist ToRosMessage(const data::CmdVelData& in) {
   Convert(out, in);
   return out;
 }
-#endif
 
 }  // namespace quadrotor::converts

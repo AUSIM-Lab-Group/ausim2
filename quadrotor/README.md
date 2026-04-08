@@ -1,145 +1,97 @@
 # Quadrotor C++ Runtime
 
-这个目录是当前四旋翼仿真的主工程。代码按 `config / data / converts / runtime / sim / ros` 分层，目标是让机型切换、bindings 适配和传感器扩展都尽量配置化，同时把消息格式、格式转换和发布逻辑拆开。
+基于 MuJoCo 的四旋翼仿真工程。代码按 `config / data / converts / controller / runtime / sim / ros` 分层，ROS2 bridge 作为独立子进程运行，通过 IPC 与仿真进程交换数据。
 
-## 目录结构
+## 构建
 
-```text
-quadrotor/
-├── CMakeLists.txt
-├── README.md
-├── cfg/
-│   ├── robot_config.yaml
-│   └── sim_config.yaml
-└── src/
-    ├── converts/
-    ├── config/
-    ├── control/
-    ├── controller/
-    ├── data/
-    ├── math/
-    ├── ros/
-    ├── runtime/
-    ├── sim/
-    └── main.cpp
+依赖：CMake >= 3.20、C++17、MuJoCo 3.3.x、Eigen3、yaml-cpp、GLFW、ROS2 Humble
+
+```bash
+source /opt/ros/humble/setup.bash
+cmake -S . -B build
+cmake --build build -j
 ```
+
+MuJoCo 不在默认路径时：
+
+```bash
+cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/build
+```
+
+产物：`build/bin/quadrotor`、`build/bin/quadrotor_ros_bridge`
+
+## 运行
+
+```bash
+./build/bin/quadrotor                    # 默认配置，带 viewer
+./build/bin/quadrotor --headless         # 无 GUI
+
+# 显式指定配置
+./build/bin/quadrotor \
+  --sim-config ./quadrotor/cfg/sim_config.yaml \
+  --robot-config ./quadrotor/cfg/robot/crazyfile_config.yaml \
+  --headless
+
+# 兼容旧单文件模式
+./build/bin/quadrotor --config ./legacy_config.yaml
+```
+
+## 进程模型
+
+两个进程通过本地 `socketpair` 通信：
+
+```
+quadrotor (仿真 + 控制)  <──IPC──>  quadrotor_ros_bridge (ROS2 I/O)
+```
+
+交换的两个数据槽：
+- `runtime.velocity_command`：bridge → sim，来自 `/cmd_vel`
+- `runtime.telemetry_snapshot`：sim → bridge，驱动所有发布者
 
 ## 分层职责
 
-### `config/`
+| 层 | 路径 | 职责 |
+|----|------|------|
+| App/Manager | `src/app/`, `src/manager/` | 启动、子进程生命周期、IPC 线程 |
+| Sim | `src/sim/` | MuJoCo bindings、状态读取、执行器写回、viewer 循环 |
+| Runtime | `src/runtime/` | `VehicleRuntime` 驱动 SE3 控制器；`GoalProvider` 选择目标来源 |
+| Controller | `src/controller/`, `src/control/`, `src/math/` | SE3 控制律、MotorMixer、姿态几何——不依赖 ROS 和 MuJoCo 名称 |
+| Data / Converts | `src/data/`, `src/converts/` | 中立消息结构体；内部 ↔ ROS2 ↔ IPC 包格式转换 |
+| ROS Bridge | `src/ros/` | ROS2 节点、publisher/subscriber 管理、IPC 收发 |
+| Config | `src/config/` | YAML 解析到 `QuadrotorConfig` |
 
-负责配置结构体和 YAML 解析。
+## ROS Bridge 架构
 
-- [quadrotor_config.hpp](src/config/quadrotor_config.hpp)
-- [quadrotor_config.cpp](src/config/quadrotor_config.cpp)
+`RosBridgeProcess` 通过两个接口 vector 管理所有 pub/sub：
 
-加载方式支持：
+```cpp
+std::vector<std::unique_ptr<ITelemetryPublisher>> publishers_;
+std::vector<std::unique_ptr<ICommandSubscriber>>  subscribers_;
+```
 
-- 两文件模式：`sim_config.yaml + robot_config.yaml`
-- 旧版单文件模式：`--config legacy.yaml`
+- `ITelemetryPublisher`（`ros/publisher/i_telemetry_publisher.hpp`）：所有遥测发布者的基类，接收 `TelemetryPacket`，内部完成转换和发布
+- `ICommandSubscriber`（`ros/subscriber/i_command_subscriber.hpp`）：所有指令订阅者的基类，回调在构造时注入
 
-解析策略是“顺序覆盖”：
+`PublishTelemetry()` 只做一件事：
 
-1. 先加载 `sim_config.yaml`
-2. 再加载 `robot_config.yaml`
+```cpp
+for (auto& pub : publishers_) pub->Publish(*packet);
+```
 
-这样既能把全局仿真和单机配置拆开，也保留局部覆盖能力。
+`sensors[]` 配置循环驱动额外 publisher 的实例化，新增传感器类型只需在该循环加一个 `else if` 分支。
 
-### `data/` + `converts/`
-
-消息格式层和格式转换层：
-
-- `data/`：保存中立、可移植的消息格式定义
-- `converts/data/`：负责内部状态、这些中立格式以及 ROS 消息之间的转换
-
-当前已经拆出的消息包括：
-
-- `cmd_vel`
-- `odom`
-- `imu`
-- `tf`
-- `/clock`
-
-这样做的目的，是让每个消息包都有单独的格式文件，便于查看字段、后续迁移到别的中间件，或者替换成非 ROS 的出口。
-
-### `controller/` + `control/` + `math/`
-
-纯控制核心：
-
-- 状态表示
-- SE(3) 控制律
-- 电机混控
-- 姿态几何工具
-
-这一层不依赖 ROS2，也不关心 MuJoCo 名称绑定。
-
-### `runtime/`
-
-把“当前状态”变成“当前控制输出”。
-
-- `CommandMailbox`
-- `TelemetryCache`
-- `GoalProvider`
-- `VehicleRuntime`
-
-当前控制来源：
-
-- `example_mode=0`：`CommandGoalProvider`
-- `example_mode=1/2`：`DemoGoalProvider`
-
-当 `example_mode=0` 且暂时没有新鲜 `cmd_vel` 时，运行时不会回退到 demo，而是保持当前位置悬停。
-
-### `sim/`
-
-MuJoCo 适配层：
-
-- 模型名称到 id / adr / dim 的绑定
-- 状态读取
-- 执行器写回
-- viewer / headless 运行循环
-
-这一层不直接处理 ROS 话题。
-
-### `ros/`
-
-ROS2 bridge：
-
-- bridge 启停和 executor 生命周期管理
-- `ros/publisher/data/` 下的 `odom` / `imu` / `tf` / `/clock` 发布
-- `ros/subscriber/data/` 下的 `cmd_vel` 订阅
-- 独立线程运行 `SingleThreadedExecutor`
-
-当前 `sensors[]` 里的相机和激光雷达还是预留扩展入口，但基础消息已经拆成独立 publisher/subscriber helper，`ros2_bridge.cpp` 不再直接手写每个字段。
-
-## 线程模型
-
-当前主流程是两条线程：
-
-1. 仿真线程
-2. ROS2 bridge 线程
-
-线程之间只通过两个轻量对象交互：
-
-- `CommandMailbox`
-- `TelemetryCache`
-
-这样 MuJoCo callback 不需要直接触碰 ROS2 executor。
-
-## 配置拆分
+## 配置
 
 ### `cfg/sim_config.yaml`
 
-放全局仿真环境和 bridge 基础参数：
+全局仿真参数和 bridge 参数，以及要加载的机型配置路径：
 
 ```yaml
-model:
-  scene_xml: ../../assets/crazyfile/scene.xml
-  track_camera_name: track
+robot_config: robot/crazyfile_config.yaml
 
 simulation:
   duration: 0.0
   dt: 0.001
-  print_interval: 0.0
 
 viewer:
   enabled: true
@@ -150,117 +102,54 @@ ros2:
   command_timeout: 0.5
 ```
 
-### `cfg/robot_config.yaml`
+### `cfg/robot/<name>_config.yaml`
 
-放单机实例参数：
+机型相关参数：
 
 ```yaml
-robot:
-  count: 1
-
 identity:
   vehicle_id: cf2
   namespace: /uav1
   frame_prefix: uav1
 
 model:
+  scene_xml: ../../../assets/crazyfile/scene.xml
   body_name: cf2
 
 simulation:
-  control_mode: 1
-  example_mode: 0
-```
-
-关键字段：
-
-- `robot.count`
-  - 当前必须是 `1`
-  - 多机实例化还没实现
-- `simulation.control_mode`
-  - `1`：速度控制
-  - `2`：位置控制
-- `simulation.example_mode`
-  - `0`：ROS `cmd_vel`
-  - `1`：简单目标
-  - `2`：圆轨迹
-
-## 运行方式
-
-### 默认配置
-
-```bash
-./build/bin/quadrotor
-./build/bin/quadrotor --viewer
-./build/bin/quadrotor --headless
-```
-
-### 显式指定分离配置
-
-```bash
-./build/bin/quadrotor \
-  --sim-config ./quadrotor/cfg/sim_config.yaml \
-  --robot-config ./quadrotor/cfg/robot_config.yaml \
-  --headless
-```
-
-### 兼容旧配置
-
-```bash
-./build/bin/quadrotor --config ./legacy_config.yaml
+  control_mode: 1   # 1=速度控制, 2=位置控制
+  example_mode: 0   # 0=ROS cmd_vel, 1=简单目标, 2=圆轨迹
 ```
 
 ## ROS2 话题
 
-默认配置下：
+默认配置（namespace `/uav1`）：
 
-- 订阅：`/uav1/cmd_vel`
-- 发布：`/uav1/odom`
-- 发布：`/uav1/imu/data`
-- 发布：`/clock`
-- TF：`uav1/odom -> uav1/base_link`
+| 方向 | 话题 | 类型 |
+|------|------|------|
+| 订阅 | `/uav1/cmd_vel` | `geometry_msgs/Twist` |
+| 发布 | `/uav1/odom` | `nav_msgs/Odometry` |
+| 发布 | `/uav1/imu/data` | `sensor_msgs/Imu` |
+| 发布 | `/clock` | `rosgraph_msgs/Clock` |
+| TF | `uav1/odom → uav1/base_link` | — |
 
-发布控制指令：
+发送速度指令：
 
 ```bash
 ros2 topic pub /uav1/cmd_vel geometry_msgs/msg/Twist \
   "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {z: 0.3}}" --once
 ```
 
-## RMW 选择
+## 新增机型
 
-ROS2 bridge 现在默认开启，不再有 `ros2.enabled` 配置开关。
+复制 `cfg/robot/<name>_config.yaml`，修改 `identity`、`model`、`bindings`、`vehicle`、`controller`，然后将 `sim_config.yaml` 的 `robot_config` 指向新文件。
 
-如果环境变量 `RMW_IMPLEMENTATION` 没有设置，程序会自动优先选择 `rmw_cyclonedds_cpp`。原因是我们确认过：
+## 新增传感器
 
-- `libmujoco + rmw_fastrtps_cpp` 同进程启动时，ROS2 节点构造阶段会触发段错误
-- `libmujoco + rmw_cyclonedds_cpp` 不会触发这个段错误
+1. 在 MJCF 里添加 sensor / camera / site
+2. 在 `cfg/robot/<name>_config.yaml` 的 `sensors[]` 中声明（`enabled: true`、`type`、`topic`、`frame_id`）
+3. 在 `src/sim/` 添加读取逻辑（如需要）
+4. 在 `src/ros/publisher/data/` 新建 `<type>_data_publisher.hpp/.cpp`，继承 `ITelemetryPublisher`，构造函数接收 `(node, topic, frame_id)`，`Publish(const ipc::TelemetryPacket&)` 内部完成转换和发布
+5. 在 `ros2_bridge.cpp` 的 `sensors[]` 循环里为新 `sensor.type` 加一个 `else if` 分支
 
-如果你需要强制指定 RMW，可以在运行前显式导出：
-
-```bash
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-./build/bin/quadrotor --headless
-```
-
-## 如何新增机型
-
-推荐只复制并修改 `robot_config.yaml`：
-
-1. 修改 `identity.namespace` 和 `identity.frame_prefix`
-2. 修改 `model.body_name`
-3. 修改 `bindings`
-4. 修改 `vehicle`
-5. 修改 `interfaces` 和 `frames`
-
-如果场景 XML 也不同，再改 `sim_config.yaml` 里的 `model.scene_xml`。
-
-## 如何新增传感器
-
-建议顺序：
-
-1. 在 MJCF 里加 sensor / camera / site
-2. 在 `robot_config.yaml` 的 `sensors[]` 里声明
-3. 在 `sim/` 增加读取逻辑
-4. 在 `ros/` 增加对应 publisher
-
-控制器和混控层通常不需要改。
+控制器和混控层无需改动。

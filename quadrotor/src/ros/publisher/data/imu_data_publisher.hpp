@@ -1,31 +1,26 @@
 #pragma once
 
 #include <memory>
-#include <string>
-
-#include "runtime/runtime_types.hpp"
-
-#if defined(QUADROTOR_HAS_ROS2)
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
-#endif
+#include <string>
+
+#include "ros/publisher/i_telemetry_publisher.hpp"
 
 namespace quadrotor {
 
-#if defined(QUADROTOR_HAS_ROS2)
-class ImuDataPublisher {
+class ImuDataPublisher : public ITelemetryPublisher {
  public:
   ImuDataPublisher(
       const std::shared_ptr<rclcpp::Node>& node,
       std::string topic_name,
       std::string frame_id);
 
-  void Publish(const TelemetrySnapshot& snapshot) const;
+  void Publish(const ipc::TelemetryPacket& packet) override;
 
  private:
-  std::string frame_id_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_;
+  std::string frame_id_;
 };
-#endif
 
 }  // namespace quadrotor

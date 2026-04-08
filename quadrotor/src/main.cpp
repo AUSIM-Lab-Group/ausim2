@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "sim/quadrotor_sim.hpp"
+#include "app/quadrotor_app.hpp"
 
 namespace fs = std::filesystem;
 
@@ -37,9 +37,28 @@ fs::path ResolveDefaultConfigPath(const char* filename) {
   });
 }
 
+std::vector<std::string> BuildBridgeConfigArguments(const CliOptions& cli) {
+  std::vector<std::string> args;
+  if (!cli.merged_config_path.empty()) {
+    args.push_back("--config");
+    args.push_back(cli.merged_config_path.string());
+    return args;
+  }
+
+  if (!cli.sim_config_path.empty()) {
+    args.push_back("--sim-config");
+    args.push_back(cli.sim_config_path.string());
+  }
+  if (!cli.robot_config_path.empty()) {
+    args.push_back("--robot-config");
+    args.push_back(cli.robot_config_path.string());
+  }
+  return args;
+}
+
 void PrintUsage(const char* program_name) {
   std::cout << "Usage: " << program_name
-            << " [--sim-config <path>] [--robot-config <path>] [--config <legacy.yaml>] "
+            << " [--sim-config <path>] [--robot-config <override-path>] [--config <legacy.yaml>] "
                "[--viewer|--headless]\n";
 }
 
@@ -83,7 +102,8 @@ int main(int argc, char** argv) {
 
     if (!cli.merged_config_path.empty() &&
         (!cli.sim_config_path.empty() || !cli.robot_config_path.empty())) {
-      throw std::runtime_error("Use either --config or the split --sim-config/--robot-config inputs.");
+      throw std::runtime_error(
+          "Use either --config or --sim-config, with optional --robot-config override.");
     }
 
     quadrotor::QuadrotorConfig config;
@@ -93,13 +113,9 @@ int main(int argc, char** argv) {
       if (cli.sim_config_path.empty()) {
         cli.sim_config_path = ResolveDefaultConfigPath("sim_config.yaml");
       }
-      if (cli.robot_config_path.empty()) {
-        cli.robot_config_path = ResolveDefaultConfigPath("robot_config.yaml");
-      }
-      if (cli.sim_config_path.empty() || cli.robot_config_path.empty()) {
+      if (cli.sim_config_path.empty()) {
         throw std::runtime_error(
-            "Unable to locate default config files. Expected quadrotor/cfg/sim_config.yaml "
-            "and quadrotor/cfg/robot_config.yaml.");
+            "Unable to locate default simulation config. Expected quadrotor/cfg/sim_config.yaml.");
       }
       config = quadrotor::LoadConfigFromYaml(
           cli.sim_config_path.string(),
@@ -113,9 +129,24 @@ int main(int argc, char** argv) {
       config.viewer.enabled = false;
     }
 
-    quadrotor::QuadrotorSim sim(std::move(config));
-    sim.Run();
-    return 0;
+    fs::path self_executable = fs::absolute(argv[0]);
+    if (!fs::exists(self_executable)) {
+      self_executable = ResolveExistingPath({
+          fs::current_path() / argv[0],
+          fs::current_path() / "build" / "bin" / "quadrotor",
+      });
+    }
+    if (self_executable.empty()) {
+      throw std::runtime_error("Unable to resolve current executable path.");
+    }
+
+    quadrotor::RosBridgeLaunchConfig bridge_launch_config;
+    bridge_launch_config.executable_path =
+        self_executable.parent_path() / "quadrotor_ros_bridge";
+    bridge_launch_config.config_arguments = BuildBridgeConfigArguments(cli);
+
+    quadrotor::QuadrotorApp app(std::move(config), std::move(bridge_launch_config));
+    return app.Run();
   } catch (const std::exception& error) {
     std::cerr << "quadrotor error: " << error.what() << '\n';
     return 1;

@@ -70,6 +70,7 @@
       <freejoint/>
       <inertial pos="0 0 0" mass="0.033" diaginertia="1.395e-5 1.395e-5 2.173e-5"/>
       <camera name="track" pos="-1 0 .5" xyaxes="0 -1 0 1 0 2" mode="trackcom"/>
+      <camera name="front_cam" pos="0.04 0 0.015" xyaxes="0 -1 0 -0.258819 0 0.965926"/>
       <geom mesh="cf2_0" material="propeller_plastic" class="visual"/>
       <geom mesh="cf2_1" material="medium_gloss_plastic" class="visual"/>
       <geom mesh="cf2_2" material="polished_gold" class="visual"/>

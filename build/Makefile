@@ -175,17 +175,30 @@ quadrotor_mujoco_viewer/fast:
 .PHONY : quadrotor_mujoco_viewer/fast
 
 #=============================================================================
-# Target rules for targets named quadrotor_core
+# Target rules for targets named quadrotor_sim_core
 
 # Build rule for target.
-quadrotor_core: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor_core
-.PHONY : quadrotor_core
+quadrotor_sim_core: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor_sim_core
+.PHONY : quadrotor_sim_core
 
 # fast build rule for target.
-quadrotor_core/fast:
-	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_core.dir/build.make quadrotor/CMakeFiles/quadrotor_core.dir/build
-.PHONY : quadrotor_core/fast
+quadrotor_sim_core/fast:
+	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_sim_core.dir/build.make quadrotor/CMakeFiles/quadrotor_sim_core.dir/build
+.PHONY : quadrotor_sim_core/fast
+
+#=============================================================================
+# Target rules for targets named quadrotor_ros_bridge_core
+
+# Build rule for target.
+quadrotor_ros_bridge_core: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor_ros_bridge_core
+.PHONY : quadrotor_ros_bridge_core
+
+# fast build rule for target.
+quadrotor_ros_bridge_core/fast:
+	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge_core.dir/build
+.PHONY : quadrotor_ros_bridge_core/fast
 
 #=============================================================================
 # Target rules for targets named uninstall
@@ -226,6 +239,19 @@ quadrotor/fast:
 	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor.dir/build.make quadrotor/CMakeFiles/quadrotor.dir/build
 .PHONY : quadrotor/fast
 
+#=============================================================================
+# Target rules for targets named quadrotor_ros_bridge
+
+# Build rule for target.
+quadrotor_ros_bridge: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quadrotor_ros_bridge
+.PHONY : quadrotor_ros_bridge
+
+# fast build rule for target.
+quadrotor_ros_bridge/fast:
+	$(MAKE) $(MAKESILENT) -f quadrotor/CMakeFiles/quadrotor_ros_bridge.dir/build.make quadrotor/CMakeFiles/quadrotor_ros_bridge.dir/build
+.PHONY : quadrotor_ros_bridge/fast
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -241,8 +267,10 @@ help:
 	@echo "... quadrotor_cpp_uninstall"
 	@echo "... uninstall"
 	@echo "... quadrotor"
-	@echo "... quadrotor_core"
 	@echo "... quadrotor_mujoco_viewer"
+	@echo "... quadrotor_ros_bridge"
+	@echo "... quadrotor_ros_bridge_core"
+	@echo "... quadrotor_sim_core"
 .PHONY : help
 
 

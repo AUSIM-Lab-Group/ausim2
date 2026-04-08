@@ -20,7 +20,6 @@ data::Header BuildHeader(double stamp_seconds, std::string frame_id) {
   return header;
 }
 
-#if defined(QUADROTOR_HAS_ROS2)
 rclcpp::Time ToRosTime(double stamp_seconds) {
   return rclcpp::Time(
       static_cast<int64_t>(std::llround(stamp_seconds * 1'000'000'000.0)),
@@ -45,6 +44,5 @@ void Convert(geometry_msgs::msg::Quaternion& out, const data::Quaternion& in) {
   out.y = in.y;
   out.z = in.z;
 }
-#endif
 
 }  // namespace quadrotor::converts

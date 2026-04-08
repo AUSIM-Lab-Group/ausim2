@@ -1,19 +1,15 @@
 #pragma once
 
 #include <memory>
-#include <string>
-
-#include "runtime/runtime_types.hpp"
-
-#if defined(QUADROTOR_HAS_ROS2)
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
-#endif
+#include <string>
+
+#include "ros/publisher/i_telemetry_publisher.hpp"
 
 namespace quadrotor {
 
-#if defined(QUADROTOR_HAS_ROS2)
-class OdomDataPublisher {
+class OdomDataPublisher : public ITelemetryPublisher {
  public:
   OdomDataPublisher(
       const std::shared_ptr<rclcpp::Node>& node,
@@ -21,13 +17,12 @@ class OdomDataPublisher {
       std::string frame_id,
       std::string child_frame_id);
 
-  void Publish(const TelemetrySnapshot& snapshot) const;
+  void Publish(const ipc::TelemetryPacket& packet) override;
 
  private:
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr publisher_;
   std::string frame_id_;
   std::string child_frame_id_;
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr publisher_;
 };
-#endif
 
 }  // namespace quadrotor

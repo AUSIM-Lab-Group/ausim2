@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "runtime/data_board_interface.hpp"
+
 namespace quadrotor {
 namespace {
 
@@ -80,53 +82,68 @@ GoalReference DemoGoalProvider::Evaluate(const GoalContext& context) {
   return goal;
 }
 
-CommandGoalProvider::CommandGoalProvider(
-    const QuadrotorConfig& config,
-    std::shared_ptr<CommandMailbox> command_mailbox)
-    : command_mailbox_(std::move(command_mailbox)) {
-  (void)config;
-}
+CommandGoalProvider::CommandGoalProvider(const QuadrotorConfig& config)
+    : command_timeout_seconds_(config.ros2.command_timeout),
+      control_mode_(static_cast<SE3Controller::ControlMode>(config.simulation.control_mode)) {}
 
 GoalReference CommandGoalProvider::Evaluate(const GoalContext& context) {
-  const std::optional<VelocityCommand> command = command_mailbox_->ReadFresh();
-  if (!yaw_initialized_) {
+  const std::optional<VelocityCommand> command =
+      ReadFreshVelocityCommand(command_timeout_seconds_);
+
+  // Capture spawn state on first call.
+  if (!initialized_) {
+    spawn_position_ = context.current_state.position;
     desired_yaw_ = QuaternionToYaw(context.current_state.quaternion);
     last_sim_time_ = context.sim_time;
-    yaw_initialized_ = true;
+    initialized_ = true;
   }
 
+  GoalReference goal;
+  goal.control_mode = SE3Controller::ControlMode::kPosition;
+  goal.state.quaternion = Eigen::Quaterniond::Identity();
+  goal.state.omega = Eigen::Vector3d::Zero();
+
   if (!command.has_value()) {
-    last_sim_time_ = context.sim_time;
-    GoalReference goal;
+    // No fresh command: hold spawn position (no takeoff, no drift).
     goal.source = "ros2_hold";
-    goal.control_mode = SE3Controller::ControlMode::kPosition;
-    goal.state.position = context.current_state.position;
+    goal.state.position = spawn_position_;
     goal.state.velocity = Eigen::Vector3d::Zero();
-    goal.state.omega = Eigen::Vector3d::Zero();
-    goal.state.quaternion = Eigen::Quaterniond::Identity();
     goal.forward = ForwardFromYaw(desired_yaw_);
+    last_sim_time_ = context.sim_time;
     return goal;
   }
 
   const double dt = std::max(0.0, context.sim_time - last_sim_time_);
-  desired_yaw_ += command->angular.z() * dt;
   last_sim_time_ = context.sim_time;
 
-  GoalReference goal;
-  goal.source = "ros2_cmd_vel";
-  goal.control_mode = SE3Controller::ControlMode::kVelocity;
-  goal.state.position = context.current_state.position;
-  goal.state.velocity = command->linear;
-  goal.state.omega = Eigen::Vector3d(0.0, 0.0, command->angular.z());
-  goal.state.quaternion = Eigen::Quaterniond::Identity();
+  if (control_mode_ == SE3Controller::ControlMode::kPosition) {
+    // cmd_vel.linear  = absolute position offset from spawn (metres)
+    // cmd_vel.angular.z = absolute heading (radians, world frame)
+    desired_yaw_ = command->angular.z();
+    goal.control_mode = SE3Controller::ControlMode::kPosition;
+    goal.source = "ros2_cmd_vel_pos";
+    goal.state.position = spawn_position_ + command->linear;
+    goal.state.velocity = Eigen::Vector3d::Zero();
+  } else {
+    // kVelocity: integrate angular.z as yaw rate, original behaviour.
+    desired_yaw_ += command->angular.z() * dt;
+    goal.control_mode = SE3Controller::ControlMode::kVelocity;
+    goal.source = "ros2_cmd_vel";
+    goal.state.position = context.current_state.position;
+    goal.state.velocity = command->linear;
+    goal.state.omega = Eigen::Vector3d(0.0, 0.0, command->angular.z());
+  }
+
   goal.forward = ForwardFromYaw(desired_yaw_);
+
   return goal;
 }
 
 void CommandGoalProvider::Reset() {
-  yaw_initialized_ = false;
+  initialized_ = false;
   desired_yaw_ = 0.0;
   last_sim_time_ = 0.0;
+  spawn_position_ = Eigen::Vector3d::Zero();
 }
 
 }  // namespace quadrotor

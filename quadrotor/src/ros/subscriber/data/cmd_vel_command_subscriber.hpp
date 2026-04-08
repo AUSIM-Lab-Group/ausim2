@@ -1,28 +1,25 @@
 #pragma once
 
+#include <geometry_msgs/msg/twist.hpp>
+#include <functional>
 #include <memory>
+#include <rclcpp/rclcpp.hpp>
 #include <string>
 
-#include "runtime/command_mailbox.hpp"
-
-#if defined(QUADROTOR_HAS_ROS2)
-#include <geometry_msgs/msg/twist.hpp>
-#include <rclcpp/rclcpp.hpp>
-#endif
+#include "data/cmd_vel.hpp"
+#include "ros/subscriber/i_command_subscriber.hpp"
 
 namespace quadrotor {
 
-#if defined(QUADROTOR_HAS_ROS2)
-class CmdVelCommandSubscriber {
+class CmdVelCommandSubscriber : public ICommandSubscriber {
  public:
   CmdVelCommandSubscriber(
       const std::shared_ptr<rclcpp::Node>& node,
       std::string topic_name,
-      std::shared_ptr<CommandMailbox> command_mailbox);
+      std::function<void(const data::CmdVelData&)> on_message);
 
  private:
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_;
 };
-#endif
 
 }  // namespace quadrotor

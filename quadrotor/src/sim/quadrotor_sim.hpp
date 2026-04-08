@@ -11,9 +11,6 @@
 #include <mujoco/mujoco.h>
 
 #include "config/quadrotor_config.hpp"
-#include "ros/ros2_bridge.hpp"
-#include "runtime/command_mailbox.hpp"
-#include "runtime/telemetry_cache.hpp"
 #include "runtime/vehicle_runtime.hpp"
 #include "sim/mujoco_actuator_writer.hpp"
 #include "sim/mujoco_bindings.hpp"
@@ -61,6 +58,7 @@ class QuadrotorSim {
       const std::filesystem::path& model_path,
       bool replace_existing);
   void ConfigureDefaultCamera();
+  void InitializeVisualizationState();
   std::string ValidateModel(const mjModel* candidate) const;
   int ComputeControlDecimation() const;
   bool ShouldContinueHeadless() const;
@@ -70,24 +68,22 @@ class QuadrotorSim {
   static void HandleSigint(int signal);
 
   QuadrotorConfig config_;
-  std::shared_ptr<CommandMailbox> command_mailbox_;
-  std::shared_ptr<TelemetryCache> telemetry_cache_;
   VehicleRuntime runtime_;
   MujocoBindings bindings_;
   MujocoStateReader state_reader_;
   MujocoActuatorWriter actuator_writer_;
-  std::unique_ptr<Ros2Bridge> ros_bridge_;
   mjModel* model_ = nullptr;
   mjData* data_ = nullptr;
   std::unique_ptr<mujoco::Simulate> viewer_;
   std::thread physics_thread_;
-  mjvCamera camera_;
-  mjvOption visualization_options_;
-  mjvPerturb perturbation_;
+  mjvCamera camera_{};
+  mjvOption visualization_options_{};
+  mjvPerturb perturbation_{};
   mutable double next_log_time_ = 0.0;
   int control_decimation_ = 1;
   int control_step_count_ = 0;
   std::atomic_bool stop_requested_ = false;
+  bool visualization_state_initialized_ = false;
 
   static QuadrotorSim* active_instance_;
 };
