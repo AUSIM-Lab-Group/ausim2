@@ -13,16 +13,22 @@ enum class ExampleMode {
   kCircular = 2,
 };
 
-double QuaternionToYaw(const Eigen::Quaterniond& quaternion) {
-  const double siny_cosp =
-      2.0 * (quaternion.w() * quaternion.z() + quaternion.x() * quaternion.y());
-  const double cosy_cosp =
-      1.0 - 2.0 * (quaternion.y() * quaternion.y() + quaternion.z() * quaternion.z());
-  return std::atan2(siny_cosp, cosy_cosp);
+double AircraftHeadingFromQuaternion(
+    const Eigen::Quaterniond& quaternion,
+    const Eigen::Vector3d& aircraft_forward_axis) {
+  const Eigen::Vector3d forward_world = quaternion.normalized() * aircraft_forward_axis;
+  return std::atan2(forward_world.y(), forward_world.x());
 }
 
 Eigen::Vector3d ForwardFromYaw(double yaw) {
   return Eigen::Vector3d(std::cos(yaw), std::sin(yaw), 0.0);
+}
+
+Eigen::Vector3d RotateLocalVelocityToWorld(const Eigen::Vector3d& local_velocity, double yaw) {
+  const Eigen::Matrix2d yaw_rotation =
+      (Eigen::Matrix2d() << std::cos(yaw), -std::sin(yaw), std::sin(yaw), std::cos(yaw)).finished();
+  const Eigen::Vector2d world_xy = yaw_rotation * local_velocity.head<2>();
+  return Eigen::Vector3d(world_xy.x(), world_xy.y(), local_velocity.z());
 }
 
 }  // namespace
@@ -84,18 +90,23 @@ GoalReference DemoGoalProvider::Evaluate(const GoalContext& context) {
 
 CommandGoalProvider::CommandGoalProvider(const QuadrotorConfig& config)
     : command_timeout_seconds_(config.ros2.command_timeout),
-      control_mode_(static_cast<SE3Controller::ControlMode>(config.simulation.control_mode)) {}
+      control_mode_(static_cast<SE3Controller::ControlMode>(config.simulation.control_mode)),
+      aircraft_forward_axis_(config.model.aircraft_forward_axis) {}
 
 GoalReference CommandGoalProvider::Evaluate(const GoalContext& context) {
   const std::optional<VelocityCommand> command =
       ReadFreshVelocityCommand(command_timeout_seconds_);
+  const double current_yaw =
+      AircraftHeadingFromQuaternion(context.current_state.quaternion, aircraft_forward_axis_);
 
   // Capture spawn state on first call.
   if (!initialized_) {
     spawn_position_ = context.current_state.position;
-    desired_yaw_ = QuaternionToYaw(context.current_state.quaternion);
+    hold_position_ = context.current_state.position;
+    desired_yaw_ = current_yaw;
     last_sim_time_ = context.sim_time;
     initialized_ = true;
+    hold_state_initialized_ = true;
   }
 
   GoalReference goal;
@@ -104,17 +115,31 @@ GoalReference CommandGoalProvider::Evaluate(const GoalContext& context) {
   goal.state.omega = Eigen::Vector3d::Zero();
 
   if (!command.has_value()) {
-    // No fresh command: hold spawn position (no takeoff, no drift).
+    // No fresh command:
+    // - velocity mode latches the current pose and hovers there
+    // - position mode keeps the original spawn-referenced semantics
     goal.source = "ros2_hold";
-    goal.state.position = spawn_position_;
+    if (control_mode_ == SE3Controller::ControlMode::kVelocity) {
+      if (!hold_state_initialized_ || previous_command_valid_) {
+        hold_position_ = context.current_state.position;
+        desired_yaw_ = current_yaw;
+        hold_state_initialized_ = true;
+      }
+      goal.state.position = hold_position_;
+    } else {
+      goal.state.position = spawn_position_;
+    }
     goal.state.velocity = Eigen::Vector3d::Zero();
     goal.forward = ForwardFromYaw(desired_yaw_);
     last_sim_time_ = context.sim_time;
+    previous_command_valid_ = false;
     return goal;
   }
 
   const double dt = std::max(0.0, context.sim_time - last_sim_time_);
+  const bool command_reacquired = !previous_command_valid_;
   last_sim_time_ = context.sim_time;
+  previous_command_valid_ = true;
 
   if (control_mode_ == SE3Controller::ControlMode::kPosition) {
     // cmd_vel.linear  = absolute position offset from spawn (metres)
@@ -125,12 +150,19 @@ GoalReference CommandGoalProvider::Evaluate(const GoalContext& context) {
     goal.state.position = spawn_position_ + command->linear;
     goal.state.velocity = Eigen::Vector3d::Zero();
   } else {
-    // kVelocity: integrate angular.z as yaw rate, original behaviour.
+    // kVelocity:
+    // - cmd_vel.linear is interpreted in the local horizontal odom frame
+    //   aligned with the current vehicle heading (x forward, y left, z up)
+    // - cmd_vel.angular.z is interpreted as a commanded yaw rate around the
+    //   locally held heading. Keeping it at zero should keep the current yaw.
+    if (command_reacquired) {
+      desired_yaw_ = current_yaw;
+    }
     desired_yaw_ += command->angular.z() * dt;
     goal.control_mode = SE3Controller::ControlMode::kVelocity;
-    goal.source = "ros2_cmd_vel";
+    goal.source = "ros2_cmd_vel_local";
     goal.state.position = context.current_state.position;
-    goal.state.velocity = command->linear;
+    goal.state.velocity = RotateLocalVelocityToWorld(command->linear, current_yaw);
     goal.state.omega = Eigen::Vector3d(0.0, 0.0, command->angular.z());
   }
 
@@ -141,9 +173,12 @@ GoalReference CommandGoalProvider::Evaluate(const GoalContext& context) {
 
 void CommandGoalProvider::Reset() {
   initialized_ = false;
+  hold_state_initialized_ = false;
+  previous_command_valid_ = false;
   desired_yaw_ = 0.0;
   last_sim_time_ = 0.0;
   spawn_position_ = Eigen::Vector3d::Zero();
+  hold_position_ = Eigen::Vector3d::Zero();
 }
 
 }  // namespace quadrotor

@@ -1,10 +1,31 @@
 #include "controller/se3_controller.hpp"
 
+#include <cmath>
 #include <stdexcept>
 
 #include "math/geometry.hpp"
 
 namespace quadrotor {
+
+namespace {
+
+Eigen::Matrix3d BuildBodyFromAircraft(const Eigen::Vector3d& aircraft_forward_axis) {
+  const Eigen::Vector3d forward_body = aircraft_forward_axis.normalized();
+  const Eigen::Vector3d left_body = Eigen::Vector3d::UnitZ().cross(forward_body).normalized();
+  const Eigen::Vector3d up_body = forward_body.cross(left_body).normalized();
+
+  Eigen::Matrix3d body_from_aircraft;
+  body_from_aircraft.col(0) = forward_body;
+  body_from_aircraft.col(1) = left_body;
+  body_from_aircraft.col(2) = up_body;
+  return body_from_aircraft;
+}
+
+Eigen::Vector3d ProjectOntoPlane(const Eigen::Vector3d& vector, const Eigen::Vector3d& normal) {
+  return vector - normal * normal.dot(vector);
+}
+
+}  // namespace
 
 void SE3Controller::setCurrentState(const State& state) {
   current_state_ = state;
@@ -12,6 +33,14 @@ void SE3Controller::setCurrentState(const State& state) {
 
 void SE3Controller::setGoalState(const State& state) {
   goal_state_ = state;
+}
+
+void SE3Controller::setAircraftForwardAxis(const Eigen::Vector3d& axis) {
+  if (axis.head<2>().norm() < 1e-6 || std::abs(axis.z()) > 1e-6) {
+    throw std::runtime_error(
+        "aircraft forward axis must be horizontal and have a non-zero xy component.");
+  }
+  body_from_aircraft_ = BuildBodyFromAircraft(axis);
 }
 
 std::pair<Eigen::Vector3d, Eigen::Vector3d> SE3Controller::updateLinearError() const {
@@ -45,24 +74,27 @@ SE3Controller::AngularError SE3Controller::updateAngularError(
   if (forward_des.norm() > 1e-6) {
     forward_des.normalize();
   } else {
-    forward_des = R_curr.col(1);
+    forward_des = R_curr * body_from_aircraft_.col(0);
   }
 
-  Eigen::Vector3d right_des = forward_des.cross(goal_z);
-  if (right_des.norm() < 1e-6) {
+  Eigen::Vector3d proj_fwd_des = ProjectOntoPlane(forward_des, goal_z);
+  if (proj_fwd_des.norm() < 1e-6) {
+    proj_fwd_des = ProjectOntoPlane(R_curr * body_from_aircraft_.col(0), goal_z);
+  }
+  if (proj_fwd_des.norm() < 1e-6) {
     const Eigen::Vector3d fallback =
         std::abs(goal_z.z()) < 0.9 ? Eigen::Vector3d::UnitZ() : Eigen::Vector3d::UnitX();
-    right_des = fallback.cross(goal_z);
+    proj_fwd_des = ProjectOntoPlane(fallback, goal_z);
   }
-  right_des.normalize();
-
-  Eigen::Vector3d proj_fwd_des = goal_z.cross(right_des);
   proj_fwd_des.normalize();
+  Eigen::Vector3d left_des = goal_z.cross(proj_fwd_des);
+  left_des.normalize();
 
-  Eigen::Matrix3d R_goal = Eigen::Matrix3d::Zero();
-  R_goal.col(0) = right_des;
-  R_goal.col(1) = proj_fwd_des;
-  R_goal.col(2) = goal_z;
+  Eigen::Matrix3d R_goal_aircraft = Eigen::Matrix3d::Zero();
+  R_goal_aircraft.col(0) = proj_fwd_des;
+  R_goal_aircraft.col(1) = left_des;
+  R_goal_aircraft.col(2) = goal_z;
+  const Eigen::Matrix3d R_goal = R_goal_aircraft * body_from_aircraft_.transpose();
 
   AngularError error;
   error.thrust = goal_z_norm;

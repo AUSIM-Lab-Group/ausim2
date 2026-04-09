@@ -27,6 +27,7 @@ class SE3Controller {
 
   void setCurrentState(const State& state);
   void setGoalState(const State& state);
+  void setAircraftForwardAxis(const Eigen::Vector3d& axis);
 
   ControlCommand controlUpdate(
       const State& current_state,
@@ -46,6 +47,11 @@ class SE3Controller {
       const Eigen::Vector3d& trans_control,
       const Eigen::Vector3d& forward) const;
 
+  Eigen::Matrix3d body_from_aircraft_ =
+      (Eigen::Matrix3d() << 0.0, -1.0, 0.0,
+                            1.0,  0.0, 0.0,
+                            0.0,  0.0, 1.0)
+          .finished();
   std::optional<State> goal_state_;
   std::optional<State> current_state_;
 };

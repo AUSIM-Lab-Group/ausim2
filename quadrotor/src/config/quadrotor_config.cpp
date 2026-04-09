@@ -1,5 +1,6 @@
 #include "config/quadrotor_config.hpp"
 
+#include <cmath>
 #include <filesystem>
 #include <optional>
 #include <stdexcept>
@@ -39,6 +40,19 @@ fs::path ResolvePath(const fs::path& config_path, const fs::path& maybe_relative
   return (config_path.parent_path() / maybe_relative_path).lexically_normal();
 }
 
+Eigen::Vector3d NormalizeAircraftForwardAxis(const Eigen::Vector3d& axis) {
+  const Eigen::Vector3d horizontal_axis(axis.x(), axis.y(), 0.0);
+  if (horizontal_axis.norm() < 1e-6) {
+    throw std::runtime_error(
+        "model.aircraft_forward_axis must have a non-zero horizontal component.");
+  }
+  if (std::abs(axis.z()) > 1e-6) {
+    throw std::runtime_error(
+        "model.aircraft_forward_axis must stay in the horizontal plane.");
+  }
+  return horizontal_axis.normalized();
+}
+
 void LoadSensors(const YAML::Node& sensors_node, std::vector<SensorConfig>* sensors) {
   sensors->clear();
   if (!sensors_node || !sensors_node.IsSequence()) {
@@ -60,7 +74,11 @@ void LoadSensors(const YAML::Node& sensors_node, std::vector<SensorConfig>* sens
   }
 }
 
-void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, QuadrotorConfig* config) {
+void ApplyConfigRoot(
+    const YAML::Node& root,
+    const fs::path& config_path,
+    QuadrotorConfig* config,
+    bool apply_global_simulation_config = true) {
   if (!root || !root.IsMap()) {
     return;
   }
@@ -78,14 +96,38 @@ void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, Quadro
     config->model.scene_xml = ResolvePath(config_path, model_node["scene_xml"].as<std::string>());
   }
   AssignIfPresent(model_node, "body_name", &config->model.vehicle_body_name);
-  AssignIfPresent(model_node, "track_camera_name", &config->model.track_camera_name);
+  if (model_node && model_node["aircraft_forward_axis"]) {
+    config->model.aircraft_forward_axis =
+        NormalizeAircraftForwardAxis(
+            LoadVector3(model_node["aircraft_forward_axis"], config->model.aircraft_forward_axis));
+  }
 
-  const YAML::Node simulation_node = root["simulation"];
-  AssignIfPresent(simulation_node, "duration", &config->simulation.duration);
-  AssignIfPresent(simulation_node, "dt", &config->simulation.dt);
-  AssignIfPresent(simulation_node, "print_interval", &config->simulation.print_interval);
-  AssignIfPresent(simulation_node, "control_mode", &config->simulation.control_mode);
-  AssignIfPresent(simulation_node, "example_mode", &config->simulation.example_mode);
+  if (apply_global_simulation_config) {
+    const YAML::Node simulation_node = root["simulation"];
+    AssignIfPresent(simulation_node, "duration", &config->simulation.duration);
+    AssignIfPresent(simulation_node, "dt", &config->simulation.dt);
+    AssignIfPresent(simulation_node, "print_interval", &config->simulation.print_interval);
+    AssignIfPresent(simulation_node, "control_mode", &config->simulation.control_mode);
+    AssignIfPresent(simulation_node, "example_mode", &config->simulation.example_mode);
+    AssignIfPresent(simulation_node, "track_camera_name", &config->simulation.track_camera_name);
+    // Backward compatibility for legacy single-file configs.
+    if (simulation_node && !simulation_node["track_camera_name"]) {
+      AssignIfPresent(model_node, "track_camera_name", &config->simulation.track_camera_name);
+    }
+    const YAML::Node goal_node = root["goal"];
+    if (goal_node) {
+      config->hover_goal.position = LoadVector3(goal_node["position"], config->hover_goal.position);
+      config->hover_goal.velocity = LoadVector3(goal_node["velocity"], config->hover_goal.velocity);
+      config->hover_goal.heading = LoadVector3(goal_node["heading"], config->hover_goal.heading);
+    }
+
+    const YAML::Node trajectory_node = root["trajectory"];
+    AssignIfPresent(trajectory_node, "wait_time", &config->circle_trajectory.wait_time);
+    AssignIfPresent(trajectory_node, "height", &config->circle_trajectory.height);
+    AssignIfPresent(trajectory_node, "radius", &config->circle_trajectory.radius);
+    AssignIfPresent(trajectory_node, "speed_hz", &config->circle_trajectory.speed_hz);
+    AssignIfPresent(trajectory_node, "height_gain", &config->circle_trajectory.height_gain);
+  }
 
   const YAML::Node vehicle_node = root["vehicle"];
   AssignIfPresent(vehicle_node, "mass", &config->vehicle.mass);
@@ -103,20 +145,6 @@ void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, Quadro
   AssignIfPresent(controller_node, "kw", &config->controller.kw);
   AssignIfPresent(controller_node, "rate_hz", &config->controller.rate_hz);
   AssignIfPresent(controller_node, "torque_scale", &config->torque_scale);
-
-  const YAML::Node goal_node = root["goal"];
-  if (goal_node) {
-    config->hover_goal.position = LoadVector3(goal_node["position"], config->hover_goal.position);
-    config->hover_goal.velocity = LoadVector3(goal_node["velocity"], config->hover_goal.velocity);
-    config->hover_goal.heading = LoadVector3(goal_node["heading"], config->hover_goal.heading);
-  }
-
-  const YAML::Node trajectory_node = root["trajectory"];
-  AssignIfPresent(trajectory_node, "wait_time", &config->circle_trajectory.wait_time);
-  AssignIfPresent(trajectory_node, "height", &config->circle_trajectory.height);
-  AssignIfPresent(trajectory_node, "radius", &config->circle_trajectory.radius);
-  AssignIfPresent(trajectory_node, "speed_hz", &config->circle_trajectory.speed_hz);
-  AssignIfPresent(trajectory_node, "height_gain", &config->circle_trajectory.height_gain);
 
   const YAML::Node viewer_node = root["viewer"];
   AssignIfPresent(viewer_node, "enabled", &config->viewer.enabled);
@@ -194,7 +222,7 @@ QuadrotorConfig LoadConfigFile(
   const YAML::Node root = YAML::LoadFile(config_path.string());
   QuadrotorConfig config;
   config.model.scene_xml = DefaultSceneXmlPath();
-  ApplyConfigRoot(root, config_path, &config);
+  ApplyConfigRoot(root, config_path, &config, true);
 
   const std::optional<fs::path> robot_config_path =
       ResolveRobotConfigPath(root, config_path, explicit_robot_path, require_robot_config);
@@ -207,7 +235,8 @@ QuadrotorConfig LoadConfigFile(
     ApplyConfigRoot(
         YAML::LoadFile(resolved_robot_config_path.string()),
         resolved_robot_config_path,
-        &config);
+        &config,
+        false);
   }
 
   return config;

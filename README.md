@@ -37,10 +37,13 @@ ausim2/
 
 Ubuntu 常见安装：
 
+  `cmake -DCMAKE_INSTALL_PREFIX=/opt/mujoco .`
+  `sudo cmake --install .`
+
 ```bash
 sudo apt install build-essential cmake libeigen3-dev libyaml-cpp-dev libglfw3-dev
 source /opt/ros/humble/setup.bash
-cmake -S . -B build -DQUADROTOR_ENABLE_ROS2=ON
+cmake -S . -B build 
 cmake --build build -j
 ```
 
@@ -85,10 +88,14 @@ cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/build
 `sim_config.yaml` 负责全局仿真环境：
 
 - `model.scene_xml`
-- `model.track_camera_name`
+- `simulation.track_camera_name`
 - `simulation.duration`
 - `simulation.dt`
 - `simulation.print_interval`
+- `simulation.control_mode`
+- `simulation.example_mode`
+- `goal.*`
+- `trajectory.*`
 - `viewer.*`
 - `ros2.*`
 
@@ -97,13 +104,10 @@ cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/build
 - `robot.count`
 - `identity.*`
 - `model.body_name`
-- `simulation.control_mode`
-- `simulation.example_mode`
+- `model.aircraft_forward_axis`
 - `bindings.*`
 - `vehicle.*`
 - `controller.*`
-- `goal.*`
-- `trajectory.*`
 - `interfaces.*`
 - `frames.*`
 - `sensors[]`

@@ -265,9 +265,6 @@ PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
 //Path to a program.
 Python3_EXECUTABLE:FILEPATH=/usr/bin/python3
 
-//Build ROS2 bridge support
-QUADROTOR_ENABLE_ROS2:BOOL=ON
-
 //Value Computed by CMake
 QuadrotorWorkspace_BINARY_DIR:STATIC=/home/x/mujoco/ausim2/build
 

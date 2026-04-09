@@ -92,6 +92,20 @@ robot_config: robot/crazyfile_config.yaml
 simulation:
   duration: 0.0
   dt: 0.001
+  control_mode: 2
+  example_mode: 0
+
+goal:
+  position: [0.0, 0.0, 0.3]
+  velocity: [0.5, 0.0, 0.0]
+  heading: [1.0, 0.0, 0.0]
+
+trajectory:
+  wait_time: 1.5
+  height: 0.3
+  radius: 0.5
+  speed_hz: 0.3
+  height_gain: 1.5
 
 viewer:
   enabled: true
@@ -115,11 +129,22 @@ identity:
 model:
   scene_xml: ../../../assets/crazyfile/scene.xml
   body_name: cf2
-
-simulation:
-  control_mode: 1   # 1=速度控制, 2=位置控制
-  example_mode: 0   # 0=ROS cmd_vel, 1=简单目标, 2=圆轨迹
+  aircraft_forward_axis: [0.0, 1.0, 0.0]
 ```
+
+`control_mode` / `example_mode` / `goal` / `trajectory` 现在放在 `cfg/sim_config.yaml` 里，作为全局仿真配置。
+
+`model.aircraft_forward_axis` 表示“飞机机头在模型 body 坐标系里的方向”。当前 Crazyflie 的语义是：
+- 模型 `+x`：飞机右侧
+- 模型 `+y`：飞机机头
+- 因此配置为 `[0.0, 1.0, 0.0]`
+- 这个配置同时影响速度模式下的“当前 heading”计算和姿态保持时的机头朝向约束
+
+`control_mode: 1` 下，`/cmd_vel` 的语义为：
+- 无新命令时：无人机锁定当前位置与当前朝向，进入悬停保持
+- `linear.x / linear.y`：无人机当前局部水平坐标系的前 / 左方向速度，`xy` 与地面平行
+- `linear.z`：竖直速度
+- `angular.z`：机体系偏航角速度；持续发 `0` 时保持当前朝向
 
 ## ROS2 话题
 
@@ -139,6 +164,8 @@ simulation:
 ros2 topic pub /uav1/cmd_vel geometry_msgs/msg/Twist \
   "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {z: 0.3}}" --once
 ```
+
+在 `control_mode: 1` 下，这条命令表示“沿无人机当前局部水平前向 `0.2 m/s` 前进，同时以 `0.3 rad/s` 向左偏航”，而不是沿世界坐标系 `+X` 方向飞行。
 
 ## 新增机型
 

@@ -8,12 +8,8 @@ identity:
 
 model:
   scene_xml: ../../../assets/crazyfile/scene.xml
-  track_camera_name: track
   body_name: cf2
-
-simulation:
-  control_mode: 2
-  example_mode: 0
+  aircraft_forward_axis: [1.0, 0.0, 0.0]
 
 bindings:
   actuators:
@@ -39,18 +35,6 @@ controller:
   kR: 6.0
   kw: 1.0
   torque_scale: 0.001
-
-goal:
-  position: [0.0, 0.0, 0.3]
-  velocity: [0.5, 0.0, 0.0]
-  heading: [1.0, 0.0, 0.0]
-
-trajectory:
-  wait_time: 1.5
-  height: 0.3
-  radius: 0.5
-  speed_hz: 0.3
-  height_gain: 1.5
 
 interfaces:
   cmd_vel_topic: cmd_vel

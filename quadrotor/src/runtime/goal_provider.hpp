@@ -38,8 +38,12 @@ class CommandGoalProvider : public GoalProvider {
  private:
   double command_timeout_seconds_ = 0.5;
   SE3Controller::ControlMode control_mode_ = SE3Controller::ControlMode::kVelocity;
+  Eigen::Vector3d aircraft_forward_axis_ = Eigen::Vector3d(0.0, 1.0, 0.0);
   bool initialized_ = false;
+  bool hold_state_initialized_ = false;
+  bool previous_command_valid_ = false;
   Eigen::Vector3d spawn_position_ = Eigen::Vector3d::Zero();
+  Eigen::Vector3d hold_position_ = Eigen::Vector3d::Zero();
   double desired_yaw_ = 0.0;
   double last_sim_time_ = 0.0;
 };

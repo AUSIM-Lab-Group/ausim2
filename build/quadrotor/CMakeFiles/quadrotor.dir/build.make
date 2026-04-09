@@ -97,7 +97,7 @@ bin/quadrotor: /usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.7.0
 bin/quadrotor: lib/libquadrotor_mujoco_viewer.a
 bin/quadrotor: /usr/lib/x86_64-linux-gnu/libglfw.so.3.3
 bin/quadrotor: ../third_party/mujoco_simulate/liblodepng.a
-bin/quadrotor: /opt/mujoco/lib/libmujoco.so.3.3.7
+bin/quadrotor: /opt/mujoco/lib/libmujoco.so.3.6.0
 bin/quadrotor: quadrotor/CMakeFiles/quadrotor.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/x/mujoco/ausim2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable ../bin/quadrotor"
 	cd /home/x/mujoco/ausim2/build/quadrotor && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/quadrotor.dir/link.txt --verbose=$(VERBOSE)

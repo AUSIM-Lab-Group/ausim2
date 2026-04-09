@@ -58,6 +58,7 @@ struct SimulationConfig {
   double print_interval = 0.5;
   int control_mode = 2;
   int example_mode = 1;
+  std::string track_camera_name = "track";
 };
 
 struct ViewerConfig {
@@ -70,7 +71,7 @@ struct ViewerConfig {
 struct ModelConfig {
   std::filesystem::path scene_xml = "../assets/crazyfile/scene.xml";
   std::string vehicle_body_name = "cf2";
-  std::string track_camera_name = "track";
+  Eigen::Vector3d aircraft_forward_axis = Eigen::Vector3d(0.0, 1.0, 0.0);
 };
 
 struct ActuatorBindingConfig {

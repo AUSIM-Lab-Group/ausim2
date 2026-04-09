@@ -8,7 +8,7 @@ namespace quadrotor {
 MujocoBindings::MujocoBindings(const QuadrotorConfig& config)
     : motor_names_(config.actuators.motor_names),
       vehicle_body_name_(config.model.vehicle_body_name),
-      track_camera_name_(config.model.track_camera_name),
+  track_camera_name_(config.simulation.track_camera_name),
       gyro_sensor_{config.state.gyro_sensor_name},
       accelerometer_sensor_{config.state.accelerometer_sensor_name},
       quaternion_sensor_{config.state.quaternion_sensor_name} {}

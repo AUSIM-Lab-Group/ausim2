@@ -17,6 +17,7 @@ VehicleRuntime::VehicleRuntime(const QuadrotorConfig& config)
   controller_.kw = config_.controller.kw;
   controller_.control_mode =
       static_cast<SE3Controller::ControlMode>(config_.simulation.control_mode);
+  controller_.setAircraftForwardAxis(config_.model.aircraft_forward_axis);
 
   if (config_.simulation.example_mode == 0) {
     goal_provider_ = std::make_unique<CommandGoalProvider>(config_);
