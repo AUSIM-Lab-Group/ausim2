@@ -1,1 +1,0 @@
-/usr/bin/c++ -O3 -DNDEBUG -Wl,--disable-new-dtags CMakeFiles/quadrotor.dir/src/main.cpp.o -o ../bin/quadrotor  -Wl,-rpath,/opt/mujoco/lib: ../lib/libquadrotor_sim_core.a /usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.7.0 ../lib/libquadrotor_mujoco_viewer.a /usr/lib/x86_64-linux-gnu/libglfw.so.3.3 ../../third_party/mujoco_simulate/liblodepng.a /opt/mujoco/lib/libmujoco.so.3.6.0 
