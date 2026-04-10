@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(NOT DEFINED MUJOCO_IMPORTED_TARGET)
+  message(FATAL_ERROR "MuJoCo dependency was not resolved before entering quadrotor/.")
+endif()
+
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(glfw3 REQUIRED)
@@ -29,11 +33,6 @@ if(EXISTS "${_quadrotor_ros_python}")
   endif()
 endif()
 
-find_package(mujoco CONFIG QUIET)
-if(NOT mujoco_FOUND)
-  message(FATAL_ERROR "MuJoCo package not found. Please set mujoco_DIR to the directory containing mujocoConfig.cmake.")
-endif()
-
 set(QUADROTOR_THIRD_PARTY_DIR "${CMAKE_SOURCE_DIR}/third_party")
 
 add_library(quadrotor_mujoco_viewer STATIC
@@ -53,7 +52,7 @@ target_compile_features(quadrotor_mujoco_viewer PUBLIC cxx_std_17)
 target_link_libraries(quadrotor_mujoco_viewer
   PUBLIC
     glfw
-    mujoco::mujoco
+    "${MUJOCO_IMPORTED_TARGET}"
     "${QUADROTOR_THIRD_PARTY_DIR}/mujoco_simulate/liblodepng.a"
 )
 
@@ -141,7 +140,7 @@ target_link_libraries(quadrotor_sim_core
   glfw
   yaml-cpp
   quadrotor_mujoco_viewer
-  mujoco::mujoco
+  "${MUJOCO_IMPORTED_TARGET}"
 )
 
 target_link_libraries(quadrotor_ros_bridge_core
@@ -163,21 +162,10 @@ add_executable(quadrotor_ros_bridge
 target_link_options(quadrotor_ros_bridge PRIVATE "LINKER:--disable-new-dtags")
 target_link_libraries(quadrotor_ros_bridge PRIVATE quadrotor_ros_bridge_core)
 
-get_target_property(_quadrotor_mujoco_lib mujoco::mujoco IMPORTED_LOCATION_RELEASE)
-if(NOT _quadrotor_mujoco_lib)
-  get_target_property(_quadrotor_mujoco_lib mujoco::mujoco IMPORTED_LOCATION_RELWITHDEBINFO)
-endif()
-if(NOT _quadrotor_mujoco_lib)
-  get_target_property(_quadrotor_mujoco_lib mujoco::mujoco IMPORTED_LOCATION_DEBUG)
-endif()
-if(NOT _quadrotor_mujoco_lib)
-  get_target_property(_quadrotor_mujoco_lib mujoco::mujoco IMPORTED_LOCATION)
-endif()
 set(_quadrotor_runtime_rpaths)
 set(_quadrotor_ros_runtime_rpaths)
-if(_quadrotor_mujoco_lib)
-  get_filename_component(_quadrotor_mujoco_dir "${_quadrotor_mujoco_lib}" DIRECTORY)
-  list(APPEND _quadrotor_runtime_rpaths "${_quadrotor_mujoco_dir}")
+if(MUJOCO_RESOLVED_LIBRARY_DIR)
+  list(APPEND _quadrotor_runtime_rpaths "${MUJOCO_RESOLVED_LIBRARY_DIR}")
 endif()
 set(_quadrotor_ros_libdir "/opt/ros/humble/lib")
 if(EXISTS "${_quadrotor_ros_libdir}")
@@ -193,6 +181,12 @@ if(_quadrotor_ros_runtime_rpaths)
   set_target_properties(quadrotor_ros_bridge PROPERTIES
     BUILD_RPATH "${_quadrotor_ros_runtime_rpaths}"
     INSTALL_RPATH "${_quadrotor_ros_runtime_rpaths}"
+  )
+endif()
+if(MUJOCO_RESOLVED_PLUGIN_DIR)
+  target_compile_definitions(quadrotor_sim_core
+    PUBLIC
+      QUADROTOR_MUJOCO_PLUGIN_FALLBACK_DIR="${MUJOCO_RESOLVED_PLUGIN_DIR}"
   )
 endif()
 

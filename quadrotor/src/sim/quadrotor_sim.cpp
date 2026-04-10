@@ -15,6 +15,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include <GLFW/glfw3.h>
 
@@ -35,10 +36,70 @@ using Seconds = std::chrono::duration<double>;
 
 constexpr double kSyncMisalign = 0.1;
 
+#ifndef QUADROTOR_MUJOCO_PLUGIN_FALLBACK_DIR
+#define QUADROTOR_MUJOCO_PLUGIN_FALLBACK_DIR ""
+#endif
+
+std::optional<fs::path> ResolveBundledPluginDirectory() {
+#if defined(__linux__)
+  std::error_code error;
+  const fs::path executable_path = fs::read_symlink("/proc/self/exe", error);
+  if (!error && !executable_path.empty()) {
+    const fs::path plugin_dir = executable_path.parent_path() / "mujoco_plugin";
+    if (fs::exists(plugin_dir, error) && fs::is_directory(plugin_dir, error)) {
+      return plugin_dir;
+    }
+  }
+#endif
+  return std::nullopt;
+}
+
+void AppendPluginDirectory(std::vector<fs::path>& directories, const fs::path& directory) {
+  if (directory.empty()) {
+    return;
+  }
+
+  std::error_code error;
+  if (!fs::exists(directory, error) || !fs::is_directory(directory, error)) {
+    return;
+  }
+
+  for (const fs::path& existing : directories) {
+    if (existing == directory) {
+      return;
+    }
+  }
+  directories.push_back(directory);
+}
+
+void AppendPluginDirectoriesFromEnv(std::vector<fs::path>& directories) {
+  const char* plugin_dirs = std::getenv("MUJOCO_PLUGIN_DIR");
+  if (plugin_dirs == nullptr || plugin_dirs[0] == '\0') {
+    return;
+  }
+
+  std::string token;
+  std::stringstream stream(plugin_dirs);
+  while (std::getline(stream, token, ':')) {
+    if (!token.empty()) {
+      AppendPluginDirectory(directories, fs::path(token));
+    }
+  }
+}
+
 void LoadMuJoCoPlugins() {
-  const char* plugin_dir = std::getenv("MUJOCO_PLUGIN_DIR");
-  if (plugin_dir) {
-    mj_loadAllPluginLibraries(plugin_dir, nullptr);
+  std::vector<fs::path> plugin_directories;
+  AppendPluginDirectoriesFromEnv(plugin_directories);
+
+  if (const auto bundled_plugin_dir = ResolveBundledPluginDirectory()) {
+    AppendPluginDirectory(plugin_directories, *bundled_plugin_dir);
+  }
+
+  AppendPluginDirectory(plugin_directories, fs::path(QUADROTOR_MUJOCO_PLUGIN_FALLBACK_DIR));
+
+  for (const fs::path& plugin_directory : plugin_directories) {
+    const std::string plugin_dir_string = plugin_directory.string();
+    mj_loadAllPluginLibraries(plugin_dir_string.c_str(), nullptr);
   }
 }
 

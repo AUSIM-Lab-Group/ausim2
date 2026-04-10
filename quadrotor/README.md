@@ -4,21 +4,38 @@
 
 ## 构建
 
-依赖：CMake >= 3.20、C++17、MuJoCo 3.3.x、Eigen3、yaml-cpp、GLFW、ROS2 Humble
+依赖：CMake >= 3.20、C++17、MuJoCo 3.6.x、Eigen3、yaml-cpp、GLFW、ROS2 Humble
 
 ```bash
 source /opt/ros/humble/setup.bash
-cmake -S . -B build
+cmake -S . -B build -DMUJOCO_SOURCE_DIR=/path/to/mujoco-source
 cmake --build build -j
 ```
 
-MuJoCo 不在默认路径时：
+推荐的 MuJoCo 使用方式是源码编译后安装，例如：
 
 ```bash
-cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/build
+cmake -S /home/x/mujoco/mujoco-3.6.0 -B /home/x/mujoco/mujoco-3.6.0/build \
+  -DCMAKE_INSTALL_PREFIX=/opt/mujoco
+cmake --build /home/x/mujoco/mujoco-3.6.0/build -j
+sudo cmake --install /home/x/mujoco/mujoco-3.6.0/build
 ```
 
-产物：`build/bin/quadrotor`、`build/bin/quadrotor_ros_bridge`
+项目里只需要给源码目录，构建会自动：
+
+- 从 `${MUJOCO_SOURCE_DIR}/build/CMakeCache.txt` 读取安装前缀
+- 尝试 `${install_prefix}/lib/cmake/mujoco`
+- 必要时回退到 `${MUJOCO_SOURCE_DIR}/include` 和 `${MUJOCO_SOURCE_DIR}/build/lib/libmujoco.so`
+
+只有高级场景才需要直接传 package 路径：
+
+```bash
+cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/lib/cmake/mujoco
+```
+
+主工程会自动编译 `third_party/mujoco_ray_caster` 外部插件，并输出到 `build/bin/mujoco_plugin/`。
+
+产物：`build/bin/quadrotor`、`build/bin/quadrotor_ros_bridge`、`build/bin/mujoco_plugin/libsensor_raycaster.so`
 
 ## 运行
 
@@ -35,6 +52,8 @@ cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/build
 # 兼容旧单文件模式
 ./build/bin/quadrotor --config ./legacy_config.yaml
 ```
+
+运行时会优先读取 `MUJOCO_PLUGIN_DIR`；如果未设置，则自动尝试加载可执行文件旁边的 `mujoco_plugin/` 目录。
 
 ## 进程模型
 

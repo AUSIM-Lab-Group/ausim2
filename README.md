@@ -29,28 +29,55 @@ ausim2/
 
 - CMake >= 3.20
 - C++17 编译器
-- MuJoCo 3.3.x
+- MuJoCo 3.6.x
 - Eigen3
 - yaml-cpp
 - GLFW
 - ROS2 Humble
 
-Ubuntu 常见安装：
+MuJoCo 推荐按源码编译安装：
 
-  `cmake -DCMAKE_INSTALL_PREFIX=/opt/mujoco .`
-  `sudo cmake --install .`
+```bash
+cmake -S /home/x/mujoco/mujoco-3.6.0 -B /home/x/mujoco/mujoco-3.6.0/build \
+  -DCMAKE_INSTALL_PREFIX=/opt/mujoco
+cmake --build /home/x/mujoco/mujoco-3.6.0/build -j
+sudo cmake --install /home/x/mujoco/mujoco-3.6.0/build
+```
+
+项目构建：
 
 ```bash
 sudo apt install build-essential cmake libeigen3-dev libyaml-cpp-dev libglfw3-dev
 source /opt/ros/humble/setup.bash
-cmake -S . -B build 
+cmake -S . -B build -DMUJOCO_SOURCE_DIR=/home/x/mujoco/mujoco-3.6.0
 cmake --build build -j
 ```
 
-如果 MuJoCo 不在默认路径，可传：
+现在的搜索逻辑尽量只需要 `MUJOCO_SOURCE_DIR`：
+
+- 先读 `${MUJOCO_SOURCE_DIR}/build/CMakeCache.txt`
+- 从里面提取 `CMAKE_INSTALL_PREFIX`
+- 自动尝试 `${install_prefix}/lib/cmake/mujoco`
+- 如果没装 package，再回退到 `${MUJOCO_SOURCE_DIR}/include` 和 `${MUJOCO_SOURCE_DIR}/build/lib/libmujoco.so`
+
+只有高级场景才需要手工指定：
 
 ```bash
-cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/build
+cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/lib/cmake/mujoco
+```
+
+主工程会自动编译 `third_party/mujoco_ray_caster`，并把插件库输出到：
+
+- `build/bin/mujoco_plugin/libsensor_raycaster.so`
+
+可选 smoke test：
+
+```bash
+cmake -S . -B build \
+  -DMUJOCO_SOURCE_DIR=/path/to/mujoco-source \
+  -DMUJOCO_RAY_CASTER_BUILD_SMOKETEST=ON
+cmake --build build -j
+./build/bin/mujoco_ray_caster_smoketest
 ```
 
 ## 运行
@@ -67,6 +94,8 @@ cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/build
 ./build/bin/quadrotor --viewer
 ./build/bin/quadrotor --headless
 ```
+
+运行时会优先读取 `MUJOCO_PLUGIN_DIR`；如果未设置，则自动尝试加载可执行文件旁边的 `mujoco_plugin/` 目录，也就是默认的 `build/bin/mujoco_plugin/`。
 
 也支持显式指定：
 

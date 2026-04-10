@@ -1,0 +1,164 @@
+include_guard(GLOBAL)
+
+function(resolve_mujoco_dependency)
+  set(options)
+  set(oneValueArgs OUT_TARGET OUT_INCLUDE_DIR OUT_LIBRARY OUT_LIBRARY_DIR OUT_PLUGIN_DIR)
+  cmake_parse_arguments(RMD "${options}" "${oneValueArgs}" "" ${ARGN})
+
+  if(NOT RMD_OUT_TARGET)
+    message(FATAL_ERROR "resolve_mujoco_dependency requires OUT_TARGET.")
+  endif()
+
+  set(_resolved_target "")
+  if(TARGET mujoco::mujoco)
+    set(_resolved_target mujoco::mujoco)
+  elseif(TARGET mujoco)
+    set(_resolved_target mujoco)
+  endif()
+
+  set(_install_prefix "")
+  if(MUJOCO_SOURCE_DIR AND EXISTS "${MUJOCO_SOURCE_DIR}/build/CMakeCache.txt")
+    file(STRINGS "${MUJOCO_SOURCE_DIR}/build/CMakeCache.txt" _install_prefix_line
+         REGEX "^CMAKE_INSTALL_PREFIX:PATH=" LIMIT_COUNT 1)
+    if(_install_prefix_line)
+      string(REPLACE "CMAKE_INSTALL_PREFIX:PATH=" "" _install_prefix "${_install_prefix_line}")
+    endif()
+  endif()
+
+  if(NOT _resolved_target)
+    set(_package_hints)
+    set(_saved_mujoco_dir "")
+    set(_restore_mujoco_dir FALSE)
+
+    if(DEFINED mujoco_DIR AND EXISTS "${mujoco_DIR}/mujocoConfig.cmake" AND EXISTS "${mujoco_DIR}/mujocoTargets.cmake")
+      list(APPEND _package_hints "${mujoco_DIR}")
+    elseif(DEFINED mujoco_DIR AND NOT "${mujoco_DIR}" STREQUAL "")
+      set(_saved_mujoco_dir "${mujoco_DIR}")
+      set(_restore_mujoco_dir TRUE)
+      unset(mujoco_DIR CACHE)
+      unset(mujoco_DIR)
+    endif()
+
+    if(_install_prefix AND EXISTS "${_install_prefix}/lib/cmake/mujoco/mujocoConfig.cmake")
+      list(APPEND _package_hints "${_install_prefix}/lib/cmake/mujoco")
+    endif()
+
+    if(EXISTS "/opt/mujoco/lib/cmake/mujoco/mujocoConfig.cmake")
+      list(APPEND _package_hints "/opt/mujoco/lib/cmake/mujoco")
+    endif()
+
+    list(REMOVE_DUPLICATES _package_hints)
+    if(_package_hints)
+      find_package(mujoco CONFIG QUIET PATHS ${_package_hints} NO_DEFAULT_PATH)
+    endif()
+
+    if(_restore_mujoco_dir AND NOT TARGET mujoco::mujoco AND NOT TARGET mujoco)
+      set(mujoco_DIR "${_saved_mujoco_dir}" CACHE PATH "Original MuJoCo package hint" FORCE)
+    endif()
+
+    if(TARGET mujoco::mujoco)
+      set(_resolved_target mujoco::mujoco)
+    elseif(TARGET mujoco)
+      set(_resolved_target mujoco)
+    endif()
+  endif()
+
+  set(_resolved_include_dir "")
+  set(_resolved_library "")
+  set(_resolved_library_dir "")
+  set(_resolved_plugin_dir "")
+
+  if(_resolved_target)
+    foreach(_cfg RELEASE RELWITHDEBINFO DEBUG)
+      get_target_property(_candidate "${_resolved_target}" "IMPORTED_LOCATION_${_cfg}")
+      if(_candidate)
+        set(_resolved_library "${_candidate}")
+        break()
+      endif()
+    endforeach()
+    if(NOT _resolved_library)
+      get_target_property(_resolved_library "${_resolved_target}" IMPORTED_LOCATION)
+    endif()
+
+    get_target_property(_include_dirs "${_resolved_target}" INTERFACE_INCLUDE_DIRECTORIES)
+    if(_include_dirs)
+      list(GET _include_dirs 0 _resolved_include_dir)
+    endif()
+  else()
+    set(_include_candidates)
+    if(MUJOCO_SOURCE_DIR)
+      list(APPEND _include_candidates "${MUJOCO_SOURCE_DIR}/include")
+    endif()
+    if(_install_prefix)
+      list(APPEND _include_candidates "${_install_prefix}/include")
+    endif()
+    list(APPEND _include_candidates "/opt/mujoco/include")
+
+    foreach(_candidate_include IN LISTS _include_candidates)
+      if(EXISTS "${_candidate_include}/mujoco/mujoco.h")
+        set(_resolved_include_dir "${_candidate_include}")
+        break()
+      endif()
+    endforeach()
+
+    set(_library_search_dirs)
+    if(MUJOCO_SOURCE_DIR)
+      list(APPEND _library_search_dirs "${MUJOCO_SOURCE_DIR}/build/lib")
+    endif()
+    if(_install_prefix)
+      list(APPEND _library_search_dirs "${_install_prefix}/lib")
+    endif()
+    list(APPEND _library_search_dirs "/opt/mujoco/lib")
+    list(REMOVE_DUPLICATES _library_search_dirs)
+
+    find_library(_manual_mujoco_library
+      NAMES mujoco libmujoco
+      PATHS ${_library_search_dirs}
+      NO_DEFAULT_PATH
+    )
+    if(_manual_mujoco_library)
+      set(_resolved_library "${_manual_mujoco_library}")
+    endif()
+
+    if(_resolved_include_dir AND _resolved_library)
+      add_library(mujoco::mujoco SHARED IMPORTED GLOBAL)
+      set_target_properties(mujoco::mujoco PROPERTIES
+        IMPORTED_LOCATION "${_resolved_library}"
+        INTERFACE_INCLUDE_DIRECTORIES "${_resolved_include_dir}"
+      )
+      set(_resolved_target mujoco::mujoco)
+    endif()
+  endif()
+
+  if(NOT _resolved_target)
+    message(FATAL_ERROR
+      "MuJoCo was not found. Pass -DMUJOCO_SOURCE_DIR=/path/to/mujoco-source, "
+      "or explicitly pass -Dmujoco_DIR=/path/to/mujoco/package-dir.")
+  endif()
+
+  if(_resolved_library)
+    get_filename_component(_resolved_library_dir "${_resolved_library}" DIRECTORY)
+  endif()
+
+  if(_install_prefix AND EXISTS "${_install_prefix}/bin/mujoco_plugin")
+    set(_resolved_plugin_dir "${_install_prefix}/bin/mujoco_plugin")
+  elseif(MUJOCO_SOURCE_DIR AND EXISTS "${MUJOCO_SOURCE_DIR}/build/lib/libobj_decoder.so")
+    set(_resolved_plugin_dir "${MUJOCO_SOURCE_DIR}/build/lib")
+  elseif(_resolved_library_dir)
+    set(_resolved_plugin_dir "${_resolved_library_dir}")
+  endif()
+
+  set(${RMD_OUT_TARGET} "${_resolved_target}" PARENT_SCOPE)
+  if(RMD_OUT_INCLUDE_DIR)
+    set(${RMD_OUT_INCLUDE_DIR} "${_resolved_include_dir}" PARENT_SCOPE)
+  endif()
+  if(RMD_OUT_LIBRARY)
+    set(${RMD_OUT_LIBRARY} "${_resolved_library}" PARENT_SCOPE)
+  endif()
+  if(RMD_OUT_LIBRARY_DIR)
+    set(${RMD_OUT_LIBRARY_DIR} "${_resolved_library_dir}" PARENT_SCOPE)
+  endif()
+  if(RMD_OUT_PLUGIN_DIR)
+    set(${RMD_OUT_PLUGIN_DIR} "${_resolved_plugin_dir}" PARENT_SCOPE)
+  endif()
+endfunction()
