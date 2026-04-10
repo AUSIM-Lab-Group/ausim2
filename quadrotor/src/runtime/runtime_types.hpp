@@ -62,12 +62,28 @@ struct TelemetrySnapshot {
   bool has_goal = false;
 };
 
+enum class CameraFrameFormat : std::uint32_t {
+  kRgb8 = 0,
+  kDepth32F = 1,
+};
+
+constexpr std::uint32_t CameraFrameBytesPerPixel(CameraFrameFormat format) {
+  switch (format) {
+    case CameraFrameFormat::kRgb8:
+      return 3;
+    case CameraFrameFormat::kDepth32F:
+      return 4;
+  }
+  return 0;
+}
+
 struct CameraFrame {
   double sim_time = 0.0;
   std::uint32_t width = 0;
   std::uint32_t height = 0;
   std::uint32_t step = 0;
   std::uint32_t sequence = 0;
+  CameraFrameFormat format = CameraFrameFormat::kRgb8;
   std::vector<std::uint8_t> data;
 };
 

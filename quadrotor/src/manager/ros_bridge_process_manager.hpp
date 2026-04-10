@@ -42,7 +42,7 @@ class RosBridgeProcessManager {
   std::thread telemetry_thread_;
   std::thread command_thread_;
   std::thread camera_thread_;
-  std::vector<std::string> camera_source_names_;
+  std::vector<std::string> camera_channel_names_;
 };
 
 }  // namespace quadrotor

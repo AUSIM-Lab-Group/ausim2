@@ -106,6 +106,16 @@ struct RosFrameConfig {
   std::string imu = "base_link";
 };
 
+struct CameraDepthConfig {
+  bool enabled = false;
+  std::string frame_id;
+  std::string topic;
+  std::string sensor_name;
+  double rate_hz = 0.0;
+  double compute_rate_hz = 0.0;
+  int worker_threads = 0;
+};
+
 struct SensorConfig {
   std::string name;
   std::string type;
@@ -116,6 +126,27 @@ struct SensorConfig {
   int width = 320;
   int height = 240;
   double rate_hz = 30.0;
+  CameraDepthConfig depth;
+};
+
+enum class CameraStreamKind {
+  kColor,
+  kDepth,
+};
+
+struct CameraStreamConfig {
+  std::string name;
+  CameraStreamKind kind = CameraStreamKind::kColor;
+  std::string channel_name;
+  std::string camera_name;
+  std::string sensor_name;
+  std::string frame_id;
+  std::string topic;
+  int width = 320;
+  int height = 240;
+  double rate_hz = 30.0;
+  double compute_rate_hz = 0.0;
+  int worker_threads = 0;
 };
 
 struct QuadrotorConfig {
@@ -142,5 +173,7 @@ QuadrotorConfig LoadConfigFromYaml(const std::string& path);
 QuadrotorConfig LoadConfigFromYaml(
     const std::string& sim_config_path,
     const std::string& robot_config_path);
+std::vector<CameraStreamConfig> BuildCameraStreamConfigs(
+    const std::vector<SensorConfig>& sensors);
 
 }  // namespace quadrotor

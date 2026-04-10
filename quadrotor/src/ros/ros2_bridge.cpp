@@ -101,6 +101,30 @@ RosBridgeConfig BuildRosBridgeConfig(const QuadrotorConfig& config) {
   return bridge_config;
 }
 
+bool IsKnownCameraFrameFormat(std::uint32_t wire_value) {
+  switch (static_cast<CameraFrameFormat>(wire_value)) {
+    case CameraFrameFormat::kRgb8:
+    case CameraFrameFormat::kDepth32F:
+      return true;
+  }
+  return false;
+}
+
+bool ValidateImageMetadata(const ipc::CameraImageMetadataPacket& metadata) {
+  if (!IsKnownCameraFrameFormat(metadata.pixel_format)) {
+    return false;
+  }
+
+  const auto format = static_cast<CameraFrameFormat>(metadata.pixel_format);
+  const std::uint32_t bytes_per_pixel = CameraFrameBytesPerPixel(format);
+  if (bytes_per_pixel == 0) {
+    return false;
+  }
+
+  return metadata.step == metadata.width * bytes_per_pixel &&
+         metadata.data_size == metadata.step * metadata.height;
+}
+
 void EnsureWritableRosHome() {
 #if defined(__linux__)
   if (std::getenv("ROS_HOME") == nullptr) {
@@ -231,11 +255,7 @@ class RosBridgeProcess {
         if (sensor.type == "imu") {
           publishers_.push_back(std::make_unique<ImuDataPublisher>(node_, topic, frame));
         } else if (sensor.type == "camera") {
-          image_publishers_.push_back(
-              std::make_unique<ImageDataPublisher>(node_, topic, frame));
-          latest_camera_frames_.push_back(nullptr);
-          last_published_camera_sequences_.push_back(0);
-          camera_frame_published_.push_back(false);
+          continue;
         } else {
           RCLCPP_WARN(
               node_->get_logger(),
@@ -243,6 +263,16 @@ class RosBridgeProcess {
               sensor.name.c_str(),
               sensor.type.c_str());
         }
+      }
+
+      for (const CameraStreamConfig& stream : BuildCameraStreamConfigs(config_.sensors)) {
+        image_publishers_.push_back(std::make_unique<ImageDataPublisher>(
+            node_,
+            ResolveTopicName(config_, stream.topic),
+            ResolveFrameId(config_, stream.frame_id)));
+        latest_camera_frames_.push_back(nullptr);
+        last_published_camera_sequences_.push_back(0);
+        camera_frame_published_.push_back(false);
       }
 
       executor_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
@@ -372,8 +402,7 @@ class RosBridgeProcess {
         RequestStop();
         return;
       }
-      if (metadata.step != metadata.width * 3 ||
-          metadata.data_size != metadata.step * metadata.height) {
+      if (!ValidateImageMetadata(metadata)) {
         if (!stop_requested_.load()) {
           std::cerr << "quadrotor_ros_bridge warning: received malformed image frame\n";
         }

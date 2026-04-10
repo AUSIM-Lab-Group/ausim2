@@ -3,6 +3,10 @@
 
   <compiler inertiafromgeom="false" meshdir="assets" autolimits="true"/>
 
+  <extension>
+    <plugin plugin="mujoco.sensor.ray_caster_camera"/>
+  </extension>
+
   <default>
     <default class="cf2">
       <default class="visual">
@@ -70,7 +74,12 @@
       <freejoint/>
       <inertial pos="0 0 0" mass="0.033" diaginertia="1.395e-5 1.395e-5 2.173e-5"/>
       <camera name="track" pos="-1 0 .5" xyaxes="0 -1 0 1 0 2" mode="trackcom"/>
-      <camera name="front_cam" pos="0.04 0 0.015" xyaxes="0 -1 0 -0.258819 0 0.965926"/>
+      <camera name="front_cam"
+        pos="0.04 0 0.015"
+        xyaxes="0 -1 0 -0.258819 0 0.965926"
+        focal="1 1"
+        sensorsize="1.333333 1"
+        resolution="320 240"/>
       <geom mesh="cf2_0" material="propeller_plastic" class="visual"/>
       <geom mesh="cf2_1" material="medium_gloss_plastic" class="visual"/>
       <geom mesh="cf2_2" material="polished_gold" class="visual"/>
@@ -135,6 +144,17 @@
     <gyro name="body_gyro" site="imu"/>
     <accelerometer name="body_linacc" site="imu"/>
     <framequat name="body_quat" objtype="site" objname="imu"/>
+    <plugin name="front_cam_depth" plugin="mujoco.sensor.ray_caster_camera" objtype="camera"
+      objname="front_cam">
+      <config key="focal_length" value="1"/>
+      <config key="horizontal_aperture" value="1.333333"/>
+      <config key="vertical_aperture" value="1"/>
+      <config key="size" value="320 240"/>
+      <config key="dis_range" value="0.02 10"/>
+      <config key="sensor_data_types" value="distance_to_image_plane_inf_zero"/>
+      <config key="n_step_update" value="0000000000"/>
+      <config key="num_thread" value="0000000000"/>
+    </plugin>
   </sensor>
 
   <keyframe>

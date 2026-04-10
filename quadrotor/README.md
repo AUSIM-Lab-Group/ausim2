@@ -174,6 +174,8 @@ model:
 | 订阅 | `/uav1/cmd_vel` | `geometry_msgs/Twist` |
 | 发布 | `/uav1/odom` | `nav_msgs/Odometry` |
 | 发布 | `/uav1/imu/data` | `sensor_msgs/Imu` |
+| 发布 | `/uav1/camera/image_raw` | `sensor_msgs/Image` (`rgb8`) |
+| 发布 | `/uav1/camera/depth/image_raw` | `sensor_msgs/Image` (`32FC1`) |
 | 发布 | `/clock` | `rosgraph_msgs/Clock` |
 | TF | `uav1/odom → uav1/base_link` | — |
 
@@ -199,3 +201,34 @@ ros2 topic pub /uav1/cmd_vel geometry_msgs/msg/Twist \
 5. 在 `ros2_bridge.cpp` 的 `sensors[]` 循环里为新 `sensor.type` 加一个 `else if` 分支
 
 控制器和混控层无需改动。
+
+### 相机深度流
+
+`type: camera` 支持在同一个传感器配置下附带 `depth:` 子块。RGB 和 depth 会沿同一条内部链路流动：
+
+```yaml
+sensors:
+  - name: front_camera
+    type: camera
+    enabled: true
+    frame_id: camera_link
+    topic: camera/image_raw
+    source_name: front_cam
+    width: 320
+    height: 240
+    rate_hz: 30.0
+    depth:
+      enabled: true
+      frame_id: camera_link
+      topic: camera/depth/image_raw
+      sensor_name: front_cam_depth
+      rate_hz: 30.0
+      compute_rate_hz: 30.0
+      worker_threads: 0
+```
+
+- `depth.enabled: false` 时不会向 data board、IPC 和 ROS image publisher 注入深度流
+- depth 分辨率继承相机 `width/height`，并要求和 MJCF 里的 ray-caster sensor `size` 一致
+- `depth.compute_rate_hz` 用来控制 ray-caster 实际计算频率；如果物理步长是 `0.001` 且该值为 `30`，插件会自动写成约每 `33` 个 physics step 更新一次
+- `depth.worker_threads` 会映射到 `mujoco_ray_caster` 的 `num_thread` 配置，只作用于 depth ray-caster，不会改动 RGB 的 OpenGL 渲染线程模型；当前上游多线程实现不稳定，默认建议保持 `0`
+- 当前 Crazyflie 示例把 `front_cam_depth` 绑定到 `assets/crazyfile/cf2.xml` 里的 `front_cam`

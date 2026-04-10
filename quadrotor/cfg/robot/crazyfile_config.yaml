@@ -57,6 +57,14 @@ sensors:
     width: 320
     height: 240
     rate_hz: 30.0
+    depth:
+      enabled: true
+      frame_id: camera_link
+      topic: camera/depth/image_raw
+      sensor_name: front_cam_depth
+      rate_hz: 30.0
+      compute_rate_hz: 30.0
+      worker_threads: 0
   - name: front_lidar
     type: laser_scan
     enabled: false

@@ -62,6 +62,7 @@ class QuadrotorSim {
       bool replace_existing);
   void ConfigureDefaultCamera();
   void ResolveCameraSensors(const mjModel* model);
+  void ApplyDepthPluginPerformanceConfig(mjModel* model) const;
   void InitializeCameraRendering();
   void RefreshCameraRendering();
   void RenderCameraFramesIfNeeded();
@@ -91,16 +92,25 @@ class QuadrotorSim {
   int control_step_count_ = 0;
   std::atomic_bool stop_requested_ = false;
   bool visualization_state_initialized_ = false;
-  struct CameraSensorRuntime {
-    std::string source_name;
+  struct CameraStreamRuntime {
+    std::string name;
+    CameraStreamKind kind = CameraStreamKind::kColor;
+    std::string channel_name;
+    std::string camera_name;
+    std::string sensor_name;
     int width = 320;
     int height = 240;
     double period_seconds = 1.0 / 30.0;
+    double compute_period_seconds = 1.0 / 30.0;
+    int worker_threads = 0;
     double next_render_time = 0.0;
     int camera_id = -1;
+    int sensor_id = -1;
+    int sensor_data_adr = -1;
+    int sensor_data_size = 0;
     std::uint32_t sequence = 0;
   };
-  std::vector<CameraSensorRuntime> camera_sensors_;
+  std::vector<CameraStreamRuntime> camera_streams_;
   CameraRenderer camera_renderer_;
   bool camera_rendering_ready_ = false;
   bool camera_rendering_failed_ = false;

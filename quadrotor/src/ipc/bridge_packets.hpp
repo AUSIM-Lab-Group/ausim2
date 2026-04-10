@@ -30,6 +30,7 @@ struct CameraImageMetadataPacket {
   std::uint32_t width = 0;
   std::uint32_t height = 0;
   std::uint32_t step = 0;
+  std::uint32_t pixel_format = 0;
   std::uint32_t data_size = 0;
 };
 

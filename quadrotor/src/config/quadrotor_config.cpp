@@ -5,6 +5,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include <yaml-cpp/yaml.h>
@@ -53,6 +54,58 @@ Eigen::Vector3d NormalizeAircraftForwardAxis(const Eigen::Vector3d& axis) {
   return horizontal_axis.normalized();
 }
 
+std::string DeriveDepthTopic(const std::string& color_topic) {
+  constexpr std::string_view kImageRawSuffix = "/image_raw";
+  if (color_topic.size() >= kImageRawSuffix.size() &&
+      color_topic.compare(
+          color_topic.size() - kImageRawSuffix.size(),
+          kImageRawSuffix.size(),
+          kImageRawSuffix) == 0) {
+    return color_topic.substr(0, color_topic.size() - kImageRawSuffix.size()) +
+           "/depth/image_raw";
+  }
+  if (color_topic.empty()) {
+    return "camera/depth/image_raw";
+  }
+  return color_topic + "/depth";
+}
+
+CameraStreamConfig BuildColorStream(const SensorConfig& sensor) {
+  CameraStreamConfig stream;
+  stream.name = sensor.name;
+  stream.kind = CameraStreamKind::kColor;
+  stream.channel_name = sensor.source_name;
+  stream.camera_name = sensor.source_name;
+  stream.frame_id = sensor.frame_id;
+  stream.topic = sensor.topic;
+  stream.width = sensor.width;
+  stream.height = sensor.height;
+  stream.rate_hz = sensor.rate_hz;
+  return stream;
+}
+
+CameraStreamConfig BuildDepthStream(const SensorConfig& sensor) {
+  CameraStreamConfig stream;
+  stream.name = sensor.name + "_depth";
+  stream.kind = CameraStreamKind::kDepth;
+  stream.camera_name = sensor.source_name;
+  stream.sensor_name =
+      sensor.depth.sensor_name.empty() ? sensor.source_name + "_depth"
+                                       : sensor.depth.sensor_name;
+  stream.channel_name = stream.sensor_name;
+  stream.frame_id =
+      sensor.depth.frame_id.empty() ? sensor.frame_id : sensor.depth.frame_id;
+  stream.topic =
+      sensor.depth.topic.empty() ? DeriveDepthTopic(sensor.topic) : sensor.depth.topic;
+  stream.width = sensor.width;
+  stream.height = sensor.height;
+  stream.rate_hz = sensor.depth.rate_hz > 0.0 ? sensor.depth.rate_hz : sensor.rate_hz;
+  stream.compute_rate_hz =
+      sensor.depth.compute_rate_hz > 0.0 ? sensor.depth.compute_rate_hz : stream.rate_hz;
+  stream.worker_threads = sensor.depth.worker_threads;
+  return stream;
+}
+
 void LoadSensors(const YAML::Node& sensors_node, std::vector<SensorConfig>* sensors) {
   sensors->clear();
   if (!sensors_node || !sensors_node.IsSequence()) {
@@ -70,6 +123,14 @@ void LoadSensors(const YAML::Node& sensors_node, std::vector<SensorConfig>* sens
     AssignIfPresent(sensor_node, "width", &sensor.width);
     AssignIfPresent(sensor_node, "height", &sensor.height);
     AssignIfPresent(sensor_node, "rate_hz", &sensor.rate_hz);
+    const YAML::Node depth_node = sensor_node["depth"];
+    AssignIfPresent(depth_node, "enabled", &sensor.depth.enabled);
+    AssignIfPresent(depth_node, "frame_id", &sensor.depth.frame_id);
+    AssignIfPresent(depth_node, "topic", &sensor.depth.topic);
+    AssignIfPresent(depth_node, "sensor_name", &sensor.depth.sensor_name);
+    AssignIfPresent(depth_node, "rate_hz", &sensor.depth.rate_hz);
+    AssignIfPresent(depth_node, "compute_rate_hz", &sensor.depth.compute_rate_hz);
+    AssignIfPresent(depth_node, "worker_threads", &sensor.depth.worker_threads);
     sensors->push_back(std::move(sensor));
   }
 }
@@ -252,6 +313,21 @@ QuadrotorConfig LoadConfigFromYaml(
     const std::string& sim_config_path,
     const std::string& robot_config_path) {
   return LoadConfigFile(sim_config_path, robot_config_path, true);
+}
+
+std::vector<CameraStreamConfig> BuildCameraStreamConfigs(
+    const std::vector<SensorConfig>& sensors) {
+  std::vector<CameraStreamConfig> streams;
+  for (const SensorConfig& sensor : sensors) {
+    if (!sensor.enabled || sensor.type != "camera") {
+      continue;
+    }
+    streams.push_back(BuildColorStream(sensor));
+    if (sensor.depth.enabled) {
+      streams.push_back(BuildDepthStream(sensor));
+    }
+  }
+  return streams;
 }
 
 }  // namespace quadrotor

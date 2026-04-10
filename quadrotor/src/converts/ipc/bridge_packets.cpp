@@ -110,6 +110,7 @@ ipc::CameraImageMetadataPacket ToCameraImageMetadataPacket(
   packet.width = frame.width;
   packet.height = frame.height;
   packet.step = frame.step;
+  packet.pixel_format = static_cast<std::uint32_t>(frame.format);
   packet.data_size = static_cast<std::uint32_t>(frame.data.size());
   return packet;
 }
@@ -123,6 +124,7 @@ CameraFrame ToCameraFrame(
   frame.width = packet.width;
   frame.height = packet.height;
   frame.step = packet.step;
+  frame.format = static_cast<CameraFrameFormat>(packet.pixel_format);
   frame.data = std::move(pixels);
   return frame;
 }
@@ -174,6 +176,11 @@ data::ImageData ToImageData(const CameraFrame& frame, const std::string& frame_i
   message.header = BuildHeader(frame.sim_time, frame_id);
   message.width = frame.width;
   message.height = frame.height;
+  if (frame.format == CameraFrameFormat::kDepth32F) {
+    message.encoding = "32FC1";
+  } else {
+    message.encoding = "rgb8";
+  }
   message.step = frame.step;
   message.data = frame.data;
   return message;

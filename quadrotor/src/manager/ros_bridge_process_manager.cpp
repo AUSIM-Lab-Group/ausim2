@@ -36,15 +36,12 @@ RosBridgeProcessManager::RosBridgeProcessManager(
     RosBridgeLaunchConfig launch_config)
     : config_(config),
       launch_config_(std::move(launch_config)) {
-  for (const SensorConfig& sensor : config_.sensors) {
-    if (!sensor.enabled || sensor.type != "camera") {
-      continue;
-    }
-    if (sensor.source_name.empty()) {
+  for (const CameraStreamConfig& stream : BuildCameraStreamConfigs(config_.sensors)) {
+    if (stream.channel_name.empty()) {
       throw std::runtime_error(
-          "Camera sensor '" + sensor.name + "' must define source_name for ROS bridge streaming.");
+          "Camera stream '" + stream.name + "' must define an internal channel name.");
     }
-    camera_source_names_.push_back(sensor.source_name);
+    camera_channel_names_.push_back(stream.channel_name);
   }
 }
 
@@ -137,7 +134,7 @@ void RosBridgeProcessManager::Start() {
   running_.store(true);
   command_thread_ = std::thread(&RosBridgeProcessManager::CommandLoop, this);
   telemetry_thread_ = std::thread(&RosBridgeProcessManager::TelemetryLoop, this);
-  if (!camera_source_names_.empty()) {
+  if (!camera_channel_names_.empty()) {
     camera_thread_ = std::thread(&RosBridgeProcessManager::CameraLoop, this);
   }
 
@@ -226,13 +223,13 @@ void RosBridgeProcessManager::CommandLoop() {
 void RosBridgeProcessManager::CameraLoop() {
   const auto period = std::chrono::duration<double>(1.0 / config_.ros2.publish_rate_hz);
   auto next_tick = std::chrono::steady_clock::now();
-  std::vector<std::uint32_t> last_sent_sequences(camera_source_names_.size(), 0);
+  std::vector<std::uint32_t> last_sent_sequences(camera_channel_names_.size(), 0);
 
   while (running_.load()) {
     next_tick += std::chrono::duration_cast<std::chrono::steady_clock::duration>(period);
 
-    for (std::size_t i = 0; i < camera_source_names_.size() && running_.load(); ++i) {
-      const std::optional<CameraFrame> frame = ReadCameraFrame(camera_source_names_[i]);
+    for (std::size_t i = 0; i < camera_channel_names_.size() && running_.load(); ++i) {
+      const std::optional<CameraFrame> frame = ReadCameraFrame(camera_channel_names_[i]);
       if (!frame.has_value() || frame->sequence == last_sent_sequences[i] || frame->data.empty()) {
         continue;
       }
