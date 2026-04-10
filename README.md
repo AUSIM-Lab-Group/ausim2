@@ -80,6 +80,22 @@ cmake --build build -j
 ./build/bin/mujoco_ray_caster_smoketest
 ```
 
+### third_party/mujoco_ray_caster（已并入主工程）
+
+当前仓库将 `third_party/mujoco_ray_caster` 作为主仿真链路的一部分直接构建，不再保留独立 demo 文档结构。
+
+- 插件目标：`sensor_raycaster`
+- 输出路径：`build/bin/mujoco_plugin/libsensor_raycaster.so`
+- 主要插件类型：
+  - `mujoco.sensor.ray_caster`
+  - `mujoco.sensor.ray_caster_camera`
+  - `mujoco.sensor.ray_caster_lidar`
+
+噪声与立体模型相关的推导说明保留在：
+
+- `third_party/mujoco_ray_caster/compute.md`
+- `third_party/mujoco_ray_caster/compute.zh-CN.md`
+
 ## 运行
 
 默认会自动读取：
