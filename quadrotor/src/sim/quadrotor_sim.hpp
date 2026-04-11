@@ -107,6 +107,7 @@ class QuadrotorSim {
     std::string channel_name;
     std::string camera_name;
     std::string sensor_name;
+    std::string data_type = "distance_to_image_plane_inf_zero";
     int width = 320;
     int height = 240;
     double period_seconds = 1.0 / 30.0;

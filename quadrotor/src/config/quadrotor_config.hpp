@@ -116,6 +116,7 @@ struct CameraDepthConfig {
   std::string frame_id;
   std::string topic;
   std::string sensor_name;
+  std::string data_type = "distance_to_image_plane_inf_zero";
   double rate_hz = 0.0;
   double compute_rate_hz = 0.0;
   int worker_threads = 0;
@@ -145,6 +146,7 @@ struct CameraStreamConfig {
   std::string channel_name;
   std::string camera_name;
   std::string sensor_name;
+  std::string data_type = "distance_to_image_plane_inf_zero";
   std::string frame_id;
   std::string topic;
   int width = 320;

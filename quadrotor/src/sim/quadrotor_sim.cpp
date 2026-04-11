@@ -1,5 +1,6 @@
 #include "sim/quadrotor_sim.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <csignal>
@@ -13,6 +14,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -106,6 +108,8 @@ void LoadMuJoCoPlugins() {
 constexpr double kSimRefreshFraction = 0.7;
 constexpr int kLoadErrorLength = 1024;
 constexpr double kFrequencyTolerance = 1e-6;
+constexpr std::string_view kDefaultRayCasterDepthDataType =
+    "distance_to_image_plane_inf_zero";
 
 struct RayCasterDepthLayout {
   int width = 0;
@@ -186,11 +190,68 @@ std::optional<MutablePluginConfigSlot> FindMutablePluginConfigSlot(
   return std::nullopt;
 }
 
+bool IsSingleRayCasterDataType(std::string_view data_type) {
+  return data_type.find_first_of(" \t\n\r\f\v") == std::string_view::npos;
+}
+
+bool IsVectorRayCasterDataType(std::string_view data_type) {
+  return data_type.find("pos_w") != std::string_view::npos ||
+         data_type.find("pos_b") != std::string_view::npos;
+}
+
+bool IsScalarRayCasterDataType(std::string_view data_type) {
+  if (data_type.empty() || IsVectorRayCasterDataType(data_type)) {
+    return false;
+  }
+  return data_type.find("distance_to_image_plane") != std::string_view::npos ||
+         data_type.find("image_plane_image") != std::string_view::npos ||
+         data_type.find("image_plane_normal") != std::string_view::npos ||
+         data_type.find("data") != std::string_view::npos ||
+         data_type.find("image") != std::string_view::npos ||
+         data_type.find("normal") != std::string_view::npos;
+}
+
+std::string ResolveRayCasterDepthDataType(const std::string& configured_data_type) {
+  const std::string data_type =
+      configured_data_type.empty() ? std::string(kDefaultRayCasterDepthDataType)
+                                   : configured_data_type;
+  if (!IsSingleRayCasterDataType(data_type)) {
+    throw std::runtime_error(
+        "Ray-caster depth data_type must be a single sensor_data_types token. "
+        "The current ROS depth image path publishes one 32FC1 block.");
+  }
+  if (!IsScalarRayCasterDataType(data_type)) {
+    throw std::runtime_error(
+        "Ray-caster depth data_type '" + data_type +
+        "' is not supported by the current 32FC1 depth image path. "
+        "Use a scalar type such as data, image, normal, distance_to_image_plane, "
+        "image_plane_image, or image_plane_normal; pos_w/pos_b require a separate xyz stream.");
+  }
+  return data_type;
+}
+
+void OverwritePluginTextConfig(
+    mjModel* model,
+    int plugin_instance,
+    const char* attribute_name,
+    const std::string& text,
+    const std::string& stream_name);
+
 void OverwritePluginIntConfig(
     mjModel* model,
     int plugin_instance,
     const char* attribute_name,
     int value,
+    const std::string& stream_name) {
+  OverwritePluginTextConfig(
+      model, plugin_instance, attribute_name, std::to_string(value), stream_name);
+}
+
+void OverwritePluginTextConfig(
+    mjModel* model,
+    int plugin_instance,
+    const char* attribute_name,
+    const std::string& text,
     const std::string& stream_name) {
   const std::optional<MutablePluginConfigSlot> slot =
       FindMutablePluginConfigSlot(model, plugin_instance, attribute_name);
@@ -200,13 +261,15 @@ void OverwritePluginIntConfig(
         attribute_name + "'.");
   }
 
-  const std::string text = std::to_string(value);
   if (text.size() + 1 > slot->capacity) {
     throw std::runtime_error(
         "Depth stream '" + stream_name + "' needs a wider placeholder for plugin attribute '" +
         attribute_name + "' in the MJCF.");
   }
-  std::snprintf(slot->value, slot->capacity, "%s", text.c_str());
+
+  std::memset(slot->value, ' ', slot->capacity - 1);
+  std::memcpy(slot->value, text.data(), text.size());
+  slot->value[slot->capacity - 1] = '\0';
 }
 
 int ComputeStepUpdate(double physics_dt, double compute_period_seconds) {
@@ -377,6 +440,7 @@ QuadrotorSim::QuadrotorSim(QuadrotorConfig config)
     stream.channel_name = stream_config.channel_name;
     stream.camera_name = stream_config.camera_name;
     stream.sensor_name = stream_config.sensor_name;
+    stream.data_type = stream_config.data_type;
     stream.width = stream_config.width;
     stream.height = stream_config.height;
     stream.period_seconds = 1.0 / stream_config.rate_hz;
@@ -954,6 +1018,31 @@ void QuadrotorSim::ApplyDepthPluginPerformanceConfig(mjModel* model) const {
     if (plugin_instance < 0 || plugin_instance >= model->nplugin) {
       continue;
     }
+
+    const std::string depth_data_type = ResolveRayCasterDepthDataType(stream.data_type);
+    const int requested_depth_samples = stream.width * stream.height;
+    if (requested_depth_samples > model->sensor_dim[sensor_id]) {
+      throw std::runtime_error(
+          "Depth stream '" + stream.name + "' requests " +
+          std::to_string(stream.width) + "x" + std::to_string(stream.height) +
+          " samples, but MJCF sensor '" + stream.sensor_name +
+          "' was compiled with capacity for only " +
+          std::to_string(model->sensor_dim[sensor_id]) +
+          " samples. Increase the MJCF ray-caster size before using this resolution.");
+    }
+
+    OverwritePluginTextConfig(
+        model,
+        plugin_instance,
+        "size",
+        std::to_string(stream.width) + " " + std::to_string(stream.height),
+        stream.name);
+    OverwritePluginTextConfig(
+        model,
+        plugin_instance,
+        "sensor_data_types",
+        depth_data_type,
+        stream.name);
 
     const int step_update =
         ComputeStepUpdate(config_.simulation.dt, stream.compute_period_seconds);

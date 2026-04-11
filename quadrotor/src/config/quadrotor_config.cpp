@@ -92,6 +92,7 @@ CameraStreamConfig BuildDepthStream(const SensorConfig& sensor) {
   stream.sensor_name =
       sensor.depth.sensor_name.empty() ? sensor.source_name + "_depth"
                                        : sensor.depth.sensor_name;
+  stream.data_type = sensor.depth.data_type;
   stream.channel_name = stream.sensor_name;
   stream.frame_id =
       sensor.depth.frame_id.empty() ? sensor.frame_id : sensor.depth.frame_id;
@@ -128,6 +129,10 @@ void LoadSensors(const YAML::Node& sensors_node, std::vector<SensorConfig>* sens
     AssignIfPresent(depth_node, "frame_id", &sensor.depth.frame_id);
     AssignIfPresent(depth_node, "topic", &sensor.depth.topic);
     AssignIfPresent(depth_node, "sensor_name", &sensor.depth.sensor_name);
+    AssignIfPresent(depth_node, "date_type", &sensor.depth.data_type);
+    AssignIfPresent(depth_node, "sensor_data_type", &sensor.depth.data_type);
+    AssignIfPresent(depth_node, "sensor_data_types", &sensor.depth.data_type);
+    AssignIfPresent(depth_node, "data_type", &sensor.depth.data_type);
     AssignIfPresent(depth_node, "rate_hz", &sensor.depth.rate_hz);
     AssignIfPresent(depth_node, "compute_rate_hz", &sensor.depth.compute_rate_hz);
     AssignIfPresent(depth_node, "worker_threads", &sensor.depth.worker_threads);

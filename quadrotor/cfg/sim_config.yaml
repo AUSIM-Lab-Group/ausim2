@@ -6,7 +6,7 @@ simulation:
   print_interval: 0.0
   control_mode: 1
   example_mode: 0
-  track_camera_name: track
+  track_camera_name: free
 
 viewer:
   enabled: true
@@ -27,7 +27,7 @@ ros2:
 dynamic_obstacle:
   enabled: true
   config_path: "../../third_party/dynamic_obs_generator/obstacle.yaml"
-  
+
 goal:
   position: [0.0, 0.0, 0.3]
   velocity: [0.5, 0.0, 0.0]

@@ -150,11 +150,12 @@
       <config key="horizontal_aperture" value="1.333333"/>
       <config key="vertical_aperture" value="1"/>
       <config key="size" value="320 240"/>
-      <config key="dis_range" value="0.02 10"/>
+      <config key="dis_range" value="0.02 5"/>
       <config key="baseline" value="0"/>
-      <config key="sensor_data_types" value="distance_to_image_plane_inf_zero"/>
-      <config key="n_step_update" value="0000000000"/>
-      <config key="num_thread" value="0000000000"/>
+      <config key="sensor_data_types" value="distance_to_image_plane_inf_zero_noise"/>
+      <config key="n_step_update" value="16"/>
+      <config key="num_thread" value="4"/>
+      <config key="noise_type" value="noise1" />
     </plugin>
   </sensor>
 
