@@ -2,7 +2,15 @@
 # 动态障碍物生成器配置
 
 # Random seed for reproducible generation (0 = use random seed from system)
-random_seed: 42
+random_seed: 0
+
+# Whether obstacles should move at runtime.
+# false: generate static obstacles only, skip runtime obstacle updates
+# true: generate runtime velocities and update obstacle motion
+dynamic: false
+
+# Enable verbose per-obstacle initialization logs and full debug dumps.
+debug: false
 
 # Generation mode: "2d" or "3d"
 # 2D: obstacles move in XY plane, Z stays fixed (for ground environments)
@@ -10,27 +18,33 @@ random_seed: 42
 mode: "2d"
 
 # Size parameters (not used when obstacles are pre-defined in XML)
-radius: 0.3          # Radius for cylinder/sphere shapes (meters)
-box_length: 0.5     # Length of box base (meters)
-box_width: 0.5      # Width of box base (meters)
-cube_size: 0.5      # Size of cube edge (meters)
+radius: 0.025          # Radius for cylinder/sphere shapes (meters)
+box_size: 0.05       # Shared edge length for box/cube shapes (meters)
 
 # Movement bounds (world coordinates)
 range:
-  x_min: -3.0       # Minimum x coordinate
-  x_max: 3.0        # Maximum x coordinate
-  y_min: -3.0       # Minimum y coordinate
-  y_max: 3.0        # Maximum y coordinate
+  x_min: 1.0       # Minimum x coordinate
+  x_max: 2.0        # Maximum x coordinate
+  y_min: -1.0       # Minimum y coordinate
+  y_max: 1.0        # Maximum y coordinate
   z_min: 0.0        # Minimum z coordinate (ground level)
-  z_max: 3.0        # Maximum z coordinate (for 3D mode)
+  z_max: 1.5        # Maximum z coordinate (for 3D mode)
 
 # Maximum number of obstacles to scan for (should match XML)
-obstacle_count: 5
+obstacle_count: 20
 
 # Motion parameters
 min_speed: 0.0       # Minimum obstacle speed (m/s)
 max_speed: 0.5       # Maximum obstacle speed (m/s)
-                  # Note: If max_speed = 0, all obstacles are static
+
+# Runtime update threads
+# 0: auto-select based on CPU cores and obstacle count
+# 1: force single-threaded updates
+# >1: total threads participating in obstacle updates, including the sim thread
+update_threads: 0
+
+# Minimum number of moving obstacles before enabling worker threads
+parallel_threshold: 16
 
 # ---------------------------------------------------------------------------
 # Quick Start:

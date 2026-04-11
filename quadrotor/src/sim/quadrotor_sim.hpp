@@ -40,6 +40,8 @@ class QuadrotorSim {
   const mjData* data() const { return data_; }
 
  private:
+  struct CameraStreamRuntime;
+
   static void ControlCallback(const mjModel* model, mjData* data);
   void ApplyControl(const mjModel* model, mjData* data);
 
@@ -75,10 +77,12 @@ class QuadrotorSim {
       const std::chrono::high_resolution_clock::time_point& step_start,
       double simulated_seconds) const;
   static void HandleSigint(int signal);
+  bool IsDepthStreamRenderable(const CameraStreamRuntime& stream) const;
+  bool HasDueDepthStreamAfterStep(double next_sim_time) const;
 
   // Dynamic obstacle management
   void InitializeDynamicObstacleManager();
-  void UpdateDynamicObstacles();
+  bool PrepareDynamicObstaclesForStep();
 
   QuadrotorConfig config_;
   VehicleRuntime runtime_;

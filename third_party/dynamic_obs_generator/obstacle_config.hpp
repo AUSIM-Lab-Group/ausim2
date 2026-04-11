@@ -21,13 +21,13 @@ enum class GenerationMode {
 struct ObstacleConfig {
   // Basic parameters
   int random_seed = 42;
+  bool dynamic = true;
+  bool debug = false;
   GenerationMode mode = GenerationMode::k2D;
 
   // Shape parameters (depending on mode, some will be used)
   double radius = 0.3;        // For cylinder/sphere
-  double box_length = 0.5;   // For box (square base)
-  double box_width = 0.5;    // For box (rectangle base)
-  double cube_size = 0.5;    // For cube
+  double box_size = 0.5;     // Shared edge length for box/cube
 
   // Generation range
   double range_x_min = -5.0;
@@ -43,10 +43,13 @@ struct ObstacleConfig {
   // Motion parameters
   double min_speed = 0.0;   // m/s
   double max_speed = 1.0;   // m/s
+  int update_threads = 0;   // 0 = auto, 1 = single-threaded, >1 = total update threads
+  int parallel_threshold = 16;  // minimum moving obstacles before enabling worker threads
 
   // Validations
   bool IsValid(std::string* error_msg = nullptr) const;
   int GetUsedShape() const;  // Returns compatible shape based on mode
+  bool HasDynamicMotion() const;
 };
 
 struct SingleObstacle {

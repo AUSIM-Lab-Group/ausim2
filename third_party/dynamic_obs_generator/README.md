@@ -61,8 +61,17 @@ dynamic_obstacle:
 # 随机种子
 random_seed: 42
 
+# 是否启用运行时运动
+dynamic: true
+
+# 是否输出逐障碍初始化日志和完整调试信息
+debug: false
+
 # 运动模式: "2d" 或 "3d"
 mode: "2d"
+
+# 统一 box / cube 边长
+box_size: 0.1
 
 # 生成范围
 range:
@@ -93,7 +102,10 @@ cmake --build build -j
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `random_seed` | int | 42 | 随机种子，用于重现 |
+| `dynamic` | bool | true | 是否启用运行时障碍运动 |
+| `debug` | bool | false | 是否打印逐障碍初始化日志和完整调试信息 |
 | `mode` | string | "2d" | "2d" 或 "3d" 运动模式 |
+| `box_size` | float | 0.5 | box / cube 共用边长 |
 | `obstacle_count` | int | 10 | 最多扫描的障碍物数量 |
 | `min_speed` | float | 0.0 | 最小速度 |
 | `max_speed` | float | 0.5 | 最大速度 |
@@ -107,16 +119,17 @@ cmake --build build -j
 
 **3D 模式**: 障碍物在 XYZ 三维空间移动（用于空中环境）
 
-### 速度 = 0
+### 静态场景
 
-当 `max_speed = 0` 时，所有障碍物保持静止在其初始位置。
+当 `dynamic: false` 时，仍会生成障碍物，但不会创建运行时运动更新。
 
 ## 工作原理
 
-1. **扫描**: `DynamicObstacleManager` 在初始化时扫描模型中所有 `dynamic_obs_*` 命名的 geom
-2. **记录**: 读取每个 geom 的初始位置、尺寸、形状
-3. **动画**: 在每次 `mj_step()` 后更新障碍物位置
-4. **碰撞**: 障碍物碰到边界会反弹
+1. **生成**: `generate_scene_obstacles.py` 在启动仿真前基于 `obstacle.yaml` 向场景 XML 注入 `dynamic_obs_*` geoms
+2. **扫描**: `DynamicObstacleManager` 在初始化时扫描模型中所有 `dynamic_obs_*` 命名的 geom
+3. **记录**: 读取每个 geom 的初始位置、尺寸和运动参数
+4. **轨迹播放**: 默认对非物理障碍按深度传感器节拍直接播放预定位置；如果障碍参与碰撞，则退回物理步频更新
+5. **碰撞**: 障碍物碰到边界时仅反转对应轴向速度
 
 ## 限制
 
@@ -129,11 +142,9 @@ cmake --build build -j
 可以使用 `generate_scene_obstacles.py` 快速生成带障碍物的场景：
 
 ```bash
-cd third_party/dynamic_obs_generator
-python3 generate_scene_obstacles.py \
-    -i ../../../assets/crazyfile/scene.xml \
-    -o ../../../assets/crazyfile/scene_with_obstacles.xml \
-    -c 10 --mode 2d
+python3 third_party/dynamic_obs_generator/generate_scene_obstacles.py \
+    --sim-config quadrotor/cfg/sim_config.yaml \
+    --print-output-path
 ```
 
 支持的形状:

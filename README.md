@@ -188,3 +188,7 @@ ros2 topic pub /uav1/cmd_vel geometry_msgs/msg/Twist \
 更完整的架构、线程模型、源码目录和扩展方式见：
 
 [quadrotor/README.md](quadrotor/README.md)
+
+动态障碍环境：无法动态生成带碰撞的GEOM，只能预先定义，但可以动态生成不带碰撞属性的geom
+
+解决方案：每次运行真正仿真前运行一个xml生成器，动态的调整xml中的动态障碍物数量，然后再启动这个xml，实现类似效果

@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -127,6 +128,11 @@ int main(int argc, char** argv) {
     }
     if (cli.force_headless) {
       config.viewer.enabled = false;
+    }
+
+    if (const char* scene_override = std::getenv("AUSIM_SCENE_XML_OVERRIDE");
+        scene_override != nullptr && scene_override[0] != '\0') {
+      config.model.scene_xml = fs::absolute(scene_override);
     }
 
     fs::path self_executable = fs::absolute(argv[0]);

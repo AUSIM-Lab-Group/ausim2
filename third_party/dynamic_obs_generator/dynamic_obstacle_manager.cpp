@@ -4,23 +4,46 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>
-
-#include "mujoco/mujoco.h"
-
-namespace dyobs = dynamic_obstacle;
 
 namespace {
 
-// Convert shape enum to MuJoCo geom type string
-const char* ShapeToGeomType(dyobs::ObstacleShape shape) {
-  switch (shape) {
-    case dyobs::ObstacleShape::kCylinder: return "cylinder";
-    case dyobs::ObstacleShape::kBox: return "box";
-    case dyobs::ObstacleShape::kSphere: return "sphere";
-    case dyobs::ObstacleShape::kCube: return "box";  // cube uses box type with equal sides
+constexpr double kStaticSpeedEpsilon = 1e-6;
+constexpr double kTwoPi = 6.28318530717958647692;
+constexpr std::size_t kPreferredObstaclesPerThread = 8;
+
+double ClampToBounds(double value, double min_value, double max_value) {
+  if (value < min_value) {
+    return min_value;
   }
-  return "box";
+  if (value > max_value) {
+    return max_value;
+  }
+  return value;
+}
+
+double ComputeReflectedCoordinate(
+    double initial_position,
+    double velocity,
+    double min_value,
+    double max_value,
+    double sim_time) {
+  const double clamped_initial = ClampToBounds(initial_position, min_value, max_value);
+  const double span = max_value - min_value;
+  if (std::abs(velocity) <= kStaticSpeedEpsilon || span <= kStaticSpeedEpsilon) {
+    return clamped_initial;
+  }
+
+  const double period = 2.0 * span;
+  double offset = (clamped_initial - min_value) + velocity * sim_time;
+  offset = std::fmod(offset, period);
+  if (offset < 0.0) {
+    offset += period;
+  }
+
+  if (offset <= span) {
+    return min_value + offset;
+  }
+  return max_value - (offset - span);
 }
 
 }  // namespace
@@ -30,310 +53,429 @@ namespace dynamic_obstacle {
 DynamicObstacleManager::DynamicObstacleManager()
     : rng_(std::random_device{}()) {}
 
-DynamicObstacleManager::~DynamicObstacleManager() {}
+DynamicObstacleManager::~DynamicObstacleManager() {
+  StopWorkerPool();
+}
 
 bool DynamicObstacleManager::Initialize(
     const ObstacleConfig& config,
     mjModel* model,
     mjData* data) {
-  // Validate config
   std::string error_msg;
   if (!config.IsValid(&error_msg)) {
     std::cerr << "[DynamicObstacleManager] Invalid config: " << error_msg << std::endl;
     return false;
   }
+  if (model == nullptr || data == nullptr) {
+    std::cerr << "[DynamicObstacleManager] Cannot initialize with null model/data." << std::endl;
+    return false;
+  }
+
+  StopWorkerPool();
 
   config_ = config;
   model_ = model;
   data_ = data;
+  moving_obstacles_.clear();
+  obstacle_count_ = 0;
+  enabled_ = false;
+  requires_physics_rate_updates_ = false;
 
-  // Initialize RNG with seed
-  {
-    std::lock_guard<std::mutex> lock(rng_mutex_);
+  if (config_.random_seed == 0) {
+    rng_.seed(std::random_device{}());
+  } else {
     rng_.seed(config_.random_seed);
   }
 
-  // Check if max_speed is 0 (static obstacles)
-  if (config_.max_speed == 0.0) {
-    std::cout << "[DynamicObstacleManager] max_speed=0, generating static obstacles" << std::endl;
-  }
+  ScanSceneObstacles();
+  ConfigureWorkerPool();
 
-  // Generate obstacles
-  GenerateObstacles();
-
-  enabled_ = true;
+  enabled_ = !moving_obstacles_.empty();
   update_count_ = 0;
   total_sim_time_ = 0.0;
-  initialized_ = false;
+  last_applied_sim_time_ = -1.0;
 
-  std::cout << "[DynamicObstacleManager] Initialized with " << obstacles_.size()
-            << " obstacles" << std::endl;
+  if (obstacle_count_ == 0) {
+    std::cout << "[DynamicObstacleManager] No dynamic_obs_* geoms found in the generated scene."
+              << std::endl;
+  } else if (!config_.dynamic) {
+    std::cout << "[DynamicObstacleManager] Scene contains " << obstacle_count_
+              << " obstacles, but obstacle_config.dynamic=false. "
+              << "Runtime obstacle updates disabled." << std::endl;
+  } else if (!enabled_) {
+    std::cout << "[DynamicObstacleManager] Scene contains " << obstacle_count_
+              << " obstacles, but all sampled speeds are zero. "
+              << "Runtime obstacle updates disabled." << std::endl;
+  } else {
+    std::cout << "[DynamicObstacleManager] Initialized with " << obstacle_count_
+              << " obstacles, " << moving_obstacles_.size() << " of them moving, using "
+              << total_update_threads_ << " update thread(s)"
+              << (requires_physics_rate_updates_ ? " at physics cadence."
+                                                 : " in trajectory-player mode at depth cadence.")
+              << std::endl;
+  }
 
   return true;
 }
 
-void DynamicObstacleManager::GenerateObstacles() {
-  obstacles_.clear();
+void DynamicObstacleManager::ScanSceneObstacles() {
+  moving_obstacles_.clear();
+  obstacle_count_ = 0;
 
-  // Scan model for existing geoms with names matching "dynamic_obs_*"
-  for (int i = 0; i < model_->ngeom; ++i) {
-    const char* geom_name = mj_id2name(model_, mjOBJ_GEOM, i);
-    if (geom_name == nullptr) continue;
-
-    // Check if this geom matches our naming pattern
-    std::string name(geom_name);
-    if (name.find("dynamic_obs_") != 0) continue;
-
-    SingleObstacle obs;
-    obs.geom_id = i;
-    obs.name = name;
-
-    // Read initial position from model
-    obs.initial_position = Eigen::Vector3d(
-        model_->geom_pos[i * 3 + 0],
-        model_->geom_pos[i * 3 + 1],
-        model_->geom_pos[i * 3 + 2]);
-
-    // Read size from model (half-sizes)
-    obs.size = Eigen::Vector3d(
-        model_->geom_size[i * 3 + 0],
-        model_->geom_size[i * 3 + 1],
-        model_->geom_size[i * 3 + 2]);
-
-    // Determine shape from geom type
-    mjtGeom geom_type = static_cast<mjtGeom>(model_->geom_type[i]);
-    switch (geom_type) {
-      case mjGEOM_CYLINDER:
-        obs.shape = ObstacleShape::kCylinder;
-        break;
-      case mjGEOM_BOX:
-        // Check if it's a cube (equal sides) or box
-        if (std::abs(obs.size.x() - obs.size.y()) < 1e-6 &&
-            std::abs(obs.size.y() - obs.size.z()) < 1e-6) {
-          obs.shape = ObstacleShape::kCube;
-        } else {
-          obs.shape = ObstacleShape::kBox;
-        }
-        break;
-      case mjGEOM_SPHERE:
-        obs.shape = ObstacleShape::kSphere;
-        break;
-      default:
-        obs.shape = ObstacleShape::kBox;  // Default to box for unknown types
+  for (int geom_id = 0; geom_id < model_->ngeom; ++geom_id) {
+    const char* geom_name = mj_id2name(model_, mjOBJ_GEOM, geom_id);
+    if (geom_name == nullptr) {
+      continue;
     }
 
-    // Generate random speed and velocity
+    const std::string name(geom_name);
+    if (name.rfind("dynamic_obs_", 0) != 0) {
+      continue;
+    }
+
+    ++obstacle_count_;
+    RuntimeObstacle obs = BuildRuntimeObstacle(geom_id);
+    if (config_.debug) {
+      std::cout << "[DynamicObstacleManager] Found obstacle: " << obs.name
+                << " at (" << obs.initial_x << ", " << obs.initial_y << ", "
+                << obs.initial_z << "), collidable="
+                << (obs.collidable ? "yes" : "no") << std::endl;
+    }
+
+    if (!config_.HasDynamicMotion()) {
+      continue;
+    }
+
     obs.speed = GenerateRandomSpeed();
-    obs.velocity = GenerateRandomVelocity(obs.speed);
-    obs.initial_velocity = obs.velocity;
+    if (obs.speed <= kStaticSpeedEpsilon) {
+      continue;
+    }
 
-    // Set bounds from config
-    obs.bound_x_min = config_.range_x_min;
-    obs.bound_x_max = config_.range_x_max;
-    obs.bound_y_min = config_.range_y_min;
-    obs.bound_y_max = config_.range_y_max;
-    obs.bound_z_min = config_.range_z_min;
-    obs.bound_z_max = config_.range_z_max;
-
-    obstacles_.push_back(obs);
-    std::cout << "[DynamicObstacleManager] Found obstacle: " << obs.name
-              << " at (" << obs.initial_position.x() << ", "
-              << obs.initial_position.y() << ", " << obs.initial_position.z() << ")"
-              << std::endl;
-  }
-
-  if (obstacles_.empty()) {
-    std::cout << "[DynamicObstacleManager] Warning: No obstacles found in scene!"
-              << " Please add geoms with names 'dynamic_obs_0', 'dynamic_obs_1', etc. to your XML."
-              << std::endl;
+    GenerateRandomVelocity(
+        obs.speed,
+        &obs.velocity_x,
+        &obs.velocity_y,
+        &obs.velocity_z);
+    requires_physics_rate_updates_ = requires_physics_rate_updates_ || obs.collidable;
+    moving_obstacles_.push_back(obs);
   }
 }
 
-Eigen::Vector3d DynamicObstacleManager::GenerateRandomPosition() {
-  std::uniform_real_distribution<double> dist_x(
-      config_.range_x_min, config_.range_x_max);
-  std::uniform_real_distribution<double> dist_y(
-      config_.range_y_min, config_.range_y_max);
-  std::uniform_real_distribution<double> dist_z(
-      config_.range_z_min, config_.range_z_max);
+DynamicObstacleManager::RuntimeObstacle DynamicObstacleManager::BuildRuntimeObstacle(int geom_id) const {
+  RuntimeObstacle obs;
+  obs.geom_id = geom_id;
+  obs.geom_pos_adr = geom_id * 3;
 
-  std::lock_guard<std::mutex> lock(rng_mutex_);
+  if (const char* geom_name = mj_id2name(model_, mjOBJ_GEOM, geom_id); geom_name != nullptr) {
+    obs.name = geom_name;
+  }
+  obs.collidable =
+      model_->geom_contype[geom_id] != 0 || model_->geom_conaffinity[geom_id] != 0;
 
-  Eigen::Vector3d pos;
-  pos.x() = dist_x(rng_);
-  pos.y() = dist_y(rng_);
-  pos.z() = dist_z(rng_);
+  obs.initial_x = model_->geom_pos[obs.geom_pos_adr + 0];
+  obs.initial_y = model_->geom_pos[obs.geom_pos_adr + 1];
+  obs.initial_z = model_->geom_pos[obs.geom_pos_adr + 2];
 
-  return pos;
-}
-
-Eigen::Vector3d DynamicObstacleManager::GenerateRandomVelocity(double speed) {
-  std::uniform_real_distribution<double> dist_angle(0.0, 2.0 * M_PI);
-
-  std::lock_guard<std::mutex> lock(rng_mutex_);
-
-  // Random direction in XY plane (for 2D mode, z velocity is 0)
-  double angle = dist_angle(rng_);
-
-  Eigen::Vector3d vel;
-  vel.x() = speed * std::cos(angle);
-  vel.y() = speed * std::sin(angle);
-  vel.z() = 0.0;  // No vertical velocity in 2D mode
-
-  // For 3D mode, add random z velocity
-  if (config_.mode == GenerationMode::k3D) {
-    std::uniform_real_distribution<double> dist_z_vel(-speed * 0.5, speed * 0.5);
-    vel.z() = dist_z_vel(rng_);
+  const int size_adr = geom_id * 3;
+  const mjtGeom geom_type = static_cast<mjtGeom>(model_->geom_type[geom_id]);
+  switch (geom_type) {
+    case mjGEOM_CYLINDER:
+      obs.half_x = model_->geom_size[size_adr + 0];
+      obs.half_y = model_->geom_size[size_adr + 0];
+      obs.half_z = model_->geom_size[size_adr + 1];
+      break;
+    case mjGEOM_SPHERE:
+      obs.half_x = model_->geom_size[size_adr + 0];
+      obs.half_y = model_->geom_size[size_adr + 0];
+      obs.half_z = model_->geom_size[size_adr + 0];
+      break;
+    case mjGEOM_BOX:
+    default:
+      obs.half_x = model_->geom_size[size_adr + 0];
+      obs.half_y = model_->geom_size[size_adr + 1];
+      obs.half_z = model_->geom_size[size_adr + 2];
+      break;
   }
 
-  return vel;
+  obs.min_x = config_.range_x_min + obs.half_x;
+  obs.max_x = config_.range_x_max - obs.half_x;
+  obs.min_y = config_.range_y_min + obs.half_y;
+  obs.max_y = config_.range_y_max - obs.half_y;
+  obs.min_z = config_.range_z_min + obs.half_z;
+  obs.max_z = config_.range_z_max - obs.half_z;
+  return obs;
 }
 
 double DynamicObstacleManager::GenerateRandomSpeed() {
-  std::uniform_real_distribution<double> dist_speed(
-      config_.min_speed, config_.max_speed);
-
-  std::lock_guard<std::mutex> lock(rng_mutex_);
+  std::uniform_real_distribution<double> dist_speed(config_.min_speed, config_.max_speed);
   return dist_speed(rng_);
 }
 
-ObstacleShape DynamicObstacleManager::RandomShapeForMode() const {
-  std::uniform_int_distribution<int> dist_shape(0, 1);
+void DynamicObstacleManager::GenerateRandomVelocity(double speed, double* vx, double* vy, double* vz) {
+  std::uniform_real_distribution<double> dist_angle(0.0, kTwoPi);
+  const double angle = dist_angle(rng_);
 
-  std::lock_guard<std::mutex> lock(rng_mutex_);
+  *vx = speed * std::cos(angle);
+  *vy = speed * std::sin(angle);
+  *vz = 0.0;
 
-  if (config_.mode == GenerationMode::k2D) {
-    // In 2D mode, use cylinder (0) or box (1)
-    return dist_shape(rng_) == 0 ? ObstacleShape::kCylinder : ObstacleShape::kBox;
-  } else {
-    // In 3D mode, use sphere (0) or cube (1)
-    return dist_shape(rng_) == 0 ? ObstacleShape::kSphere : ObstacleShape::kCube;
+  if (config_.mode == GenerationMode::k3D) {
+    std::uniform_real_distribution<double> dist_z_velocity(-speed * 0.5, speed * 0.5);
+    *vz = dist_z_velocity(rng_);
   }
 }
 
-void DynamicObstacleManager::Update() {
-  if (!enabled_ || !HasValidModelData()) {
+std::size_t DynamicObstacleManager::ResolveUpdateThreadCount() const {
+  const std::size_t moving_count = moving_obstacles_.size();
+  if (moving_count < 2) {
+    return 1;
+  }
+
+  if (config_.parallel_threshold > 0 &&
+      moving_count < static_cast<std::size_t>(config_.parallel_threshold)) {
+    return 1;
+  }
+
+  std::size_t thread_count = 1;
+  if (config_.update_threads > 0) {
+    thread_count = static_cast<std::size_t>(config_.update_threads);
+  } else {
+    const std::size_t hardware_threads = std::max<std::size_t>(
+        2, static_cast<std::size_t>(std::thread::hardware_concurrency()));
+    const std::size_t size_based_threads =
+        std::max<std::size_t>(2, (moving_count + kPreferredObstaclesPerThread - 1) /
+                                     kPreferredObstaclesPerThread);
+    thread_count = std::min(hardware_threads, size_based_threads);
+    if (thread_count == 0) {
+      thread_count = 1;
+    }
+  }
+
+  thread_count = std::max<std::size_t>(1, thread_count);
+  return std::min(thread_count, moving_count);
+}
+
+void DynamicObstacleManager::ConfigureWorkerPool() {
+  StopWorkerPool();
+
+  total_update_threads_ = ResolveUpdateThreadCount();
+  main_work_range_ = WorkRange{0, moving_obstacles_.size()};
+  use_parallel_update_ = total_update_threads_ > 1;
+
+  if (!use_parallel_update_) {
     return;
   }
 
-  // Get time step from model
-  const double dt = model_->opt.timestep;
+  const std::size_t moving_count = moving_obstacles_.size();
+  const std::size_t base_chunk = moving_count / total_update_threads_;
+  const std::size_t remainder = moving_count % total_update_threads_;
 
-  // Update all obstacles
-  for (auto& obs : obstacles_) {
-    UpdateSingleObstacle(obs, dt);
+  std::size_t begin = 0;
+  std::vector<WorkRange> all_ranges;
+  all_ranges.reserve(total_update_threads_);
+  for (std::size_t index = 0; index < total_update_threads_; ++index) {
+    const std::size_t count = base_chunk + (index < remainder ? 1 : 0);
+    all_ranges.push_back(WorkRange{begin, begin + count});
+    begin += count;
   }
 
-  // Mark as initialized after first update
-  initialized_ = true;
+  main_work_range_ = all_ranges.front();
+  worker_ranges_.assign(all_ranges.begin() + 1, all_ranges.end());
+  StartWorkerPool(worker_ranges_.size());
+}
+
+void DynamicObstacleManager::StartWorkerPool(std::size_t thread_count) {
+  if (thread_count == 0) {
+    return;
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(worker_mutex_);
+    stop_workers_ = false;
+    active_workers_ = 0;
+    work_generation_ = 0;
+    pending_sim_time_ = 0.0;
+    pending_geom_pos_ = nullptr;
+  }
+
+  worker_threads_.reserve(thread_count);
+  for (std::size_t worker_index = 0; worker_index < thread_count; ++worker_index) {
+    worker_threads_.emplace_back(&DynamicObstacleManager::WorkerLoop, this, worker_index);
+  }
+}
+
+void DynamicObstacleManager::StopWorkerPool() {
+  {
+    std::lock_guard<std::mutex> lock(worker_mutex_);
+    stop_workers_ = true;
+    ++work_generation_;
+  }
+  worker_cv_.notify_all();
+
+  for (std::thread& worker : worker_threads_) {
+    if (worker.joinable()) {
+      worker.join();
+    }
+  }
+
+  worker_threads_.clear();
+  worker_ranges_.clear();
+  main_work_range_ = WorkRange{0, moving_obstacles_.size()};
+  use_parallel_update_ = false;
+  total_update_threads_ = 1;
+
+  {
+    std::lock_guard<std::mutex> lock(worker_mutex_);
+    stop_workers_ = false;
+    active_workers_ = 0;
+    pending_sim_time_ = 0.0;
+    pending_geom_pos_ = nullptr;
+  }
+}
+
+void DynamicObstacleManager::WorkerLoop(std::size_t worker_index) {
+  std::size_t local_generation = 0;
+
+  while (true) {
+    WorkRange range;
+    double sim_time = 0.0;
+    double* geom_pos = nullptr;
+
+    {
+      std::unique_lock<std::mutex> lock(worker_mutex_);
+      worker_cv_.wait(lock, [this, &local_generation] {
+        return stop_workers_ || work_generation_ != local_generation;
+      });
+
+      if (stop_workers_) {
+        return;
+      }
+
+      local_generation = work_generation_;
+      range = worker_ranges_[worker_index];
+      sim_time = pending_sim_time_;
+      geom_pos = pending_geom_pos_;
+    }
+
+    ApplyTrajectoryRange(range.begin, range.end, sim_time, geom_pos);
+
+    {
+      std::lock_guard<std::mutex> lock(worker_mutex_);
+      if (active_workers_ > 0) {
+        --active_workers_;
+        if (active_workers_ == 0) {
+          worker_done_cv_.notify_one();
+        }
+      }
+    }
+  }
+}
+
+bool DynamicObstacleManager::ApplyTrajectory(double sim_time) {
+  if (!enabled_ || !HasValidModelData()) {
+    return false;
+  }
+  if (sim_time < 0.0) {
+    return false;
+  }
+  if (std::abs(sim_time - last_applied_sim_time_) <= kStaticSpeedEpsilon) {
+    return false;
+  }
+
+  double* geom_pos = model_->geom_pos;
+
+  if (!use_parallel_update_ || worker_threads_.empty()) {
+    ApplyTrajectoryRange(0, moving_obstacles_.size(), sim_time, geom_pos);
+  } else {
+    {
+      std::lock_guard<std::mutex> lock(worker_mutex_);
+      pending_sim_time_ = sim_time;
+      pending_geom_pos_ = geom_pos;
+      active_workers_ = worker_threads_.size();
+      ++work_generation_;
+    }
+    worker_cv_.notify_all();
+
+    ApplyTrajectoryRange(main_work_range_.begin, main_work_range_.end, sim_time, geom_pos);
+
+    std::unique_lock<std::mutex> lock(worker_mutex_);
+    worker_done_cv_.wait(lock, [this] { return active_workers_ == 0; });
+  }
 
   ++update_count_;
-  total_sim_time_ += dt;
+  total_sim_time_ = sim_time;
+  last_applied_sim_time_ = sim_time;
+  return true;
 }
 
-void DynamicObstacleManager::UpdateSingleObstacle(SingleObstacle& obs, double dt) {
-  if (!HasValidModelData()) {
-    return;
+void DynamicObstacleManager::ApplyTrajectoryRange(
+    std::size_t begin,
+    std::size_t end,
+    double sim_time,
+    double* geom_pos) {
+  for (std::size_t index = begin; index < end; ++index) {
+    ApplySingleObstacleTrajectory(moving_obstacles_[index], sim_time, geom_pos);
   }
+}
 
-  // Find geom ID by name if not already found
-  if (obs.geom_id < 0) {
-    obs.geom_id = mj_name2id(model_, mjOBJ_GEOM, obs.name.c_str());
-  }
+void DynamicObstacleManager::ApplySingleObstacleTrajectory(
+    RuntimeObstacle& obs,
+    double sim_time,
+    double* geom_pos) {
+  const double new_x = ComputeReflectedCoordinate(
+      obs.initial_x, obs.velocity_x, obs.min_x, obs.max_x, sim_time);
+  const double new_y = ComputeReflectedCoordinate(
+      obs.initial_y, obs.velocity_y, obs.min_y, obs.max_y, sim_time);
 
-  if (obs.geom_id < 0) {
-    // Geom not found, skip
-    return;
-  }
-
-  // If speed is 0, obstacle is static - use initial position
-  if (obs.speed < 1e-6) {
-    // Write to model geom_pos - mj_forward() will compute geom_xpos from it
-    model_->geom_pos[obs.geom_id * 3 + 0] = obs.initial_position.x();
-    model_->geom_pos[obs.geom_id * 3 + 1] = obs.initial_position.y();
-    model_->geom_pos[obs.geom_id * 3 + 2] = obs.initial_position.z();
-    return;
-  }
-
-  // Update position based on velocity
-  // Write to model geom_pos - mj_forward() will compute geom_xpos from it
-  double new_x = model_->geom_pos[obs.geom_id * 3 + 0] + obs.velocity.x() * dt;
-  double new_y = model_->geom_pos[obs.geom_id * 3 + 1] + obs.velocity.y() * dt;
-  double new_z = model_->geom_pos[obs.geom_id * 3 + 2] + obs.velocity.z() * dt;
-
-  // Wall collision - bounce back
-  bool bounced = false;
-  Eigen::Vector3d normal = Eigen::Vector3d::Zero();
-
-  // Check X bounds
-  double half_size_x = obs.size.x();
-  if (new_x - half_size_x < obs.bound_x_min) {
-    new_x = obs.bound_x_min + half_size_x;
-    obs.velocity.x() = -obs.velocity.x();
-    bounced = true;
-  } else if (new_x + half_size_x > obs.bound_x_max) {
-    new_x = obs.bound_x_max - half_size_x;
-    obs.velocity.x() = -obs.velocity.x();
-    bounced = true;
-  }
-
-  // Check Y bounds
-  double half_size_y = obs.size.y();
-  if (new_y - half_size_y < obs.bound_y_min) {
-    new_y = obs.bound_y_min + half_size_y;
-    obs.velocity.y() = -obs.velocity.y();
-    bounced = true;
-  } else if (new_y + half_size_y > obs.bound_y_max) {
-    new_y = obs.bound_y_max - half_size_y;
-    obs.velocity.y() = -obs.velocity.y();
-    bounced = true;
-  }
-
-  // Check Z bounds (for 3D mode)
+  double new_z = obs.initial_z;
   if (config_.mode == GenerationMode::k3D) {
-    double half_size_z = obs.size.z();
-    if (new_z - half_size_z < obs.bound_z_min) {
-      new_z = obs.bound_z_min + half_size_z;
-      obs.velocity.z() = -obs.velocity.z();
-      bounced = true;
-    } else if (new_z + half_size_z > obs.bound_z_max) {
-      new_z = obs.bound_z_max - half_size_z;
-      obs.velocity.z() = -obs.velocity.z();
-      bounced = true;
-    }
-  } else {
-    // In 2D mode, keep z at initial position (obstacle sits on ground)
-    new_z = obs.initial_position.z();
+    new_z = ComputeReflectedCoordinate(
+        obs.initial_z, obs.velocity_z, obs.min_z, obs.max_z, sim_time);
   }
 
-  // Apply new position to model - mj_forward() will compute geom_xpos from it
-  model_->geom_pos[obs.geom_id * 3 + 0] = new_x;
-  model_->geom_pos[obs.geom_id * 3 + 1] = new_y;
-  model_->geom_pos[obs.geom_id * 3 + 2] = new_z;
+  geom_pos[obs.geom_pos_adr + 0] = new_x;
+  geom_pos[obs.geom_pos_adr + 1] = new_y;
+  geom_pos[obs.geom_pos_adr + 2] = new_z;
 }
 
 std::string DynamicObstacleManager::GetDebugInfo() const {
   std::ostringstream oss;
   oss << "DynamicObstacleManager Debug Info:\n";
   oss << "  Enabled: " << (enabled_ ? "yes" : "no") << "\n";
-  oss << "  Obstacle count: " << obstacles_.size() << "\n";
+  oss << "  Obstacle count: " << obstacle_count_ << "\n";
+  oss << "  Moving obstacle count: " << moving_obstacles_.size() << "\n";
   oss << "  Update count: " << update_count_ << "\n";
   oss << "  Total sim time: " << total_sim_time_ << " s\n";
   oss << "  Config:\n";
+  oss << "    dynamic: " << (config_.dynamic ? "true" : "false") << "\n";
+  oss << "    debug: " << (config_.debug ? "true" : "false") << "\n";
   oss << "    mode: " << (config_.mode == GenerationMode::k2D ? "2D" : "3D") << "\n";
   oss << "    random_seed: " << config_.random_seed << "\n";
   oss << "    obstacle_count: " << config_.obstacle_count << "\n";
   oss << "    speed range: [" << config_.min_speed << ", " << config_.max_speed << "] m/s\n";
-  oss << "    range: [(" << config_.range_x_min << ", " << config_.range_y_min << ", " << config_.range_z_min
-      << ") to (" << config_.range_x_max << ", " << config_.range_y_max << ", " << config_.range_z_max << ")]\n";
+  oss << "    update_threads: " << config_.update_threads << "\n";
+  oss << "    parallel_threshold: " << config_.parallel_threshold << "\n";
+  oss << "    active_update_threads: " << total_update_threads_ << "\n";
+  oss << "    parallel_update: " << (use_parallel_update_ ? "yes" : "no") << "\n";
+  oss << "    update_cadence: "
+      << (requires_physics_rate_updates_ ? "physics-step" : "depth-driven trajectory playback")
+      << "\n";
+  oss << "    range: [(" << config_.range_x_min << ", " << config_.range_y_min << ", "
+      << config_.range_z_min << ") to (" << config_.range_x_max << ", "
+      << config_.range_y_max << ", " << config_.range_z_max << ")]\n";
 
-  if (!obstacles_.empty()) {
-    oss << "  Obstacles:\n";
-    for (const auto& obs : obstacles_) {
-      oss << "    " << obs.name << ": shape=" << static_cast<int>(obs.shape)
-          << ", pos=(" << obs.initial_position.x() << ", " << obs.initial_position.y() << ", " << obs.initial_position.z()
-          << "), speed=" << obs.speed << " m/s\n";
+  if (config_.debug && !moving_obstacles_.empty()) {
+    oss << "  Moving Obstacles:\n";
+    for (const RuntimeObstacle& obs : moving_obstacles_) {
+      oss << "    " << obs.name
+          << ": pos=(" << obs.initial_x << ", " << obs.initial_y << ", " << obs.initial_z << ")"
+          << ", speed=" << obs.speed << " m/s"
+          << ", velocity=(" << obs.velocity_x << ", " << obs.velocity_y << ", "
+          << obs.velocity_z << ")"
+          << ", collidable=" << (obs.collidable ? "yes" : "no") << "\n";
     }
+  } else if (!moving_obstacles_.empty()) {
+    oss << "  Moving obstacle details hidden (set debug=true to print each obstacle).\n";
   }
 
   return oss.str();

@@ -20,14 +20,47 @@ void AssignIfPresent(const YAML::Node& node, const char* key, T* value) {
   }
 }
 
-std::string ShapeToString(dyobs::ObstacleShape shape) {
-  switch (shape) {
-    case dyobs::ObstacleShape::kCylinder: return "cylinder";
-    case dyobs::ObstacleShape::kBox: return "box";
-    case dyobs::ObstacleShape::kSphere: return "sphere";
-    case dyobs::ObstacleShape::kCube: return "cube";
+std::optional<double> ReadOptionalDouble(const YAML::Node& node, const char* key) {
+  if (node && node[key]) {
+    return node[key].as<double>();
   }
-  return "unknown";
+  return std::nullopt;
+}
+
+void AssignUnifiedBoxSize(const YAML::Node& root, double* box_size) {
+  if (const std::optional<double> unified_box_size =
+          ReadOptionalDouble(root, "box_size")) {
+    *box_size = *unified_box_size;
+    return;
+  }
+
+  const std::optional<double> legacy_box_length =
+      ReadOptionalDouble(root, "box_length");
+  const std::optional<double> legacy_box_width =
+      ReadOptionalDouble(root, "box_width");
+  const std::optional<double> legacy_cube_size =
+      ReadOptionalDouble(root, "cube_size");
+
+  const std::optional<double> fallback_value =
+      legacy_box_length ? legacy_box_length
+                        : (legacy_box_width ? legacy_box_width
+                                            : legacy_cube_size);
+  if (!fallback_value) {
+    return;
+  }
+
+  const auto matches = [fallback_value](const std::optional<double>& candidate) {
+    return !candidate || std::abs(*candidate - *fallback_value) < 1e-9;
+  };
+  if (!matches(legacy_box_length) ||
+      !matches(legacy_box_width) ||
+      !matches(legacy_cube_size)) {
+    throw std::runtime_error(
+        "Legacy obstacle size fields box_length, box_width, and cube_size must match. "
+        "Please migrate to box_size.");
+  }
+
+  *box_size = *fallback_value;
 }
 
 }  // namespace
@@ -78,18 +111,22 @@ bool ObstacleConfig::IsValid(std::string* error_msg) const {
     if (error_msg) *error_msg = "min_speed must not exceed max_speed";
     return false;
   }
+  if (update_threads < 0) {
+    if (error_msg) *error_msg = "update_threads must be non-negative";
+    return false;
+  }
+  if (parallel_threshold < 0) {
+    if (error_msg) *error_msg = "parallel_threshold must be non-negative";
+    return false;
+  }
 
   // Check size parameters
   if (radius <= 0) {
     if (error_msg) *error_msg = "radius must be positive";
     return false;
   }
-  if (box_length <= 0 || box_width <= 0) {
-    if (error_msg) *error_msg = "box_length and box_width must be positive";
-    return false;
-  }
-  if (cube_size <= 0) {
-    if (error_msg) *error_msg = "cube_size must be positive";
+  if (box_size <= 0) {
+    if (error_msg) *error_msg = "box_size must be positive";
     return false;
   }
 
@@ -104,6 +141,10 @@ int ObstacleConfig::GetUsedShape() const {
     // In 3D mode, randomly choose between sphere and cube
     return -2;  // Signal to randomize
   }
+}
+
+bool ObstacleConfig::HasDynamicMotion() const {
+  return dynamic && obstacle_count > 0;
 }
 
 ObstacleConfig LoadConfigFromYaml(const std::string& path) {
@@ -121,6 +162,8 @@ ObstacleConfig LoadConfigFromYaml(const std::string& path) {
 
   // Basic parameters
   AssignIfPresent(root, "random_seed", &config.random_seed);
+  AssignIfPresent(root, "dynamic", &config.dynamic);
+  AssignIfPresent(root, "debug", &config.debug);
 
   // Mode
   if (root["mode"]) {
@@ -136,9 +179,7 @@ ObstacleConfig LoadConfigFromYaml(const std::string& path) {
 
   // Size parameters
   AssignIfPresent(root, "radius", &config.radius);
-  AssignIfPresent(root, "box_length", &config.box_length);
-  AssignIfPresent(root, "box_width", &config.box_width);
-  AssignIfPresent(root, "cube_size", &config.cube_size);
+  AssignUnifiedBoxSize(root, &config.box_size);
 
   // Generation range
   if (root["range"]) {
@@ -157,6 +198,8 @@ ObstacleConfig LoadConfigFromYaml(const std::string& path) {
   // Speed parameters
   AssignIfPresent(root, "min_speed", &config.min_speed);
   AssignIfPresent(root, "max_speed", &config.max_speed);
+  AssignIfPresent(root, "update_threads", &config.update_threads);
+  AssignIfPresent(root, "parallel_threshold", &config.parallel_threshold);
 
   // Validate
   std::string error_msg;

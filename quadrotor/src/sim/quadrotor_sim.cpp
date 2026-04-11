@@ -437,10 +437,8 @@ void QuadrotorSim::Step() {
   if (model_ == nullptr || data_ == nullptr) {
     throw std::runtime_error("Simulation is not loaded.");
   }
+  PrepareDynamicObstaclesForStep();
   mj_step(model_, data_);
-  UpdateDynamicObstacles();
-  // Recompute forward kinematics so renderer sees updated geom positions
-  mj_forward(model_, data_);
 }
 
 void QuadrotorSim::Run() {
@@ -685,6 +683,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
         sim.speed_changed = false;
 
         sim.InjectNoise(sim.key);
+        PrepareDynamicObstaclesForStep();
         mj_step(model_, data_);
 
         if (const char* message = Diverged(model_->opt.disableflags, data_)) {
@@ -707,6 +706,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
           }
 
           sim.InjectNoise(sim.key);
+          PrepareDynamicObstaclesForStep();
           mj_step(model_, data_);
 
           if (const char* message = Diverged(model_->opt.disableflags, data_)) {
@@ -806,6 +806,7 @@ void QuadrotorSim::InstallModelPointers(
 
   mjModel* old_model = model_;
   mjData* old_data = data_;
+  obstacle_manager_.reset();
 
   new_model->opt.timestep = config_.simulation.dt;
   model_ = new_model;
@@ -839,6 +840,30 @@ void QuadrotorSim::InstallModelPointers(
       mj_deleteModel(old_model);
     }
   }
+}
+
+bool QuadrotorSim::IsDepthStreamRenderable(const CameraStreamRuntime& stream) const {
+  if (stream.kind != CameraStreamKind::kDepth) {
+    return false;
+  }
+  return stream.sensor_data_adr >= 0 &&
+         stream.sensor_data_size == stream.width * stream.height;
+}
+
+bool QuadrotorSim::HasDueDepthStreamAfterStep(double next_sim_time) const {
+  if (data_ == nullptr) {
+    return false;
+  }
+
+  for (const auto& stream : camera_streams_) {
+    if (!IsDepthStreamRenderable(stream)) {
+      continue;
+    }
+    if (next_sim_time + 1e-9 >= stream.next_render_time) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void QuadrotorSim::ConfigureDefaultCamera() {
@@ -1002,7 +1027,11 @@ void QuadrotorSim::RenderCameraFramesIfNeeded() {
   }
 
   for (auto& stream : camera_streams_) {
-    if (stream.camera_id < 0 || data_->time + 1e-9 < stream.next_render_time) {
+    if (stream.kind == CameraStreamKind::kDepth) {
+      if (!IsDepthStreamRenderable(stream) || data_->time + 1e-9 < stream.next_render_time) {
+        continue;
+      }
+    } else if (stream.camera_id < 0 || data_->time + 1e-9 < stream.next_render_time) {
       continue;
     }
 
@@ -1179,12 +1208,7 @@ void QuadrotorSim::LogStateIfNeeded(const TelemetrySnapshot& snapshot) const {
 void QuadrotorSim::InitializeDynamicObstacleManager() {
   // Skip if not enabled
   if (!config_.dynamic_obstacle.enabled) {
-    return;
-  }
-
-  // Skip if already initialized (model reloaded)
-  if (obstacle_manager_ != nullptr) {
-    std::cout << "[QuadrotorSim] Dynamic obstacle manager already initialized, skipping." << std::endl;
+    obstacle_manager_.reset();
     return;
   }
 
@@ -1192,6 +1216,7 @@ void QuadrotorSim::InitializeDynamicObstacleManager() {
   if (config_.dynamic_obstacle.config_path.empty()) {
     std::cerr << "[QuadrotorSim] Warning: dynamic_obstacle.enabled=true but config_path is not set." << std::endl;
     std::cerr << "[QuadrotorSim] Warning: Please set dynamic_obstacle.config_path in sim_config.yaml" << std::endl;
+    obstacle_manager_.reset();
     return;
   }
 
@@ -1201,21 +1226,41 @@ void QuadrotorSim::InitializeDynamicObstacleManager() {
         config_.dynamic_obstacle.config_path);
 
     if (manager->Initialize(obstacle_config, model_, data_)) {
-      obstacle_manager_ = std::move(manager);
-      std::cout << "[QuadrotorSim] Dynamic obstacle manager initialized successfully." << std::endl;
-      std::cout << obstacle_manager_->GetDebugInfo() << std::endl;
+      if (manager->IsEnabled()) {
+        obstacle_manager_ = std::move(manager);
+        std::cout << "[QuadrotorSim] Dynamic obstacle manager initialized successfully." << std::endl;
+        if (obstacle_config.debug) {
+          std::cout << obstacle_manager_->GetDebugInfo() << std::endl;
+        }
+      } else {
+        obstacle_manager_.reset();
+        std::cout << "[QuadrotorSim] Dynamic obstacles resolved to a static scene. "
+                  << "Runtime obstacle updates are disabled." << std::endl;
+      }
     } else {
+      obstacle_manager_.reset();
       std::cerr << "[QuadrotorSim] Failed to initialize dynamic obstacle manager." << std::endl;
     }
   } catch (const std::exception& e) {
+    obstacle_manager_.reset();
     std::cerr << "[QuadrotorSim] Exception initializing dynamic obstacle manager: " << e.what() << std::endl;
   }
 }
 
-void QuadrotorSim::UpdateDynamicObstacles() {
-  if (obstacle_manager_ != nullptr) {
-    obstacle_manager_->Update();
+bool QuadrotorSim::PrepareDynamicObstaclesForStep() {
+  if (obstacle_manager_ == nullptr || model_ == nullptr || data_ == nullptr) {
+    return false;
   }
+
+  const double next_sim_time = data_->time + model_->opt.timestep;
+  const bool update_due =
+      obstacle_manager_->RequiresPhysicsRateUpdates() ||
+      HasDueDepthStreamAfterStep(next_sim_time);
+  if (!update_due) {
+    return false;
+  }
+
+  return obstacle_manager_->ApplyTrajectory(next_sim_time);
 }
 
 }  // namespace quadrotor
