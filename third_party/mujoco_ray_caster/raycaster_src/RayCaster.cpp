@@ -7,6 +7,20 @@
 #include <mujoco/mujoco.h>
 #include <utility>
 
+namespace {
+
+mjvGeom *AppendSceneGeom(mjvScene *scn) {
+  if (scn == nullptr || scn->geoms == nullptr || scn->ngeom >= scn->maxgeom) {
+    return nullptr;
+  }
+  scn->ngeom += 1;
+  return scn->geoms + scn->ngeom - 1;
+}
+
+int ClampDrawRatio(int ratio) { return std::max(1, ratio); }
+
+} // namespace
+
 RayCaster::RayCaster() {}
 RayCaster::RayCaster(const RayCasterCfg &cfg) { init(cfg); }
 
@@ -373,24 +387,30 @@ std::vector<std::vector<double>> RayCaster::get_data_pos_b() {
 
 void RayCaster::draw_line(mjvScene *scn, mjtNum *from, mjtNum *to, mjtNum width,
                           float *rgba) {
-  scn->ngeom += 1;
-  mjvGeom *geom = scn->geoms + scn->ngeom - 1;
+  mjvGeom *geom = AppendSceneGeom(scn);
+  if (geom == nullptr) {
+    return;
+  }
   mjv_initGeom(geom, mjGEOM_SPHERE, NULL, NULL, NULL, rgba);
   mjv_connector(geom, mjGEOM_LINE, width, from, to);
 }
 
 void RayCaster::draw_arrow(mjvScene *scn, mjtNum *from, mjtNum *to,
                            mjtNum width, float *rgba) {
-  scn->ngeom += 1;
-  mjvGeom *geom = scn->geoms + scn->ngeom - 1;
+  mjvGeom *geom = AppendSceneGeom(scn);
+  if (geom == nullptr) {
+    return;
+  }
   mjv_initGeom(geom, mjGEOM_SPHERE, NULL, NULL, NULL, rgba);
   mjv_connector(geom, mjGEOM_ARROW, width, from, to);
 }
 
 void RayCaster::draw_geom(mjvScene *scn, int type, mjtNum *size, mjtNum *pos,
                           mjtNum *mat, float rgba[4]) {
-  scn->ngeom += 1;
-  mjvGeom *geom = scn->geoms + scn->ngeom - 1;
+  mjvGeom *geom = AppendSceneGeom(scn);
+  if (geom == nullptr) {
+    return;
+  }
   mjv_initGeom(geom, type, size, pos, mat, rgba);
 }
 
@@ -416,6 +436,7 @@ void RayCaster::draw_deep_ray(mjvScene *scn, int ratio, int width, bool edge,
                               float *color) {
   if (!enable)
     return;
+  ratio = ClampDrawRatio(ratio);
   float color_[4] = {1.0, 0.0, 0.0, 1.0};
   if (color != nullptr) {
     color_[0] = color[0];
@@ -449,6 +470,9 @@ void RayCaster::draw_deep_ray(mjvScene *scn, int ratio, int width, bool edge,
 void RayCaster::draw_deep_ray(mjvScene *scn, int idx, int width, float *color) {
   if (!enable)
     return;
+  if (idx < 0 || idx >= nray) {
+    return;
+  }
   float color_[4] = {1.0, 0.0, 0.0, 1.0};
   if (color != nullptr) {
     color_[0] = color[0];
@@ -470,6 +494,7 @@ void RayCaster::draw_deep_ray(mjvScene *scn, int idx, int width, float *color) {
 void RayCaster::draw_deep(mjvScene *scn, int ratio, int width, float *color) {
   if (!enable)
     return;
+  ratio = ClampDrawRatio(ratio);
   float color_[4] = {1.0, 0.0, 0.0, 1.0};
   if (color != nullptr) {
     color_[0] = color[0];
@@ -489,6 +514,7 @@ void RayCaster::draw_hip_point(mjvScene *scn, int ratio, mjtNum size,
                                float *color) {
   if (!enable)
     return;
+  ratio = ClampDrawRatio(ratio);
   if (!is_compute_hit) {
     is_compute_hit = true;
     compute_hit();
@@ -516,6 +542,7 @@ void RayCaster::draw_hip_point(mjvScene *scn, int ratio, mjtNum size,
 void RayCaster::draw_normal(mjvScene *scn, int ratio, int width, float *color) {
   if (!enable)
     return;
+  ratio = ClampDrawRatio(ratio);
 #if mjVERSION_HEADER > 340
   if (!is_compute_hit) {
     is_compute_hit = true;

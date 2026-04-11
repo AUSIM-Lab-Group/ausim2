@@ -116,7 +116,7 @@ struct CameraDepthConfig {
   std::string frame_id;
   std::string topic;
   std::string sensor_name;
-  std::string data_type = "distance_to_image_plane_inf_zero";
+  std::string data_type;
   double rate_hz = 0.0;
   double compute_rate_hz = 0.0;
   int worker_threads = 0;

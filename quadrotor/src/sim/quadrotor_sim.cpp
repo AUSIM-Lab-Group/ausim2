@@ -1019,7 +1019,6 @@ void QuadrotorSim::ApplyDepthPluginPerformanceConfig(mjModel* model) const {
       continue;
     }
 
-    const std::string depth_data_type = ResolveRayCasterDepthDataType(stream.data_type);
     const int requested_depth_samples = stream.width * stream.height;
     if (requested_depth_samples > model->sensor_dim[sensor_id]) {
       throw std::runtime_error(
@@ -1037,12 +1036,16 @@ void QuadrotorSim::ApplyDepthPluginPerformanceConfig(mjModel* model) const {
         "size",
         std::to_string(stream.width) + " " + std::to_string(stream.height),
         stream.name);
-    OverwritePluginTextConfig(
-        model,
-        plugin_instance,
-        "sensor_data_types",
-        depth_data_type,
-        stream.name);
+
+    if (!stream.data_type.empty()) {
+      const std::string depth_data_type = ResolveRayCasterDepthDataType(stream.data_type);
+      OverwritePluginTextConfig(
+          model,
+          plugin_instance,
+          "sensor_data_types",
+          depth_data_type,
+          stream.name);
+    }
 
     const int step_update =
         ComputeStepUpdate(config_.simulation.dt, stream.compute_period_seconds);

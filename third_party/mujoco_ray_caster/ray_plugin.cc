@@ -303,6 +303,9 @@ void RayPlugin::initSensor(const mjModel *m, mjData *d, int instance,
       ReadStringVector(mj_getPluginConfig(m, instance, base_attributes[5]));
   auto noise_cfg =
       ReadVector<mjtNum>(mj_getPluginConfig(m, instance, base_attributes[6]));
+  if (!noise.empty() && noise_cfg.empty()) {
+    mju_warning("RayPlugin: noise_type is ignored because noise_cfg is empty");
+  }
   if (!noise.empty() && !noise_cfg.empty()) {
     unsigned int seed = 0;
     int noise_type = 0;

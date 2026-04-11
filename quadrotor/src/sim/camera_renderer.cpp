@@ -9,6 +9,8 @@
 namespace quadrotor {
 namespace {
 
+constexpr int kMaxSceneGeoms = 100000;
+
 bool HasGraphicalDisplay() {
 #if defined(__linux__)
   return std::getenv("DISPLAY") != nullptr || std::getenv("WAYLAND_DISPLAY") != nullptr;
@@ -58,7 +60,7 @@ bool CameraRenderer::RefreshModel(mjModel* model, int max_width, int max_height,
 
   mjv_defaultOption(&option_);
   mjv_defaultScene(&scene_);
-  mjv_makeScene(model, &scene_, 1000);
+  mjv_makeScene(model, &scene_, kMaxSceneGeoms);
   scene_initialized_ = true;
 
   mjr_defaultContext(&context_);
