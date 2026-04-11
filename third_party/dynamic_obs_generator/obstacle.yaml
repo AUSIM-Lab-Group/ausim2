@@ -36,7 +36,7 @@ range:
   z_max: 1.5        # Maximum z coordinate (for 3D mode)
 
 # Maximum number of obstacles to scan for (should match XML)
-obstacle_count: 50
+obstacle_count: 25
 
 # Motion parameters
 min_speed: 0.0       # Minimum obstacle speed (m/s)

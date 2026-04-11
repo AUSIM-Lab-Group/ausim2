@@ -2,3 +2,4 @@
 build/
 .codex
 MUJOCO_LOG.TXT
+assets/crazyfile/scene.dynamic_obstacles.xml
