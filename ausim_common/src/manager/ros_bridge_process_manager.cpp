@@ -123,7 +123,7 @@ void RosBridgeProcessManager::Start() {
     argv.push_back(nullptr);
 
     execv(launch_config_.executable_path.c_str(), argv.data());
-    std::perror("execv quadrotor_ros_bridge");
+    std::perror("execv ausim_ros_bridge");
     _exit(127);
   }
 
@@ -176,7 +176,7 @@ void RosBridgeProcessManager::Stop() {
         waitpid(child_pid_, &status, 0);
       }
     } else if (result < 0 && errno != ECHILD && was_running) {
-      std::cerr << "quadrotor warning: waitpid failed while stopping ROS bridge: "
+      std::cerr << "ausim warning: waitpid failed while stopping ROS bridge: "
                 << std::strerror(errno) << '\n';
     }
     child_pid_ = -1;
@@ -212,7 +212,7 @@ void RosBridgeProcessManager::CommandLoop() {
         continue;
       case ipc::PacketReceiveStatus::kError:
         if (running_.load()) {
-          std::cerr << "quadrotor warning: command socket receive failed\n";
+          std::cerr << "ausim warning: command socket receive failed\n";
         }
         running_.store(false);
         return;
@@ -241,7 +241,7 @@ void RosBridgeProcessManager::CameraLoop() {
           ipc::WriteFully(image_send_fd_, frame->data.data(), frame->data.size());
       if (!sent) {
         if (running_.load()) {
-          std::cerr << "quadrotor warning: image socket send failed\n";
+          std::cerr << "ausim warning: image socket send failed\n";
         }
         running_.store(false);
         return;

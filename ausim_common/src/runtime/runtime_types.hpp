@@ -7,7 +7,6 @@
 
 #include <Eigen/Core>
 
-#include "controller/se3_controller.hpp"
 #include "controller/state.hpp"
 
 namespace quadrotor {
@@ -33,21 +32,6 @@ struct VelocityCommand {
   Eigen::Vector3d linear = Eigen::Vector3d::Zero();
   Eigen::Vector3d angular = Eigen::Vector3d::Zero();
   std::chrono::steady_clock::time_point received_time = std::chrono::steady_clock::now();
-};
-
-struct GoalReference {
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  State state;
-  Eigen::Vector3d forward = Eigen::Vector3d(1.0, 0.0, 0.0);
-  SE3Controller::ControlMode control_mode = SE3Controller::ControlMode::kPosition;
-  std::string source = "demo";
-};
-
-struct RuntimeOutput {
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  GoalReference goal;
-  ControlCommand command;
-  Eigen::Vector4d motor_speed_krpm = Eigen::Vector4d::Zero();
 };
 
 struct TelemetrySnapshot {

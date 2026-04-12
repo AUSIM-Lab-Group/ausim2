@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+#include <GLFW/glfw3.h>
+
 #include "runtime/data_board_interface.hpp"
 
 namespace fs = std::filesystem;
@@ -150,6 +152,25 @@ std::string VectorToString(const Eigen::Vector3d& vector) {
   stream << std::fixed << std::setprecision(3)
          << "(" << vector.x() << ", " << vector.y() << ", " << vector.z() << ")";
   return stream.str();
+}
+
+bool HasGraphicalDisplay() {
+#if defined(__linux__)
+  return std::getenv("DISPLAY") != nullptr || std::getenv("WAYLAND_DISPLAY") != nullptr;
+#else
+  return true;
+#endif
+}
+
+void ConfigureDefaultCamera(mjvCamera* camera) {
+  mjv_defaultCamera(camera);
+  camera->type = mjCAMERA_FREE;
+  camera->lookat[0] = 0.0;
+  camera->lookat[1] = 0.0;
+  camera->lookat[2] = 0.25;
+  camera->distance = 3.0;
+  camera->azimuth = 135.0;
+  camera->elevation = -25.0;
 }
 
 }  // namespace
@@ -368,10 +389,17 @@ void ScoutSim::Run() {
     LoadModel();
   }
 
-  while (ShouldContinue()) {
-    const auto step_start = std::chrono::high_resolution_clock::now();
-    Step();
-    SleepToMatchRealtime(step_start);
+  if (config_.common.viewer.enabled) {
+    if (HasGraphicalDisplay()) {
+      RunWithViewer();
+    } else if (config_.common.viewer.fallback_to_headless) {
+      std::cerr << "viewer unavailable, falling back to headless: no graphical display detected\n";
+      RunHeadless();
+    } else {
+      throw std::runtime_error("OpenGL viewer unavailable: no graphical display detected.");
+    }
+  } else {
+    RunHeadless();
   }
 
   std::signal(SIGINT, SIG_DFL);
@@ -381,6 +409,76 @@ void ScoutSim::Run() {
             << data_->time << " s, final position="
             << VectorToString(Eigen::Vector3d(data_->qpos[0], data_->qpos[1], data_->qpos[2]))
             << '\n';
+}
+
+void ScoutSim::RunHeadless() {
+  while (ShouldContinue()) {
+    const auto step_start = std::chrono::high_resolution_clock::now();
+    Step();
+    SleepToMatchRealtime(step_start);
+  }
+}
+
+void ScoutSim::RunWithViewer() {
+  if (!glfwInit()) {
+    if (config_.common.viewer.fallback_to_headless) {
+      std::cerr << "viewer unavailable, falling back to headless: could not initialize GLFW\n";
+      RunHeadless();
+      return;
+    }
+    throw std::runtime_error("OpenGL viewer unavailable: could not initialize GLFW.");
+  }
+
+  GLFWwindow* window = glfwCreateWindow(1200, 900, "Scout MuJoCo Simulation", nullptr, nullptr);
+  if (window == nullptr) {
+    glfwTerminate();
+    if (config_.common.viewer.fallback_to_headless) {
+      std::cerr << "viewer unavailable, falling back to headless: could not create GLFW window\n";
+      RunHeadless();
+      return;
+    }
+    throw std::runtime_error("OpenGL viewer unavailable: could not create GLFW window.");
+  }
+
+  glfwMakeContextCurrent(window);
+  glfwSwapInterval(config_.common.viewer.vsync ? 1 : 0);
+
+  mjvCamera camera;
+  ConfigureDefaultCamera(&camera);
+  mjvOption visualization_options;
+  mjv_defaultOption(&visualization_options);
+  mjvScene scene;
+  mjv_defaultScene(&scene);
+  mjv_makeScene(model_, &scene, 2000);
+  mjrContext context;
+  mjr_defaultContext(&context);
+  mjr_makeContext(model_, &context, mjFONTSCALE_150);
+
+  while (ShouldContinue() && !glfwWindowShouldClose(window)) {
+    const auto step_start = std::chrono::high_resolution_clock::now();
+    Step();
+
+    mjrRect viewport{0, 0, 0, 0};
+    glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
+    mjv_updateScene(
+        model_,
+        data_,
+        &visualization_options,
+        nullptr,
+        &camera,
+        mjCAT_ALL,
+        &scene);
+    mjr_render(viewport, &scene, &context);
+
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+    SleepToMatchRealtime(step_start);
+  }
+
+  mjr_freeContext(&context);
+  mjv_freeScene(&scene);
+  glfwDestroyWindow(window);
+  glfwTerminate();
 }
 
 bool ScoutSim::ShouldContinue() const {

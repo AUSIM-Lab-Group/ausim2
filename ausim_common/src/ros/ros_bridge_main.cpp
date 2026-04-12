@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
     const quadrotor::QuadrotorConfig config = LoadConfig(cli);
     return quadrotor::RunRosBridgeProcess(config, cli.telemetry_fd, cli.command_fd, cli.image_fd);
   } catch (const std::exception& error) {
-    std::cerr << "quadrotor_ros_bridge error: " << error.what() << '\n';
+    std::cerr << "ausim_ros_bridge error: " << error.what() << '\n';
     return 1;
   }
 }

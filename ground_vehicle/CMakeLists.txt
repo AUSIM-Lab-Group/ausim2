@@ -12,22 +12,19 @@ endif()
 
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(glfw3 REQUIRED)
 
 add_library(ground_vehicle_sim_core STATIC
   src/config/scout_config.cpp
   src/control/differential_drive_controller.cpp
   src/sim/scout_sim.cpp
   src/sim/wheel_actuator_writer.cpp
-  ../quadrotor/src/config/quadrotor_config.cpp
-  ../quadrotor/src/converts/ipc/bridge_packets.cpp
-  ../quadrotor/src/manager/ros_bridge_process_manager.cpp
-  ../quadrotor/src/runtime/data_board_interface.cpp
 )
 
 target_include_directories(ground_vehicle_sim_core
   PUBLIC
+    "${CMAKE_SOURCE_DIR}/ausim_common/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    "${CMAKE_SOURCE_DIR}/quadrotor/src"
 )
 
 target_compile_features(ground_vehicle_sim_core PUBLIC cxx_std_17)
@@ -39,7 +36,9 @@ target_compile_definitions(ground_vehicle_sim_core
 
 target_link_libraries(ground_vehicle_sim_core
   Eigen3::Eigen
+  glfw
   yaml-cpp
+  ausim_common_runtime
   "${MUJOCO_IMPORTED_TARGET}"
 )
 

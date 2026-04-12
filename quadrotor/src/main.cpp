@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
 
     quadrotor::RosBridgeLaunchConfig bridge_launch_config;
     bridge_launch_config.executable_path =
-        self_executable.parent_path() / "quadrotor_ros_bridge";
+        self_executable.parent_path() / "ausim_ros_bridge";
     bridge_launch_config.config_arguments = BuildBridgeConfigArguments(cli);
 
     quadrotor::QuadrotorApp app(std::move(config), std::move(bridge_launch_config));

@@ -38,6 +38,8 @@ class ScoutSim {
   void ApplyControl();
   void PublishTelemetry(bool log_state = true);
   void LogStateIfNeeded(const quadrotor::TelemetrySnapshot& snapshot) const;
+  void RunHeadless();
+  void RunWithViewer();
   bool ShouldContinue() const;
   void SleepToMatchRealtime(
       const std::chrono::high_resolution_clock::time_point& step_start) const;

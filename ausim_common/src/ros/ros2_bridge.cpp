@@ -128,7 +128,7 @@ bool ValidateImageMetadata(const ipc::CameraImageMetadataPacket& metadata) {
 void EnsureWritableRosHome() {
 #if defined(__linux__)
   if (std::getenv("ROS_HOME") == nullptr) {
-    const fs::path ros_home = fs::path("/tmp") / "quadrotor_ros_home";
+    const fs::path ros_home = fs::path("/tmp") / "ausim_ros_home";
     std::error_code error_code;
     fs::create_directories(ros_home, error_code);
     setenv("ROS_HOME", ros_home.string().c_str(), 0);
@@ -142,13 +142,13 @@ std::string ActiveRmwImplementation() {
 }
 
 bool RosStartupDebugEnabled() {
-  const char* value = std::getenv("QUADROTOR_DEBUG_ROS2_STARTUP");
+  const char* value = std::getenv("AUSIM_DEBUG_ROS2_STARTUP");
   return value != nullptr && std::string(value) != "0" && std::string(value) != "false";
 }
 
 void RosStartupDebugLog(const std::string& message) {
   if (RosStartupDebugEnabled()) {
-    std::cerr << "[quadrotor][ros2-child] " << message << std::endl;
+    std::cerr << "[ausim][ros2-child] " << message << std::endl;
   }
 }
 
@@ -221,7 +221,7 @@ class RosBridgeProcess {
       RosStartupDebugLog("starting ROS bridge child");
       if (!rclcpp::ok()) {
         int argc = 1;
-        char program_name[] = "quadrotor_ros_bridge";
+        char program_name[] = "ausim_ros_bridge";
         char* argv[] = {program_name, nullptr};
         rclcpp::init(argc, argv);
         owns_rclcpp_runtime_ = true;
@@ -362,7 +362,7 @@ class RosBridgeProcess {
           continue;
         case ipc::PacketReceiveStatus::kError:
           if (!stop_requested_.load()) {
-            std::cerr << "quadrotor_ros_bridge warning: telemetry socket receive failed\n";
+            std::cerr << "ausim_ros_bridge warning: telemetry socket receive failed\n";
           }
           RequestStop();
           return;
@@ -391,7 +391,7 @@ class RosBridgeProcess {
           return;
         }
         if (!stop_requested_.load()) {
-          std::cerr << "quadrotor_ros_bridge warning: received image for unknown sensor index "
+          std::cerr << "ausim_ros_bridge warning: received image for unknown sensor index "
                     << metadata.sensor_index << '\n';
         }
         continue;
@@ -404,7 +404,7 @@ class RosBridgeProcess {
       }
       if (!ValidateImageMetadata(metadata)) {
         if (!stop_requested_.load()) {
-          std::cerr << "quadrotor_ros_bridge warning: received malformed image frame\n";
+          std::cerr << "ausim_ros_bridge warning: received malformed image frame\n";
         }
         continue;
       }

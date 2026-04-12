@@ -1,7 +1,7 @@
 #pragma once
 
 #include "config/quadrotor_config.hpp"
-#include "runtime/runtime_types.hpp"
+#include "runtime/quadrotor_runtime_types.hpp"
 
 namespace quadrotor {
 

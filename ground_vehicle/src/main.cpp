@@ -20,6 +20,8 @@ struct CliOptions {
   fs::path sim_config_path;
   fs::path robot_config_path;
   bool no_ros = false;
+  bool force_viewer = false;
+  bool force_headless = false;
 };
 
 fs::path ResolveExistingPath(const std::vector<fs::path>& candidates) {
@@ -62,7 +64,7 @@ std::vector<std::string> BuildBridgeConfigArguments(const CliOptions& cli) {
 void PrintUsage(const char* program_name) {
   std::cout << "Usage: " << program_name
             << " [--sim-config <path>] [--robot-config <override-path>] "
-               "[--config <legacy.yaml>] [--no-ros]\n";
+               "[--config <legacy.yaml>] [--viewer|--headless] [--no-ros]\n";
 }
 
 ground_vehicle::ScoutConfig LoadConfig(const CliOptions& cli) {
@@ -111,6 +113,10 @@ int main(int argc, char** argv) {
         cli.robot_config_path = argv[++i];
       } else if (arg == "--no-ros") {
         cli.no_ros = true;
+      } else if (arg == "--viewer") {
+        cli.force_viewer = true;
+      } else if (arg == "--headless") {
+        cli.force_headless = true;
       } else {
         if (!cli.merged_config_path.empty()) {
           throw std::runtime_error("Only one positional legacy config path is supported.");
@@ -128,6 +134,12 @@ int main(int argc, char** argv) {
     }
 
     ground_vehicle::ScoutConfig config = LoadConfig(cli);
+    if (cli.force_viewer) {
+      config.common.viewer.enabled = true;
+    }
+    if (cli.force_headless) {
+      config.common.viewer.enabled = false;
+    }
 
     if (const char* scene_override = std::getenv("AUSIM_SCENE_XML_OVERRIDE");
         scene_override != nullptr && scene_override[0] != '\0') {
@@ -149,7 +161,7 @@ int main(int argc, char** argv) {
 
       quadrotor::RosBridgeLaunchConfig bridge_launch_config;
       bridge_launch_config.executable_path =
-          self_executable.parent_path() / "quadrotor_ros_bridge";
+          self_executable.parent_path() / "ausim_ros_bridge";
       bridge_launch_config.config_arguments = BuildBridgeConfigArguments(cli);
 
       bridge_manager = std::make_unique<quadrotor::RosBridgeProcessManager>(
