@@ -1,8 +1,9 @@
-.vscode
 build/
+.vscode
 .codex
-MUJOCO_LOG.TXT
-assets/crazyfile/scene.dynamic_obstacles.xml
+.claude
+CLAUDE.md
 .em_run_target
 MJDATA.TXT
-.claude
+MUJOCO_LOG.TXT
+assets/crazyfile/scene.dynamic_obstacles.xml
