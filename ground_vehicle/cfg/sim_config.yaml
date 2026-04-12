@@ -3,8 +3,8 @@ robot_config: robot/scout_v2_config.yaml
 simulation:
   duration: 0.0
   dt: 0.001
-  print_interval: 0.5
-  track_camera_name: ""
+  print_interval: 0.0
+  track_camera_name: "free"
 
 viewer:
   enabled: true

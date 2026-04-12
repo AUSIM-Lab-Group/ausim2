@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_DIR="${SCRIPT_DIR}/build/bin/mujoco_plugin"
 BUNDLED_PLUGIN_DIR="${SCRIPT_DIR}/third_party/mujoco-3.6.0/bin/mujoco_plugin"
 GENERATOR="${SCRIPT_DIR}/third_party/dynamic_obs_generator/generate_scene_obstacles.py"
-TARGET_CONFIG="${SCRIPT_DIR}/.em_run_target"
+MODEL_TARGET_CONFIG="${SCRIPT_DIR}/.em_run_target"
 
 if [ -d "${BUNDLED_PLUGIN_DIR}" ] && [ -d "${PLUGIN_DIR}" ]; then
   export MUJOCO_PLUGIN_DIR="${BUNDLED_PLUGIN_DIR}:${PLUGIN_DIR}"
@@ -20,13 +20,19 @@ SIM_CONFIG=""
 ROBOT_CONFIG=""
 SHOW_HELP=0
 FORCE_SELECT=0
-TARGET=""
+MODEL_TARGET=""
+TARGET_FAMILY=""
 EXECUTABLE=""
 PASSTHROUGH_ARGS=()
 
-is_valid_target() {
+normalize_model_target() {
   case "$1" in
-    quadrotor|scout)
+    crazyfile)
+      printf "crazyfile\n"
+      return 0
+      ;;
+    scout_v2)
+      printf "scout_v2\n"
       return 0
       ;;
     *)
@@ -35,65 +41,74 @@ is_valid_target() {
   esac
 }
 
-choose_target() {
+choose_model_target() {
   local choice=""
   local selected=""
 
-  echo "请选择要启动的仿真目标："
-  echo "  1) quadrotor"
-  echo "  2) scout"
+  echo "请选择要启动的仿真模型："
+  echo "  1) crazyfile (quadrotor)"
+  echo "  2) scout_v2 (ground_vehicle)"
 
   while true; do
     read -r -p "输入编号或名称: " choice
     case "${choice}" in
-      ""|1|quadrotor)
-        selected="quadrotor"
+      ""|1|crazyfile)
+        selected="crazyfile"
         break
         ;;
-      2|scout|ground_vehicle)
-        selected="scout"
+      2|scout_v2)
+        selected="scout_v2"
         break
         ;;
       *)
-        echo "无效选择：${choice}。请输入 1/2、quadrotor 或 scout。"
+        echo "无效选择：${choice}。请输入 1/2、crazyfile 或 scout_v2。"
         ;;
     esac
   done
 
-  printf "%s\n" "${selected}" > "${TARGET_CONFIG}"
-  echo "已保存默认仿真目标：${selected}（之后用 ./em_run.sh -S 可重新选择）"
-  TARGET="${selected}"
+  printf "%s\n" "${selected}" > "${MODEL_TARGET_CONFIG}"
+  echo "已保存默认仿真模型：${selected}（之后用 ./em_run.sh -S 可重新选择）"
+  MODEL_TARGET="${selected}"
 }
 
-load_target() {
+load_model_target() {
+  local stored_target=""
+
   if [ "${FORCE_SELECT}" -eq 1 ]; then
-    choose_target
+    choose_model_target
     return
   fi
 
-  if [ -f "${TARGET_CONFIG}" ]; then
-    TARGET="$(tr -d '[:space:]' < "${TARGET_CONFIG}")"
-    if is_valid_target "${TARGET}"; then
+  if [ -f "${MODEL_TARGET_CONFIG}" ]; then
+    stored_target="$(tr -d '[:space:]' < "${MODEL_TARGET_CONFIG}")"
+    if MODEL_TARGET="$(normalize_model_target "${stored_target}")"; then
+      echo "使用默认仿真模型：${MODEL_TARGET}（之后用 ./em_run.sh -S 可重新选择）"
       return
     fi
-    echo "已保存的仿真目标无效：${TARGET}，将重新选择。"
+    echo "已保存的仿真模型无效：${stored_target}，将重新选择。"
   fi
 
   if [ -t 0 ]; then
-    choose_target
+    choose_model_target
   else
-    TARGET="quadrotor"
-    printf "%s\n" "${TARGET}" > "${TARGET_CONFIG}"
-    echo "未检测到交互式终端，默认选择 quadrotor。之后用 ./em_run.sh -S 可重新选择。"
+    MODEL_TARGET="crazyfile"
+    printf "%s\n" "${MODEL_TARGET}" > "${MODEL_TARGET_CONFIG}"
+    echo "未检测到交互式终端，默认选择 crazyfile。之后用 ./em_run.sh -S 可重新选择。"
   fi
 }
 
-resolve_executable() {
-  case "${TARGET}" in
-    quadrotor)
+resolve_runtime_profile() {
+  case "${MODEL_TARGET}" in
+    crazyfile)
+      TARGET_FAMILY="quadrotor"
       EXECUTABLE="./build/bin/quadrotor"
+      if [ -z "${MERGED_CONFIG}" ] && [ -z "${SIM_CONFIG}" ]; then
+        PASSTHROUGH_ARGS+=(--sim-config "${SCRIPT_DIR}/quadrotor/cfg/sim_config.yaml")
+        SIM_CONFIG="${SCRIPT_DIR}/quadrotor/cfg/sim_config.yaml"
+      fi
       ;;
-    scout)
+    scout_v2)
+      TARGET_FAMILY="ground_vehicle"
       EXECUTABLE="./build/bin/scout"
       if [ -z "${MERGED_CONFIG}" ] && [ -z "${SIM_CONFIG}" ]; then
         PASSTHROUGH_ARGS+=(--sim-config "${SCRIPT_DIR}/ground_vehicle/cfg/sim_config.yaml")
@@ -101,14 +116,14 @@ resolve_executable() {
       fi
       ;;
     *)
-      echo "未知仿真目标：${TARGET}" >&2
+      echo "未知仿真模型：${MODEL_TARGET}" >&2
       exit 1
       ;;
   esac
 
   if [ ! -x "${EXECUTABLE}" ]; then
     echo "目标可执行文件不存在或不可执行：${EXECUTABLE}" >&2
-    echo "请先构建对应目标，例如：cmake --build build --target ${TARGET}" >&2
+    echo "请先构建对应目标，例如：cmake --build build --target ${EXECUTABLE##*/}" >&2
     exit 1
   fi
 }
@@ -165,10 +180,10 @@ done
 
 cd "${SCRIPT_DIR}"
 
-load_target
-resolve_executable
+load_model_target
+resolve_runtime_profile
 
-if [ "${SHOW_HELP}" -eq 0 ] && [ "${TARGET}" = "quadrotor" ] && [ -f "${GENERATOR}" ]; then
+if [ "${SHOW_HELP}" -eq 0 ] && [ "${TARGET_FAMILY}" = "quadrotor" ] && [ -f "${GENERATOR}" ]; then
   GENERATOR_ARGS=(--print-output-path)
   if [ -n "${MERGED_CONFIG}" ]; then
     GENERATOR_ARGS+=(--config "${MERGED_CONFIG}")

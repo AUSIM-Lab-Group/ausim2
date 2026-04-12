@@ -2,7 +2,7 @@ robot_config: robot/crazyfile_config.yaml
 
 simulation:
   duration: 0.0
-  dt: 0.001
+  dt: 0.002
   print_interval: 0.0
   control_mode: 1
   example_mode: 0
