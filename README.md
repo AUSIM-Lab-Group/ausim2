@@ -1,49 +1,40 @@
 # ausim2
 
-基于 MuJoCo 的四旋翼仿真工程，当前主入口是 `quadrotor` C++ 程序。现在的运行时已经拆成：
+## 1. 介绍仓库
 
-- MuJoCo 仿真与控制链
-- 独立线程运行的 ROS2 bridge
-- 配置驱动的机体参数、bindings、话题与 frame
+`ausim2` 是一个基于 MuJoCo 3.6.0 的仿真仓库，当前提供两个主要可执行程序：
 
-## 目录
+- `quadrotor`：四旋翼仿真，集成 ray-caster 深度传感器插件与动态障碍场景生成。
+- `scout`：地面车辆仿真。
 
-```text
-ausim2/
-├── assets/
-├── quadrotor/
-│   ├── CMakeLists.txt
-│   ├── README.md
-│   ├── cfg/
-│   │   ├── sim_config.yaml
-│   │   └── robot_config.yaml
-│   ├── include/
-│   └── src/
-├── script/
-└── third_party/
-```
+仓库当前的 MuJoCo 依赖已经完全内置，不再依赖外部 MuJoCo 源码或 `/opt/mujoco` 安装。核心依赖位于：
 
-## 构建
+- `third_party/mujoco-3.6.0/include/mujoco`：MuJoCo 公开头文件
+- `third_party/mujoco-3.6.0/lib/libmujoco.so.3.6.0`：MuJoCo 运行时库
+- `third_party/mujoco-3.6.0/bin/mujoco_plugin/`：MuJoCo 官方插件与 OBJ/STL decoder
+- `build/bin/mujoco_plugin/libsensor_raycaster.so`：本仓库编译出的自定义传感器插件
 
-依赖：
+仓库中和运行直接相关的目录如下：
+
+- `assets/`：MJCF 模型、网格与场景文件
+- `quadrotor/`：四旋翼仿真源码与配置
+- `ground_vehicle/`：Scout 仿真源码与配置
+- `ausim_common/`：配置、IPC、ROS2 bridge 相关公共代码
+- `third_party/`：MuJoCo release 包、ray-caster 插件源码、动态障碍生成器
+- `em_run.sh`：统一启动脚本
+
+## 2. 如何编译相关代码
+
+系统依赖：
 
 - CMake >= 3.20
 - C++17 编译器
-- MuJoCo 3.6.x
 - Eigen3
 - yaml-cpp
 - GLFW
 - ROS2 Humble
 
-MuJoCo 作为仓内 third-party release 包提供，无需额外下载或安装源码：
-
-```bash
-third_party/mujoco-3.6.0/include/mujoco
-third_party/mujoco-3.6.0/lib/libmujoco.so.3.6.0
-third_party/mujoco-3.6.0/bin/mujoco_plugin/
-```
-
-项目构建：
+安装常用 apt 依赖并构建：
 
 ```bash
 sudo apt install build-essential cmake libeigen3-dev libyaml-cpp-dev libglfw3-dev
@@ -52,145 +43,71 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
-现在的 MuJoCo 依赖默认固定到仓内 release 包：
+主要产物：
 
-- 头文件：`third_party/mujoco-3.6.0/include`
-- 动态库：`third_party/mujoco-3.6.0/lib/libmujoco.so`
-- 官方插件：`third_party/mujoco-3.6.0/bin/mujoco_plugin`
-- 自定义插件输出：`build/bin/mujoco_plugin/libsensor_raycaster.so`
-
-如需检查本地绑定是否正常，可直接运行：
-
-```bash
-./build/bin/mujoco_ray_caster_smoketest
-```
-
-主工程会自动编译 `third_party/mujoco_ray_caster`，并把插件库输出到：
-
+- `build/bin/quadrotor`
+- `build/bin/scout`
+- `build/bin/quadrotor_ros_bridge`
+- `build/bin/ausim_ros_bridge`
 - `build/bin/mujoco_plugin/libsensor_raycaster.so`
 
-可选 smoke test：
+可选地运行一次 MuJoCo 插件 smoke test：
 
 ```bash
-cmake -S . -B build -DMUJOCO_RAY_CASTER_BUILD_SMOKETEST=ON
-cmake --build build -j
 ./build/bin/mujoco_ray_caster_smoketest
 ```
 
-### third_party/mujoco_ray_caster（已并入主工程）
+## 3. 如何启动
 
-当前仓库将 `third_party/mujoco_ray_caster` 作为主仿真链路的一部分直接构建，不再保留独立 demo 文档结构。
-
-- 插件目标：`sensor_raycaster`
-- 输出路径：`build/bin/mujoco_plugin/libsensor_raycaster.so`
-- 主要插件类型：
-  - `mujoco.sensor.ray_caster`
-  - `mujoco.sensor.ray_caster_camera`
-  - `mujoco.sensor.ray_caster_lidar`
-
-噪声与立体模型相关的推导说明保留在：
-
-- `third_party/mujoco_ray_caster/compute.md`
-- `third_party/mujoco_ray_caster/compute.zh-CN.md`
-
-## 运行
-
-默认会自动读取：
-
-- [quadrotor/cfg/sim_config.yaml](quadrotor/cfg/sim_config.yaml)
-- [quadrotor/cfg/robot_config.yaml](quadrotor/cfg/robot_config.yaml)
-
-直接运行：
+推荐使用统一启动脚本：
 
 ```bash
-./build/bin/quadrotor
-./build/bin/quadrotor --viewer
-./build/bin/quadrotor --headless
+./em_run.sh --headless
+./em_run.sh --viewer
+./em_run.sh -S --headless
 ```
 
-运行时会同时使用两组仓内插件目录：
+`em_run.sh` 的行为：
 
-- `third_party/mujoco-3.6.0/bin/mujoco_plugin`：官方 decoder / builtin plugins
-- `build/bin/mujoco_plugin`：本工程编译出的 `libsensor_raycaster.so`
+- 自动在 `quadrotor` 和 `scout` 之间选择启动目标，并把默认选择保存到 `.em_run_target`
+- 自动导出 `MUJOCO_PLUGIN_DIR`
+- 运行 `quadrotor` 时，会先调用 `third_party/dynamic_obs_generator/generate_scene_obstacles.py`
 
-`em_run.sh` 会自动导出这两个目录；直接运行可执行文件时，程序也会自动回退到这两处路径。
+运行时会同时使用两组插件目录：
 
-也支持显式指定：
+- `third_party/mujoco-3.6.0/bin/mujoco_plugin`：MuJoCo 官方插件与 decoder
+- `build/bin/mujoco_plugin`：本仓库编译出的 `libsensor_raycaster.so`
+
+也可以直接运行可执行文件。
+
+四旋翼：
 
 ```bash
-./build/bin/quadrotor \
-  --sim-config ./quadrotor/cfg/sim_config.yaml \
-  --robot-config ./quadrotor/cfg/robot_config.yaml \
-  --headless
+./build/bin/quadrotor --sim-config ./quadrotor/cfg/sim_config.yaml --headless
+./build/bin/quadrotor --sim-config ./quadrotor/cfg/sim_config.yaml --viewer
+./build/bin/quadrotor --sim-config ./quadrotor/cfg/sim_config.yaml \
+  --robot-config ./quadrotor/cfg/robot/xi35_config.yaml --headless
 ```
 
-兼容旧的单文件模式：
+地面车辆：
 
 ```bash
-./build/bin/quadrotor --config ./path/to/legacy_config.yaml
+./build/bin/scout --sim-config ./ground_vehicle/cfg/sim_config.yaml --headless
+./build/bin/scout --sim-config ./ground_vehicle/cfg/sim_config.yaml --viewer
 ```
 
-## 配置说明
+默认配置文件：
 
-`sim_config.yaml` 负责全局仿真环境：
+- `quadrotor/cfg/sim_config.yaml`，默认指向 `robot/crazyfile_config.yaml`
+- `ground_vehicle/cfg/sim_config.yaml`，默认指向 `robot/scout_v2_config.yaml`
 
-- `model.scene_xml`
-- `simulation.track_camera_name`
-- `simulation.duration`
-- `simulation.dt`
-- `simulation.print_interval`
-- `simulation.control_mode`
-- `simulation.example_mode`
-- `goal.*`
-- `trajectory.*`
-- `viewer.*`
-- `ros2.*`
-
-`robot_config.yaml` 负责单台无人机实例：
-
-- `robot.count`
-- `identity.*`
-- `model.body_name`
-- `model.aircraft_forward_axis`
-- `bindings.*`
-- `vehicle.*`
-- `controller.*`
-- `interfaces.*`
-- `frames.*`
-- `sensors[]`
-
-`simulation.example_mode` 语义：
-
-- `0`：接收 ROS `cmd_vel`
-- `1`：内置简单目标
-- `2`：内置圆轨迹 demo
-
-现在 ROS2 bridge 默认开启，不再通过配置开关控制。
-
-## ROS2 使用
-
-默认配置下：
-
-- namespace：`/uav1`
-- 订阅：`/uav1/cmd_vel`
-- 发布：`/uav1/odom`
-- 发布：`/uav1/imu/data`
-- 发布：`/clock`
-- TF：`uav1/odom -> uav1/base_link`
-
-速度控制示例：
+如果需要在运行时使用 ROS2 命令，请先在当前 shell 中执行：
 
 ```bash
-ros2 topic pub /uav1/cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 0.3, y: 0.0, z: 0.0}, angular: {z: 0.4}}" --once
+source /opt/ros/humble/setup.bash
 ```
 
-## 详细说明
+更细的源码结构与单模块说明见：
 
-更完整的架构、线程模型、源码目录和扩展方式见：
-
-[quadrotor/README.md](quadrotor/README.md)
-
-动态障碍环境：无法动态生成带碰撞的GEOM，只能预先定义，但可以动态生成不带碰撞属性的geom
-
-解决方案：每次运行真正仿真前运行一个xml生成器，动态的调整xml中的动态障碍物数量，然后再启动这个xml，实现类似效果
+- [quadrotor/README.md](quadrotor/README.md)
+- [third_party/README.md](third_party/README.md)

@@ -4,3 +4,5 @@ build/
 MUJOCO_LOG.TXT
 assets/crazyfile/scene.dynamic_obstacles.xml
 .em_run_target
+MJDATA.TXT
+.claude
