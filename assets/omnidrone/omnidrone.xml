@@ -24,7 +24,7 @@
   <worldbody>
     <body name="omnidrone" pos="0 0 0.03" childclass="omnidrone">
       <freejoint/>
-      <inertial pos="0 0 0" mass="0.033" diaginertia="5.57e-5 5.57e-5 9.78e-5"/>
+      <inertial pos="0 0 0" mass="0.174" diaginertia="5.57e-5 5.57e-5 9.78e-5"/>
       <camera name="track" pos="-1 0 0.5" xyaxes="0 -1 0 1 0 2" mode="trackcom"/>
 
       <!-- Recenter the STL so the body frame sits near the mesh center. -->
@@ -33,18 +33,18 @@
 
       <site name="imu"/>
       <site name="actuation"/>
-      <site name="motor1_site" pos="0.0325 0.0325 0.013"/>
-      <site name="motor2_site" pos="0.0325 -0.0325 0.013"/>
-      <site name="motor3_site" pos="-0.0325 -0.0325 0.013"/>
-      <site name="motor4_site" pos="-0.0325 0.0325 0.013"/>
+      <site name="motor1_site" pos="0.0325 0.0325 -0.02"/>
+      <site name="motor2_site" pos="0.0325 -0.0325 -0.02"/>
+      <site name="motor3_site" pos="-0.0325 -0.0325 -0.02"/>
+      <site name="motor4_site" pos="-0.0325 0.0325 -0.02"/>
     </body>
   </worldbody>
 
   <actuator>
-    <motor class="omnidrone" ctrlrange="0 1" gear="0 0 0.1573 0 0 -3.842e-03" site="motor1_site" name="motor1"/>
-    <motor class="omnidrone" ctrlrange="0 1" gear="0 0 0.1573 0 0 3.842e-03" site="motor2_site" name="motor2"/>
-    <motor class="omnidrone" ctrlrange="0 1" gear="0 0 0.1573 0 0 -3.842e-03" site="motor3_site" name="motor3"/>
-    <motor class="omnidrone" ctrlrange="0 1" gear="0 0 0.1573 0 0 3.842e-03" site="motor4_site" name="motor4"/>
+    <motor class="omnidrone" ctrlrange="0 1" gear="0 0 0.933912 0 0 -4.63141e-03" site="motor1_site" name="motor1"/>
+    <motor class="omnidrone" ctrlrange="0 1" gear="0 0 0.933912 0 0 4.63141e-03" site="motor2_site" name="motor2"/>
+    <motor class="omnidrone" ctrlrange="0 1" gear="0 0 0.933912 0 0 -4.63141e-03" site="motor3_site" name="motor3"/>
+    <motor class="omnidrone" ctrlrange="0 1" gear="0 0 0.933912 0 0 4.63141e-03" site="motor4_site" name="motor4"/>
   </actuator>
 
   <sensor>

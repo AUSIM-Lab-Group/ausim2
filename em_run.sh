@@ -31,6 +31,10 @@ normalize_model_target() {
       printf "crazyfile\n"
       return 0
       ;;
+    omnidrone)
+      printf "omnidrone\n"
+      return 0
+      ;;
     scout_v2)
       printf "scout_v2\n"
       return 0
@@ -47,7 +51,8 @@ choose_model_target() {
 
   echo "请选择要启动的仿真模型："
   echo "  1) crazyfile (quadrotor)"
-  echo "  2) scout_v2 (ground_vehicle)"
+  echo "  2) omnidrone (quadrotor)"
+  echo "  3) scout_v2 (ground_vehicle)"
 
   while true; do
     read -r -p "输入编号或名称: " choice
@@ -56,12 +61,16 @@ choose_model_target() {
         selected="crazyfile"
         break
         ;;
-      2|scout_v2)
+      2|omnidrone)
+        selected="omnidrone"
+        break
+        ;;
+      3|scout_v2)
         selected="scout_v2"
         break
         ;;
       *)
-        echo "无效选择：${choice}。请输入 1/2、crazyfile 或 scout_v2。"
+        echo "无效选择：${choice}。请输入 1/2/3、crazyfile、omnidrone 或 scout_v2。"
         ;;
     esac
   done
@@ -105,6 +114,22 @@ resolve_runtime_profile() {
       if [ -z "${MERGED_CONFIG}" ] && [ -z "${SIM_CONFIG}" ]; then
         PASSTHROUGH_ARGS+=(--sim-config "${SCRIPT_DIR}/quadrotor/cfg/sim_config.yaml")
         SIM_CONFIG="${SCRIPT_DIR}/quadrotor/cfg/sim_config.yaml"
+      fi
+      if [ -z "${MERGED_CONFIG}" ] && [ -z "${ROBOT_CONFIG}" ]; then
+        PASSTHROUGH_ARGS+=(--robot-config "${SCRIPT_DIR}/quadrotor/cfg/robot/crazyfile_config.yaml")
+        ROBOT_CONFIG="${SCRIPT_DIR}/quadrotor/cfg/robot/crazyfile_config.yaml"
+      fi
+      ;;
+    omnidrone)
+      TARGET_FAMILY="quadrotor"
+      EXECUTABLE="./build/bin/quadrotor"
+      if [ -z "${MERGED_CONFIG}" ] && [ -z "${SIM_CONFIG}" ]; then
+        PASSTHROUGH_ARGS+=(--sim-config "${SCRIPT_DIR}/quadrotor/cfg/sim_config.yaml")
+        SIM_CONFIG="${SCRIPT_DIR}/quadrotor/cfg/sim_config.yaml"
+      fi
+      if [ -z "${MERGED_CONFIG}" ] && [ -z "${ROBOT_CONFIG}" ]; then
+        PASSTHROUGH_ARGS+=(--robot-config "${SCRIPT_DIR}/quadrotor/cfg/robot/omnidrone_config.yaml")
+        ROBOT_CONFIG="${SCRIPT_DIR}/quadrotor/cfg/robot/omnidrone_config.yaml"
       fi
       ;;
     scout_v2)
