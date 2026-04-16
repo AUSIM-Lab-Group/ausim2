@@ -1,4 +1,12 @@
 models:
+  - id: omnidrone
+    sim_config: quadrotor/cfg/sim_config.yaml
+    robot_config: quadrotor/cfg/robot/omnidrone_config.yaml
+    scene_xml: assets/omnidrone/scene.xml
+    dynamic_obstacle:
+      enabled: false
+      config_path: third_party/dynamic_obs_generator/obstacle.yaml
+  
   - id: crazyfile
     sim_config: quadrotor/cfg/sim_config.yaml
     robot_config: quadrotor/cfg/robot/crazyfile_config.yaml
@@ -15,10 +23,3 @@ models:
       enabled: true
       config_path: third_party/dynamic_obs_generator/obstacle.yaml
 
-  - id: omnidrone
-    sim_config: quadrotor/cfg/sim_config.yaml
-    robot_config: quadrotor/cfg/robot/omnidrone_config.yaml
-    scene_xml: assets/omnidrone/scene.xml
-    dynamic_obstacle:
-      enabled: false
-      config_path: third_party/dynamic_obs_generator/obstacle.yaml

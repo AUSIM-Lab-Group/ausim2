@@ -1,4 +1,12 @@
 models:
+  - id: scout_v2_pure
+    sim_config: ground_vehicle/cfg/sim_config.yaml
+    robot_config: ground_vehicle/cfg/robot/scout_v2_config.yaml
+    scene_xml: assets/scout_v2/scene.xml
+    dynamic_obstacle:
+      enabled: false
+      config_path: third_party/dynamic_obs_generator/obstacle.yaml
+
   - id: scout_v2
     sim_config: ground_vehicle/cfg/sim_config.yaml
     robot_config: ground_vehicle/cfg/robot/scout_v2_config.yaml
@@ -6,3 +14,4 @@ models:
     dynamic_obstacle:
       enabled: false
       config_path: third_party/dynamic_obs_generator/obstacle.yaml
+
