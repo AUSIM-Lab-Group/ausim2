@@ -11,7 +11,6 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(std_srvs REQUIRED)
 
 add_executable(remote_control_node
   src/main.cpp
@@ -32,14 +31,13 @@ ament_target_dependencies(
   geometry_msgs
   sensor_msgs
   std_msgs
-  std_srvs
 )
 
 install(TARGETS remote_control_node
   RUNTIME DESTINATION bin
 )
 
-install(DIRECTORY config launch
+install(DIRECTORY config
   DESTINATION share/remote_control
 )
 

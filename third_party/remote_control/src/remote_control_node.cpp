@@ -18,8 +18,6 @@ namespace {
 constexpr char kDefaultJoyTopic[] = "/joy";
 constexpr char kDefaultCmdVelTopic[] = "/uav1/cmd_vel";
 constexpr char kDefaultTeleopEventTopic[] = "/uav1/teleop/event";
-constexpr char kDefaultTakeoffService[] = "/uav1/takeoff";
-constexpr char kDefaultResetService[] = "/uav1/sim/reset";
 
 double ApplyDeadzone(double value, double deadzone) {
   if (std::abs(value) < deadzone) {
@@ -196,19 +194,13 @@ RemoteControlNode::RemoteControlNode() : Node("remote_control_node") {
   LoadParameters();
   LoadEventBindings();
 
-  cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_, 10);
-  if (!teleop_event_topic_.empty()) {
-    teleop_event_publisher_ = create_publisher<std_msgs::msg::String>(teleop_event_topic_, 10);
+  if (teleop_event_topic_.empty()) {
+    throw std::runtime_error("topics.teleop_event must be configured; remote_control no longer supports legacy service fallback");
   }
+  cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_, 10);
+  teleop_event_publisher_ = create_publisher<std_msgs::msg::String>(teleop_event_topic_, 10);
   joy_subscription_ = create_subscription<sensor_msgs::msg::Joy>(
       joy_topic_, rclcpp::SensorDataQoS(), std::bind(&RemoteControlNode::OnJoy, this, std::placeholders::_1));
-
-  if (!takeoff_service_.empty()) {
-    takeoff_client_ = create_client<std_srvs::srv::Trigger>(takeoff_service_);
-  }
-  if (!reset_service_.empty()) {
-    reset_client_ = create_client<std_srvs::srv::Trigger>(reset_service_);
-  }
 
   keyboard_ = std::make_unique<TerminalKeyboard>(keyboard_enabled_, keyboard_key_timeout_seconds_);
   if (keyboard_enabled_ && !keyboard_->available()) {
@@ -228,8 +220,6 @@ void RemoteControlNode::LoadParameters() {
   joy_topic_ = declare_parameter<std::string>("topics.joy", kDefaultJoyTopic);
   cmd_vel_topic_ = declare_parameter<std::string>("topics.cmd_vel", kDefaultCmdVelTopic);
   teleop_event_topic_ = declare_parameter<std::string>("topics.teleop_event", kDefaultTeleopEventTopic);
-  takeoff_service_ = declare_parameter<std::string>("services.takeoff", kDefaultTakeoffService);
-  reset_service_ = declare_parameter<std::string>("services.reset", kDefaultResetService);
 
   publish_rate_hz_ = declare_parameter<double>("publish_rate_hz", 30.0);
   joy_timeout_seconds_ = declare_parameter<double>("joy_timeout", 0.5);
@@ -379,50 +369,9 @@ void RemoteControlNode::TriggerAction(const std::string& event_name, const char*
   PublishZeroCommand();
 
   RCLCPP_INFO(get_logger(), "triggering %s from %s", event_name.c_str(), source);
-  if (teleop_event_publisher_ != nullptr) {
-    std_msgs::msg::String message;
-    message.data = event_name;
-    teleop_event_publisher_->publish(message);
-    return;
-  }
-
-  // Service fallback for the two events that have dedicated std_srvs::Trigger
-  // endpoints on the sim side. Other events require the teleop_event topic.
-  if (event_name == "takeoff") {
-    CallTriggerService("takeoff", takeoff_client_);
-    return;
-  }
-  if (event_name == "reset") {
-    CallTriggerService("reset", reset_client_);
-    return;
-  }
-  RCLCPP_WARN(get_logger(), "teleop event publisher is not configured for '%s'", event_name.c_str());
-}
-
-void RemoteControlNode::CallTriggerService(const std::string& label, const rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr& client) {
-  if (client == nullptr) {
-    RCLCPP_WARN(get_logger(), "%s service client is not configured", label.c_str());
-    return;
-  }
-  if (!client->wait_for_service(std::chrono::milliseconds(0))) {
-    RCLCPP_WARN(get_logger(), "%s service is not available", label.c_str());
-    return;
-  }
-
-  auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
-  client->async_send_request(
-      request, [this, label](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
-        try {
-          const auto response = future.get();
-          if (response->success) {
-            RCLCPP_INFO(get_logger(), "%s service succeeded: %s", label.c_str(), response->message.c_str());
-          } else {
-            RCLCPP_WARN(get_logger(), "%s service rejected: %s", label.c_str(), response->message.c_str());
-          }
-        } catch (const std::exception& error) {
-          RCLCPP_ERROR(get_logger(), "%s service call failed: %s", label.c_str(), error.what());
-        }
-      });
+  std_msgs::msg::String message;
+  message.data = event_name;
+  teleop_event_publisher_->publish(message);
 }
 
 void RemoteControlNode::PublishZeroCommand() { cmd_vel_publisher_->publish(geometry_msgs::msg::Twist()); }

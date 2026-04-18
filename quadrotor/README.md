@@ -2,58 +2,9 @@
 
 基于 MuJoCo 的四旋翼仿真工程。代码按 `config / data / converts / controller / runtime / sim / ros` 分层，ROS2 bridge 作为独立子进程运行，通过 IPC 与仿真进程交换数据。
 
-## 构建
+构建 (`./build.sh`) 与启动 (`./em_run.sh`) 见仓库根 [README](../README.md)；本文件只描述 quadrotor 自身的结构、配置与状态机。
 
-依赖：CMake >= 3.20、C++17、MuJoCo 3.6.x、Eigen3、yaml-cpp、GLFW、ROS2 Humble
-
-```bash
-source /opt/ros/humble/setup.bash
-cmake -S . -B build -DMUJOCO_SOURCE_DIR=/path/to/mujoco-source
-cmake --build build -j
-```
-
-推荐的 MuJoCo 使用方式是源码编译后安装，例如：
-
-```bash
-cmake -S /home/x/mujoco/mujoco-3.6.0 -B /home/x/mujoco/mujoco-3.6.0/build \
-  -DCMAKE_INSTALL_PREFIX=/opt/mujoco
-cmake --build /home/x/mujoco/mujoco-3.6.0/build -j
-sudo cmake --install /home/x/mujoco/mujoco-3.6.0/build
-```
-
-项目里只需要给源码目录，构建会自动：
-
-- 从 `${MUJOCO_SOURCE_DIR}/build/CMakeCache.txt` 读取安装前缀
-- 尝试 `${install_prefix}/lib/cmake/mujoco`
-- 必要时回退到 `${MUJOCO_SOURCE_DIR}/include` 和 `${MUJOCO_SOURCE_DIR}/build/lib/libmujoco.so`
-
-只有高级场景才需要直接传 package 路径：
-
-```bash
-cmake -S . -B build -Dmujoco_DIR=/path/to/mujoco/lib/cmake/mujoco
-```
-
-主工程会自动编译 `third_party/mujoco_ray_caster` 外部插件，并输出到 `build/bin/mujoco_plugin/`。
-
-产物：`build/bin/quadrotor`、`build/bin/quadrotor_ros_bridge`、`build/bin/mujoco_plugin/libsensor_raycaster.so`
-
-## 运行
-
-```bash
-./build/bin/quadrotor                    # 默认配置，带 viewer
-./build/bin/quadrotor --headless         # 无 GUI
-
-# 显式指定配置
-./build/bin/quadrotor \
-  --sim-config ./quadrotor/cfg/sim_config.yaml \
-  --robot-config ./quadrotor/cfg/robot/crazyfile_config.yaml \
-  --headless
-
-# 兼容旧单文件模式
-./build/bin/quadrotor --config ./legacy_config.yaml
-```
-
-运行时会优先读取 `MUJOCO_PLUGIN_DIR`；如果未设置，则自动尝试加载可执行文件旁边的 `mujoco_plugin/` 目录。
+产物：`build/bin/quadrotor`、`build/bin/quadrotor_ros_bridge`、`build/bin/mujoco_plugin/libsensor_raycaster.so`。运行时会优先读取 `MUJOCO_PLUGIN_DIR`；`em_run.sh` 会自动导出。
 
 ## 进程模型
 
@@ -149,21 +100,26 @@ model:
   scene_xml: ../../../assets/crazyfile/scene.xml
   body_name: cf2
   aircraft_forward_axis: [0.0, 1.0, 0.0]
+
+# teleop / 状态机，详见"Teleop 状态机"章节
+mode_machine: ../teleop/quadrotor_default.yaml
 ```
 
 `control_mode` / `example_mode` / `goal` / `trajectory` 现在放在 `cfg/sim_config.yaml` 里，作为全局仿真配置。
 
-`model.aircraft_forward_axis` 表示“飞机机头在模型 body 坐标系里的方向”。当前 Crazyflie 的语义是：
-- 模型 `+x`：飞机右侧
-- 模型 `+y`：飞机机头
-- 因此配置为 `[0.0, 1.0, 0.0]`
-- 这个配置同时影响速度模式下的“当前 heading”计算和姿态保持时的机头朝向约束
+`model.aircraft_forward_axis` 表示"飞机机头在模型 body 坐标系里的方向"。Crazyflie 约定：
+- 模型 `+x`：飞机右侧，模型 `+y`：飞机机头，故为 `[0.0, 1.0, 0.0]`
+- 影响速度模式下的"当前 heading"计算和姿态保持时的机头朝向约束
 
-`control_mode: 1` 下，`/cmd_vel` 的语义为：
-- 无新命令时：无人机锁定当前位置与当前朝向，进入悬停保持
-- `linear.x / linear.y`：无人机当前局部水平坐标系的前 / 左方向速度，`xy` 与地面平行
+`control_mode: 1` 下，`/cmd_vel` 的语义：
+- 无新命令时：锁定当前位置与当前朝向，进入悬停保持
+- `linear.x / linear.y`：无人机当前局部水平坐标系的前 / 左方向速度（与地面平行）
 - `linear.z`：竖直速度
 - `angular.z`：机体系偏航角速度；持续发 `0` 时保持当前朝向
+
+### `cfg/teleop/<name>.yaml`
+
+分层状态机 + action 参数的定义，可由多个机型共享。默认提供 `quadrotor_default.yaml`，详见下节。
 
 ## ROS2 话题
 
@@ -193,28 +149,90 @@ model:
 |------|------|------|
 | 订阅 | `/uav1/teleop/event` | `std_msgs/String` |
 
-默认四旋翼 teleop 状态机：
+## Teleop 状态机
 
-- `SAFE/on_ground`
-- `MANUAL_READY/hover`
-- `MANUAL_ACTIVE/velocity_control`
-- `FAULT/estop`
+四旋翼共用 `cfg/teleop/quadrotor_default.yaml` 定义的分层状态机。机型 YAML 通过一行引用即可：
 
-发送速度指令：
+```yaml
+mode_machine: ../teleop/quadrotor_default.yaml
+```
+
+### 默认状态
+
+| Sub-state          | Top-level       | accepts_motion (cmd_vel) |
+|--------------------|-----------------|:------------------------:|
+| `on_ground`        | `SAFE`          | false |
+| `hover`            | `MANUAL_READY`  | true  |
+| `velocity_control` | `MANUAL_ACTIVE` | true  |
+| `estop`            | `FAULT`         | false |
+
+`accepts_motion: false` 的子状态会**过滤掉** `/cmd_vel`——这也是"必须先调 takeoff 才能飞"的实现方式。
+
+### 转移触发器
+
+每条 transition 恰好使用一种触发：
+
+| 触发 | YAML 字段 | 语义 |
+|------|-----------|------|
+| 事件 | `event: <name>` | 任意字符串（`takeoff` / `land` / `estop` / 自定义），由 `/uav1/takeoff` service、`/uav1/teleop/event` topic 或 remote_control 产生 |
+| 条件 | `condition: motion_active` / `motion_inactive` | 由 `/cmd_vel` 活跃/超时驱动 |
+| 超时 | `timeout: <sec>` | 进入 `from` 后无转移经过 N 秒自动触发 |
+
+Event-driven 转移**忽略** `condition`；加载时会对同时设置两者的条目打 warning。
+
+### 默认转移
+
+```
+on_ground        --event:takeoff--------> hover               (action: takeoff)
+hover            --event:land-----------> on_ground           (action: land)
+hover            --condition:motion_act-> velocity_control
+velocity_control --condition:motion_ina-> hover
+hover            --timeout:60s----------> on_ground           (action: land)
+{any}            --event:estop---------> estop               (action: emergency_stop)
+```
+
+### Action 注册表
+
+状态机只认 action 名字，回调由 `GoalProvider` 在构造时向 `ModeActionsRegistry` 注册：
+
+| action name       | 参数来源 (`actions:` 子节) | 默认行为 |
+|-------------------|----------------------------|----------|
+| `takeoff`         | `actions.takeoff.height`   | 跳到悬停高度（`climb_rate=0` 即瞬时） |
+| `land`            | `actions.land.descent_rate`| 落回出生点高度（`descent_rate=0` 即瞬时） |
+| `emergency_stop`  | —                          | 骨架占位 |
+
+自定义 action 只需 `provider.RegisterAction("my_action", cb)`，再在 YAML 里用 `action: my_action`——无需改 C++ 分发代码。
+
+### 触发途径
+
+**ROS2 service**（保留 legacy 语义）：
+
+```bash
+ros2 service call /uav1/takeoff  std_srvs/srv/Trigger "{}"
+ros2 service call /uav1/sim/reset std_srvs/srv/Trigger "{}"
+```
+
+**通用事件 topic**（任意字符串）：
+
+```bash
+ros2 topic pub /uav1/teleop/event std_msgs/msg/String "{data: land}"  --once
+ros2 topic pub /uav1/teleop/event std_msgs/msg/String "{data: estop}" --once
+```
+
+**手柄 / 键盘**（`third_party/remote_control`）：事件绑定在 `config/xbox_like.yaml` 的 `events:` 块里，按键和按钮组合均可配置，详见 `third_party/remote_control/README.md`。
+
+**速度指令**：
 
 ```bash
 ros2 topic pub /uav1/cmd_vel geometry_msgs/msg/Twist \
   "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {z: 0.3}}" --once
 ```
 
-在 `control_mode: 1` 下，这条命令表示“沿无人机当前局部水平前向 `0.2 m/s` 前进，同时以 `0.3 rad/s` 向左偏航”，而不是沿世界坐标系 `+X` 方向飞行。
+注意：初始态 `on_ground.accepts_motion=false` 会过滤 `/cmd_vel`，需先调 `/uav1/takeoff` 让状态机进入 `hover`。
 
-调用起飞与重置：
+### 自定义机型状态机
 
-```bash
-ros2 service call /uav1/takeoff std_srvs/srv/Trigger "{}"
-ros2 service call /uav1/sim/reset std_srvs/srv/Trigger "{}"
-```
+在 `cfg/teleop/` 下新增 YAML（如 `xi35_aggressive.yaml`），把机型配置的 `mode_machine:` 指向它即可。字段支持内联 map 或字符串路径两种形式。
 
 ## 新增机型
 
