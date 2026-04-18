@@ -103,12 +103,12 @@ CommandGoalProvider::CommandGoalProvider(const QuadrotorConfig& config)
 
 GoalReference CommandGoalProvider::Evaluate(const GoalContext& context) {
   const std::optional<VelocityCommand> raw_command = ReadFreshVelocityCommand(command_timeout_seconds_);
+  const bool motion_active = raw_command.has_value() && MotionCommandActive(*raw_command);
   if (mode_machine_.enabled()) {
-    const bool motion_active = raw_command.has_value() && MotionCommandActive(*raw_command);
     mode_machine_.UpdateConditions({motion_active});
   }
   const std::optional<VelocityCommand> command =
-      (!mode_machine_.enabled() || mode_machine_.AcceptsMotion()) ? raw_command : std::optional<VelocityCommand>{};
+      ((!mode_machine_.enabled() || mode_machine_.AcceptsMotion()) && motion_active) ? raw_command : std::optional<VelocityCommand>{};
   const double current_yaw = AircraftHeadingFromQuaternion(context.current_state.quaternion, aircraft_forward_axis_);
 
   // Capture spawn state on first call.
@@ -136,8 +136,8 @@ GoalReference CommandGoalProvider::Evaluate(const GoalContext& context) {
     if (goal.source.empty()) {
       goal.source = "ros2_hold";
     }
-    if (control_mode_ == SE3Controller::ControlMode::kVelocity) {
-      if (!hold_state_initialized_ || previous_command_valid_) {
+    if (control_mode_ == SE3Controller::ControlMode::kVelocity || action_hold_active_) {
+      if (!action_hold_active_ && (!hold_state_initialized_ || previous_command_valid_)) {
         hold_position_ = context.current_state.position;
         desired_yaw_ = current_yaw;
         hold_state_initialized_ = true;
@@ -157,6 +157,7 @@ GoalReference CommandGoalProvider::Evaluate(const GoalContext& context) {
   const bool command_reacquired = !previous_command_valid_;
   last_sim_time_ = context.sim_time;
   previous_command_valid_ = true;
+  action_hold_active_ = false;
 
   if (control_mode_ == SE3Controller::ControlMode::kPosition) {
     // cmd_vel.linear  = absolute position offset from spawn (metres)
@@ -230,6 +231,7 @@ bool CommandGoalProvider::HandleTakeoffCommand(const GoalContext& context) {
   last_sim_time_ = context.sim_time;
   hold_state_initialized_ = true;
   previous_command_valid_ = false;
+  action_hold_active_ = true;
   return true;
 }
 
@@ -247,6 +249,7 @@ bool CommandGoalProvider::HandleLandCommand(const GoalContext& context) {
   last_sim_time_ = context.sim_time;
   hold_state_initialized_ = true;
   previous_command_valid_ = false;
+  action_hold_active_ = true;
   return true;
 }
 
@@ -259,6 +262,7 @@ bool CommandGoalProvider::HandleEmergencyStopCommand(const GoalContext& context)
   last_sim_time_ = context.sim_time;
   hold_state_initialized_ = true;
   previous_command_valid_ = false;
+  action_hold_active_ = true;
   return true;
 }
 
@@ -267,6 +271,7 @@ void CommandGoalProvider::Reset() {
   initialized_ = false;
   hold_state_initialized_ = false;
   previous_command_valid_ = false;
+  action_hold_active_ = false;
   desired_yaw_ = 0.0;
   last_sim_time_ = 0.0;
   spawn_position_ = Eigen::Vector3d::Zero();

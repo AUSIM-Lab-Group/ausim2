@@ -17,13 +17,14 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joy.hpp>
-#include <std_msgs/msg/string.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
 namespace remote_control {
 
-// Runtime binding of a single abstract event (e.g. "takeoff") to concrete
-// inputs: a joystick button combo and an optional single keyboard key.
-struct EventBinding {
+// Runtime binding of a single action slot (e.g. "action1") to a concrete
+// service endpoint plus optional joystick/keyboard triggers.
+struct ActionBinding {
+  std::string service_name;
   std::vector<int> buttons;    // all buttons must be held; empty = no joystick binding
   char keyboard_key = '\0';    // single ASCII key; '\0' = no keyboard binding
 };
@@ -38,9 +39,9 @@ class TerminalKeyboard {
 
   bool available() const { return available_.load(); }
 
-  // Registers a keyboard->event mapping. Case-insensitive; '\0' is ignored.
-  void RegisterEventKey(char key, std::string event_name);
-  // Clears any previously-registered event key bindings.
+  // Registers a keyboard->action mapping. Case-insensitive; '\0' is ignored.
+  void RegisterEventKey(char key, std::string action_name);
+  // Clears any previously-registered action key bindings.
   void ClearEventKeys();
 
   geometry_msgs::msg::Twist BuildTwist(double linear_x_scale, double linear_y_scale, double linear_z_scale, double angular_yaw_scale) const;
@@ -90,10 +91,10 @@ class RemoteControlNode : public rclcpp::Node {
   };
 
   void LoadParameters();
-  void LoadEventBindings();
+  void LoadActionBindings();
   void OnJoy(const sensor_msgs::msg::Joy::SharedPtr message);
   void OnPublishTimer();
-  void TriggerAction(const std::string& event_name, const char* source);
+  void TriggerAction(const std::string& action_name, const char* source);
   void PublishZeroCommand();
   void UpdateInputMode(InputMode mode);
   geometry_msgs::msg::Twist BuildJoyTwist(const sensor_msgs::msg::Joy& message) const;
@@ -103,14 +104,13 @@ class RemoteControlNode : public rclcpp::Node {
   static std::vector<int> ToIntVector(const std::vector<std::int64_t>& values);
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr teleop_event_publisher_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscription_;
   rclcpp::TimerBase::SharedPtr publish_timer_;
   std::unique_ptr<TerminalKeyboard> keyboard_;
+  std::unordered_map<std::string, rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr> action_clients_;
 
   std::string joy_topic_;
   std::string cmd_vel_topic_;
-  std::string teleop_event_topic_;
   double publish_rate_hz_ = 30.0;
   double joy_timeout_seconds_ = 0.5;
   double deadzone_ = 0.1;
@@ -125,12 +125,10 @@ class RemoteControlNode : public rclcpp::Node {
   double scale_linear_z_ = 0.5;
   double scale_angular_yaw_ = -1.0;
 
-  // Event name -> (joystick combo + keyboard key). Populated from YAML under
-  // the `events:` namespace. For backward compatibility, legacy
-  // `buttons.<takeoff|reset|mode_next|estop>` parameters fill the joystick
-  // half of any missing entry.
-  std::unordered_map<std::string, EventBinding> event_bindings_;
-  std::unordered_map<std::string, bool> event_combo_active_;
+  // Action slot name -> (service endpoint + joystick combo + keyboard key).
+  // Populated from YAML under the `actions:` namespace.
+  std::unordered_map<std::string, ActionBinding> action_bindings_;
+  std::unordered_map<std::string, bool> action_combo_active_;
 
   double command_cooldown_seconds_ = 0.5;
   double keyboard_key_timeout_seconds_ = 0.25;

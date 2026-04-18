@@ -128,6 +128,7 @@ mode_machine: ../teleop/quadrotor_default.yaml
 | 方向 | 话题 | 类型 |
 |------|------|------|
 | 订阅 | `/uav1/cmd_vel` | `geometry_msgs/Twist` |
+| 订阅 | `/joy/cmd_vel` | `geometry_msgs/Twist` |
 | 发布 | `/uav1/odom` | `nav_msgs/Odometry` |
 | 发布 | `/uav1/imu/data` | `sensor_msgs/Imu` |
 | 发布 | `/uav1/camera/image_raw` | `sensor_msgs/Image` (`rgb8`) |
@@ -140,14 +141,10 @@ mode_machine: ../teleop/quadrotor_default.yaml
 
 | 方向 | 话题 | 类型 |
 |------|------|------|
-| 服务 | `/uav1/takeoff` | `std_srvs/Trigger` |
-| 服务 | `/uav1/sim/reset` | `std_srvs/Trigger` |
-
-同时会订阅通用 teleop 事件话题：
-
-| 方向 | 话题 | 类型 |
-|------|------|------|
-| 订阅 | `/uav1/teleop/event` | `std_msgs/String` |
+| 服务 | `/joy/action1` | `std_srvs/Trigger` |
+| 服务 | `/joy/action2` | `std_srvs/Trigger` |
+| 服务 | `/joy/action3` | `std_srvs/Trigger` |
+| 服务 | `/joy/action4` | `std_srvs/Trigger` |
 
 ## Teleop 状态机
 
@@ -174,7 +171,7 @@ mode_machine: ../teleop/quadrotor_default.yaml
 
 | 触发 | YAML 字段 | 语义 |
 |------|-----------|------|
-| 事件 | `event: <name>` | 任意字符串（`takeoff` / `land` / `estop` / 自定义），由 `/uav1/takeoff` service、`/uav1/teleop/event` topic 或 remote_control 产生 |
+| 事件 | `event: <name>` | 任意字符串（`takeoff` / `land` / `estop` / 自定义），由 `/joy/actionN` service 或其他离散命令入口产生 |
 | 条件 | `condition: motion_active` / `motion_inactive` | 由 `/cmd_vel` 活跃/超时驱动 |
 | 超时 | `timeout: <sec>` | 进入 `from` 后无转移经过 N 秒自动触发 |
 
@@ -205,21 +202,16 @@ hover            --timeout:60s----------> on_ground           (action: land)
 
 ### 触发途径
 
-**ROS2 service**（保留 legacy 语义）：
+**ROS2 service**（默认 RC 动作入口）：
 
 ```bash
-ros2 service call /uav1/takeoff  std_srvs/srv/Trigger "{}"
-ros2 service call /uav1/sim/reset std_srvs/srv/Trigger "{}"
+ros2 service call /joy/action1 std_srvs/srv/Trigger "{}"  # takeoff
+ros2 service call /joy/action2 std_srvs/srv/Trigger "{}"  # land
+ros2 service call /joy/action3 std_srvs/srv/Trigger "{}"  # reset
+ros2 service call /joy/action4 std_srvs/srv/Trigger "{}"  # estop
 ```
 
-**通用事件 topic**（任意字符串）：
-
-```bash
-ros2 topic pub /uav1/teleop/event std_msgs/msg/String "{data: land}"  --once
-ros2 topic pub /uav1/teleop/event std_msgs/msg/String "{data: estop}" --once
-```
-
-**手柄 / 键盘**（`third_party/remote_control`）：事件绑定在 `config/xbox_like.yaml` 的 `events:` 块里，按键和按钮组合均可配置，详见 `third_party/remote_control/README.md`。
+**手柄 / 键盘**（`third_party/remote_control`）：默认把摇杆输出到 `/joy/cmd_vel`，并把离散动作槽位调用到 `/joy/actionN`，详见 `third_party/remote_control/README.md`。
 
 **速度指令**：
 
@@ -228,7 +220,7 @@ ros2 topic pub /uav1/cmd_vel geometry_msgs/msg/Twist \
   "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {z: 0.3}}" --once
 ```
 
-注意：初始态 `on_ground.accepts_motion=false` 会过滤 `/cmd_vel`，需先调 `/uav1/takeoff` 让状态机进入 `hover`。
+注意：初始态 `on_ground.accepts_motion=false` 会过滤 `/cmd_vel`，需先调 `/joy/action1` 让状态机进入 `hover`。
 
 ### 自定义机型状态机
 

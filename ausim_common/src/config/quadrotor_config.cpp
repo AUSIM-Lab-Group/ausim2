@@ -26,6 +26,17 @@ void AssignIfPresent(const YAML::Node& node, const char* key, T* value) {
   }
 }
 
+std::string RequireNonEmptyScalar(const YAML::Node& node, const char* key, const std::string& context) {
+  if (!node || !node[key] || !node[key].IsScalar()) {
+    throw std::runtime_error(context + " must define scalar '" + std::string(key) + "'");
+  }
+  const std::string value = node[key].as<std::string>();
+  if (value.empty()) {
+    throw std::runtime_error(context + " must define non-empty '" + std::string(key) + "'");
+  }
+  return value;
+}
+
 Eigen::Vector3d LoadVector3(const YAML::Node& node, const Eigen::Vector3d& fallback) {
   if (!node || !node.IsSequence() || node.size() != 3) {
     return fallback;
@@ -215,6 +226,34 @@ void LoadRobotModeConfig(const YAML::Node& root, const fs::path& config_path, Ro
   }
 }
 
+void LoadJoyActionServices(const YAML::Node& interfaces_node, std::vector<JoyActionServiceConfig>* action_services) {
+  if (action_services == nullptr) {
+    return;
+  }
+  action_services->clear();
+  if (!interfaces_node || !interfaces_node["joy_action_services"]) {
+    return;
+  }
+
+  const YAML::Node services_node = interfaces_node["joy_action_services"];
+  if (!services_node.IsSequence()) {
+    throw std::runtime_error("interfaces.joy_action_services must be a YAML sequence");
+  }
+
+  for (std::size_t index = 0; index < services_node.size(); ++index) {
+    const YAML::Node service_node = services_node[index];
+    if (!service_node.IsMap()) {
+      throw std::runtime_error("interfaces.joy_action_services[" + std::to_string(index) + "] must be a YAML map");
+    }
+
+    JoyActionServiceConfig action_service;
+    const std::string context = "interfaces.joy_action_services[" + std::to_string(index) + "]";
+    action_service.service = RequireNonEmptyScalar(service_node, "service", context);
+    action_service.event = RequireNonEmptyScalar(service_node, "event", context);
+    action_services->push_back(std::move(action_service));
+  }
+}
+
 void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, QuadrotorConfig* config, bool apply_global_simulation_config = true) {
   if (!root || !root.IsMap()) {
     return;
@@ -319,12 +358,11 @@ void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, Quadro
 
   const YAML::Node interfaces_node = root["interfaces"];
   AssignIfPresent(interfaces_node, "cmd_vel_topic", &config->interfaces.cmd_vel_topic);
+  AssignIfPresent(interfaces_node, "joy_cmd_vel_topic", &config->interfaces.joy_cmd_vel_topic);
   AssignIfPresent(interfaces_node, "odom_topic", &config->interfaces.odom_topic);
   AssignIfPresent(interfaces_node, "imu_topic", &config->interfaces.imu_topic);
   AssignIfPresent(interfaces_node, "clock_topic", &config->interfaces.clock_topic);
-  AssignIfPresent(interfaces_node, "reset_service", &config->interfaces.reset_service);
-  AssignIfPresent(interfaces_node, "takeoff_service", &config->interfaces.takeoff_service);
-  AssignIfPresent(interfaces_node, "teleop_event_topic", &config->interfaces.teleop_event_topic);
+  LoadJoyActionServices(interfaces_node, &config->interfaces.joy_action_services);
   AssignIfPresent(interfaces_node, "robot_mode_topic", &config->interfaces.robot_mode_topic);
 
   const YAML::Node frames_node = root["frames"];

@@ -16,8 +16,7 @@ namespace remote_control {
 namespace {
 
 constexpr char kDefaultJoyTopic[] = "/joy";
-constexpr char kDefaultCmdVelTopic[] = "/uav1/cmd_vel";
-constexpr char kDefaultTeleopEventTopic[] = "/uav1/teleop/event";
+constexpr char kDefaultCmdVelTopic[] = "/joy/cmd_vel";
 
 double ApplyDeadzone(double value, double deadzone) {
   if (std::abs(value) < deadzone) {
@@ -192,13 +191,8 @@ void TerminalKeyboard::ClearMovementLocked() {
 
 RemoteControlNode::RemoteControlNode() : Node("remote_control_node") {
   LoadParameters();
-  LoadEventBindings();
-
-  if (teleop_event_topic_.empty()) {
-    throw std::runtime_error("topics.teleop_event must be configured; remote_control no longer supports legacy service fallback");
-  }
+  LoadActionBindings();
   cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_, 10);
-  teleop_event_publisher_ = create_publisher<std_msgs::msg::String>(teleop_event_topic_, 10);
   joy_subscription_ = create_subscription<sensor_msgs::msg::Joy>(
       joy_topic_, rclcpp::SensorDataQoS(), std::bind(&RemoteControlNode::OnJoy, this, std::placeholders::_1));
 
@@ -206,10 +200,11 @@ RemoteControlNode::RemoteControlNode() : Node("remote_control_node") {
   if (keyboard_enabled_ && !keyboard_->available()) {
     RCLCPP_WARN(get_logger(), "keyboard fallback requested but stdin is not a TTY; keyboard control is disabled");
   }
-  for (const auto& [event_name, binding] : event_bindings_) {
+  for (const auto& [action_name, binding] : action_bindings_) {
     if (binding.keyboard_key != '\0') {
-      keyboard_->RegisterEventKey(binding.keyboard_key, event_name);
+      keyboard_->RegisterEventKey(binding.keyboard_key, action_name);
     }
+    action_clients_.emplace(action_name, create_client<std_srvs::srv::Trigger>(binding.service_name));
   }
 
   const auto period = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(1.0 / publish_rate_hz_));
@@ -219,7 +214,6 @@ RemoteControlNode::RemoteControlNode() : Node("remote_control_node") {
 void RemoteControlNode::LoadParameters() {
   joy_topic_ = declare_parameter<std::string>("topics.joy", kDefaultJoyTopic);
   cmd_vel_topic_ = declare_parameter<std::string>("topics.cmd_vel", kDefaultCmdVelTopic);
-  teleop_event_topic_ = declare_parameter<std::string>("topics.teleop_event", kDefaultTeleopEventTopic);
 
   publish_rate_hz_ = declare_parameter<double>("publish_rate_hz", 30.0);
   joy_timeout_seconds_ = declare_parameter<double>("joy_timeout", 0.5);
@@ -253,52 +247,46 @@ void RemoteControlNode::LoadParameters() {
   }
 }
 
-void RemoteControlNode::LoadEventBindings() {
-  // Preferred style: events.<name>.buttons  + events.<name>.keyboard
-  // Legacy style:    buttons.<takeoff|reset|mode_next|estop>
-  // Legacy keyboard keys (t/x/m/q) are retained as fallback defaults.
-  struct LegacyDefault {
+void RemoteControlNode::LoadActionBindings() {
+  struct ActionDefault {
     const char* name;
+    const char* service_name;
     std::vector<std::int64_t> buttons;
     char keyboard_key;
   };
-  const LegacyDefault legacy_defaults[] = {
-      {"takeoff", {4, 0}, 't'},
-      {"land", {5, 0}, 'g'},
-      {"reset", {6, 7}, 'x'},
-      {"mode_next", {-1}, 'm'},
-      {"estop", {-1}, 'q'},
+  const ActionDefault action_defaults[] = {
+      {"action1", "/joy/action1", {4, 0}, 't'},
+      {"action2", "/joy/action2", {5, 0}, 'g'},
+      {"action3", "/joy/action3", {6, 7}, 'x'},
+      {"action4", "/joy/action4", {-1}, 'q'},
+      {"action5", "", {-1}, '\0'},
+      {"action6", "", {-1}, '\0'},
+      {"action7", "", {-1}, '\0'},
+      {"action8", "", {-1}, '\0'},
   };
 
-  for (const LegacyDefault& def : legacy_defaults) {
+  for (const ActionDefault& def : action_defaults) {
     const std::string name(def.name);
-    const std::string buttons_param = "events." + name + ".buttons";
-    const std::string keyboard_param = "events." + name + ".keyboard";
+    const std::string service_param = "actions." + name + ".service";
+    const std::string buttons_param = "actions." + name + ".buttons";
+    const std::string keyboard_param = "actions." + name + ".keyboard";
+    const std::string service_name = declare_parameter<std::string>(service_param, def.service_name);
     std::vector<std::int64_t> buttons = declare_parameter<std::vector<std::int64_t>>(buttons_param, def.buttons);
-    std::string keyboard_str = declare_parameter<std::string>(keyboard_param, std::string(1, def.keyboard_key));
+    std::string keyboard_str =
+        declare_parameter<std::string>(keyboard_param, def.keyboard_key == '\0' ? "" : std::string(1, def.keyboard_key));
 
-    // Legacy fallback for buttons: if the caller set the old `buttons.<name>`
-    // param but didn't yet populate the new style, honour it.
-    const std::string legacy_buttons_param = "buttons." + name;
-    std::vector<std::int64_t> legacy_buttons = declare_parameter<std::vector<std::int64_t>>(legacy_buttons_param, def.buttons);
-    const bool preferred_uses_default = buttons == def.buttons;
-    const bool legacy_overridden = legacy_buttons != def.buttons;
-    if (preferred_uses_default && legacy_overridden) {
-      buttons = std::move(legacy_buttons);
-    }
-
-    EventBinding binding;
+    ActionBinding binding;
+    binding.service_name = service_name;
     binding.buttons = ToIntVector(buttons);
-    // Filter out -1 sentinels used historically to disable a combo.
+    // `-1` remains the config sentinel for "no joystick binding".
     binding.buttons.erase(std::remove(binding.buttons.begin(), binding.buttons.end(), -1), binding.buttons.end());
     binding.keyboard_key = keyboard_str.empty() ? '\0' : keyboard_str.front();
-    event_bindings_.emplace(name, std::move(binding));
-    event_combo_active_.emplace(name, false);
+    if (binding.service_name.empty()) {
+      continue;
+    }
+    action_bindings_.emplace(name, std::move(binding));
+    action_combo_active_.emplace(name, false);
   }
-
-  // Allow arbitrary user-defined events via `events.<name>.buttons/keyboard`.
-  // (Beyond the legacy set, we can't enumerate without a parameter namespace
-  // walker; future extension can scan `list_parameters`.)
 }
 
 void RemoteControlNode::OnJoy(const sensor_msgs::msg::Joy::SharedPtr message) {
@@ -309,11 +297,11 @@ void RemoteControlNode::OnJoy(const sensor_msgs::msg::Joy::SharedPtr message) {
   have_joy_message_ = true;
   last_joy_message_time_ = now();
 
-  for (auto& [event_name, binding] : event_bindings_) {
+  for (auto& [action_name, binding] : action_bindings_) {
     const bool pressed = !binding.buttons.empty() && ButtonsPressed(*message, binding.buttons);
-    bool& was_active = event_combo_active_[event_name];
+    bool& was_active = action_combo_active_[action_name];
     if (pressed && !was_active) {
-      TriggerAction(event_name, "joystick");
+      TriggerAction(action_name, "joystick");
     }
     was_active = pressed;
   }
@@ -321,17 +309,17 @@ void RemoteControlNode::OnJoy(const sensor_msgs::msg::Joy::SharedPtr message) {
 
 void RemoteControlNode::OnPublishTimer() {
   while (keyboard_ != nullptr) {
-    std::optional<std::string> event = keyboard_->ConsumeEvent();
-    if (!event.has_value()) {
+    std::optional<std::string> action = keyboard_->ConsumeEvent();
+    if (!action.has_value()) {
       break;
     }
-    TriggerAction(*event, "keyboard");
+    TriggerAction(*action, "keyboard");
   }
 
   geometry_msgs::msg::Twist command;
   const bool joystick_active = have_joy_message_ && (now() - last_joy_message_time_).seconds() <= joy_timeout_seconds_;
   if (!joystick_active) {
-    for (auto& [name, active] : event_combo_active_) {
+    for (auto& [name, active] : action_combo_active_) {
       (void)name;
       active = false;
     }
@@ -353,8 +341,14 @@ void RemoteControlNode::OnPublishTimer() {
   cmd_vel_publisher_->publish(command);
 }
 
-void RemoteControlNode::TriggerAction(const std::string& event_name, const char* source) {
-  if (event_name.empty()) {
+void RemoteControlNode::TriggerAction(const std::string& action_name, const char* source) {
+  if (action_name.empty()) {
+    return;
+  }
+  const auto binding_it = action_bindings_.find(action_name);
+  const auto client_it = action_clients_.find(action_name);
+  if (binding_it == action_bindings_.end() || client_it == action_clients_.end() || !client_it->second) {
+    RCLCPP_WARN(get_logger(), "ignoring unconfigured action slot '%s'", action_name.c_str());
     return;
   }
 
@@ -368,10 +362,35 @@ void RemoteControlNode::TriggerAction(const std::string& event_name, const char*
   suppress_motion_until_ = now_steady + motion_suppress_duration_;
   PublishZeroCommand();
 
-  RCLCPP_INFO(get_logger(), "triggering %s from %s", event_name.c_str(), source);
-  std_msgs::msg::String message;
-  message.data = event_name;
-  teleop_event_publisher_->publish(message);
+  const std::string service_name = binding_it->second.service_name;
+  auto client = client_it->second;
+  RCLCPP_INFO(get_logger(), "triggering %s -> %s from %s", action_name.c_str(), service_name.c_str(), source);
+
+  if (!client->service_is_ready()) {
+    RCLCPP_WARN(get_logger(), "service %s is not ready for action slot %s", service_name.c_str(), action_name.c_str());
+    return;
+  }
+
+  auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+  client->async_send_request(
+      request, [this, action_name, service_name](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+        try {
+          const auto response = future.get();
+          if (!response) {
+            RCLCPP_WARN(get_logger(), "action slot %s (%s) returned no response", action_name.c_str(), service_name.c_str());
+            return;
+          }
+          if (response->success) {
+            RCLCPP_INFO(get_logger(), "action slot %s (%s) succeeded: %s", action_name.c_str(), service_name.c_str(),
+                        response->message.c_str());
+            return;
+          }
+          RCLCPP_WARN(get_logger(), "action slot %s (%s) failed: %s", action_name.c_str(), service_name.c_str(),
+                      response->message.c_str());
+        } catch (const std::exception& error) {
+          RCLCPP_WARN(get_logger(), "action slot %s (%s) call threw: %s", action_name.c_str(), service_name.c_str(), error.what());
+        }
+      });
 }
 
 void RemoteControlNode::PublishZeroCommand() { cmd_vel_publisher_->publish(geometry_msgs::msg::Twist()); }

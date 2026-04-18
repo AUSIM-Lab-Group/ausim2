@@ -29,7 +29,6 @@
 #include "ros/publisher/data/transform_data_publisher.hpp"
 #include "ros/publisher/i_telemetry_publisher.hpp"
 #include "ros/subscriber/data/cmd_vel_command_subscriber.hpp"
-#include "ros/subscriber/data/teleop_event_subscriber.hpp"
 #include "ros/subscriber/i_command_subscriber.hpp"
 #include "runtime/robot_mode_state_machine.hpp"
 
@@ -246,33 +245,27 @@ class RosBridgeProcess {
       const std::string base_frame = ResolveFrameId(config_, config_.frames.base);
       const std::string imu_frame = ResolveFrameId(config_, config_.frames.imu);
       const std::string cmd_vel_topic = ResolveTopicName(config_, config_.interfaces.cmd_vel_topic);
-      const std::string teleop_event_topic = ResolveTopicName(config_, config_.interfaces.teleop_event_topic);
+      const std::string joy_cmd_vel_topic =
+          config_.interfaces.joy_cmd_vel_topic.empty() ? "" : ResolveTopicName(config_, config_.interfaces.joy_cmd_vel_topic);
 
       publishers_ = BuildPublishers(node_, config_, odom_frame, base_frame, imu_frame);
 
       subscribers_.push_back(
           std::make_unique<CmdVelCommandSubscriber>(node_, cmd_vel_topic, [this](const data::CmdVelData& message) { PublishCommand(message); }));
-      if (!config_.interfaces.teleop_event_topic.empty()) {
-        subscribers_.push_back(std::make_unique<TeleopEventSubscriber>(
-            node_, teleop_event_topic, [this](const std::string& event_name) { PublishDiscreteCommand(event_name); }));
+      if (!joy_cmd_vel_topic.empty() && joy_cmd_vel_topic != cmd_vel_topic) {
+        subscribers_.push_back(
+            std::make_unique<CmdVelCommandSubscriber>(node_, joy_cmd_vel_topic, [this](const data::CmdVelData& message) {
+              PublishCommand(message);
+            }));
       }
 
-      if (!config_.interfaces.reset_service.empty()) {
-        const std::string reset_service_name = ResolveServiceName(config_, config_.interfaces.reset_service);
-        reset_service_ = node_->create_service<TriggerService>(
-            reset_service_name,
-            [this](const TriggerService::Request::SharedPtr, TriggerService::Response::SharedPtr response) {
-              ExecuteDiscreteCommand("reset", response.get());
-            });
-      }
-
-      if (!config_.interfaces.takeoff_service.empty()) {
-        const std::string takeoff_service_name = ResolveServiceName(config_, config_.interfaces.takeoff_service);
-        takeoff_service_ = node_->create_service<TriggerService>(
-            takeoff_service_name,
-            [this](const TriggerService::Request::SharedPtr, TriggerService::Response::SharedPtr response) {
-              ExecuteDiscreteCommand("takeoff", response.get());
-            });
+      for (const JoyActionServiceConfig& action_service : config_.interfaces.joy_action_services) {
+        joy_action_services_.push_back(node_->create_service<TriggerService>(
+            ResolveServiceName(config_, action_service.service),
+            [this, event_name = action_service.event](const TriggerService::Request::SharedPtr,
+                                                      TriggerService::Response::SharedPtr response) {
+              ExecuteDiscreteCommand(event_name, response.get());
+            }));
       }
 
       if (!config_.interfaces.robot_mode_topic.empty()) {
@@ -353,8 +346,7 @@ class RosBridgeProcess {
     }
 
     telemetry_timer_.reset();
-    reset_service_.reset();
-    takeoff_service_.reset();
+    joy_action_services_.clear();
     robot_mode_publisher_.reset();
     subscribers_.clear();
     publishers_.clear();
@@ -565,8 +557,7 @@ class RosBridgeProcess {
   std::vector<std::unique_ptr<ITelemetryPublisher>> publishers_;
   std::vector<std::unique_ptr<ImageDataPublisher>> image_publishers_;
   std::vector<std::unique_ptr<ICommandSubscriber>> subscribers_;
-  rclcpp::Service<TriggerService>::SharedPtr reset_service_;
-  rclcpp::Service<TriggerService>::SharedPtr takeoff_service_;
+  std::vector<rclcpp::Service<TriggerService>::SharedPtr> joy_action_services_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr robot_mode_publisher_;
   rclcpp::TimerBase::SharedPtr telemetry_timer_;
   std::thread telemetry_thread_;

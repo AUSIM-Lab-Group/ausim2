@@ -1,11 +1,10 @@
 # Remote Control
 
-仓内 ROS2 teleop 节点：把手柄 / 键盘输入转换成 `/uav1/cmd_vel` + `/uav1/teleop/event`（字符串事件），由 sim 侧状态机解释。
+仓内 ROS2 RC 适配节点：把手柄 / 键盘输入转换成标准化的 `/joy/cmd_vel` 和一组 `/joy/actionN` service 调用。节点本身不关心机器人语义，只负责把 RC 输入映射到可配置接口。
 
 - 订阅：`/joy`
-- 发布：`/uav1/cmd_vel`（`geometry_msgs/Twist`）
-- 发布：`/uav1/teleop/event`（`std_msgs/String`，任意事件名字符串）
-- 不再有任何 service fallback。状态机事件（takeoff / land / reset / estop / 自定义）全部走 `/teleop/event` 话题。
+- 发布：`/joy/cmd_vel`（`geometry_msgs/Twist`）
+- 调用：`/joy/actionN`（`std_srvs/Trigger`）
 - 没有新鲜手柄输入且 stdin 是 TTY 时，自动切到键盘控制。
 
 ## 启动（唯一入口）
@@ -41,37 +40,39 @@
 | `r` / `f` | 上 / 下 |
 | `j` / `l` | 偏航左 / 右 |
 | `space` | 立即清零 |
-| `t` | 发事件 `takeoff` |
-| `g` | 发事件 `land` |
-| `x` | 发事件 `reset` |
-| `m` | 发事件 `mode_next` |
-| `q` | 发事件 `estop` |
+| `t` | 调用 `action1`（默认 `/joy/action1`） |
+| `g` | 调用 `action2`（默认 `/joy/action2`） |
+| `x` | 调用 `action3`（默认 `/joy/action3`） |
+| `q` | 调用 `action4`（默认 `/joy/action4`） |
 
 ## 默认手柄组合键
 
-| 组合 | 事件 |
+| 组合 | 动作槽位 |
 |------|------|
-| `LB + A`      | `takeoff` |
-| `LB + B`      | `land` |
-| `Back + Start`| `reset` |
-| `mode_next` / `estop` | 默认未绑定按钮（仅键盘），需要在 YAML 里显式配置 |
+| `LB + A`      | `action1` |
+| `LB + B`      | `action2` |
+| `Back + Start`| `action3` |
+| `action4` | 默认未绑定按钮（仅键盘），需要在 YAML 里显式配置 |
 
 注意：如果想禁用某个摇杆组合，不要写 `buttons: []`。ROS2 参数文件里空数组常会丢失类型，默认配置使用 `buttons: [-1]` 作为“未绑定”哨兵值。
 
-## 自定义事件 / 按键
+默认配置里，`action1..4` 分别指向 `/joy/action1..4`。接收端通常再把它们映射成 `takeoff` / `land` / `reset` / `estop`。
 
-在 `config/xbox_like.yaml` 的 `events:` 块中添加条目即可：
+## 自定义动作 / 按键
+
+在 `config/xbox_like.yaml` 的 `actions:` 块中配置槽位即可：
 
 ```yaml
-events:
-  my_custom_event:
+actions:
+  action5:
+    service: /joy/action5
     buttons: [3]
     keyboard: "c"
 ```
 
-节点不认识事件白名单——事件名只是字符串，由 sim 侧状态机 YAML 决定语义。
+节点不认识动作语义——只知道调用哪个 service。接收端配置决定 `actionN` 对应的状态机事件或其他离散命令。
 
 ## 说明
 
 - 键盘 fallback 依赖前台终端 TTY；无 TTY 场景（nohup / systemd / Docker without `-t`）下键盘自动禁用，只剩手柄
-- 未配置 `topics.teleop_event` 启动时会直接 throw；不再有"silently drop"路径
+- 离散动作触发时会先发布一次零速 `cmd_vel`，并按 `motion_suppress_after_command` 暂停运动输出，再异步调用目标 service

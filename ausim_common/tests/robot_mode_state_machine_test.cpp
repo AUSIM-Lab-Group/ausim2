@@ -54,6 +54,10 @@ int main() {
   Expect(machine.AcceptsMotion(), "hover should accept motion");
   Expect(executed_actions.size() == 1 && executed_actions.front() == "takeoff", "takeoff action should execute exactly once");
 
+  const bool duplicate_takeoff = machine.HandleEvent("takeoff", {.execute_action = record_action});
+  Expect(!duplicate_takeoff, "takeoff should be rejected outside on_ground");
+  Expect(executed_actions.size() == 1, "rejected takeoff should not execute another action");
+
   const bool motion_started = machine.UpdateConditions({.motion_active = true});
   Expect(motion_started, "motion_active should transition into velocity_control");
   Expect(machine.Snapshot().sub_state == "velocity_control", "motion_active should move to velocity_control");

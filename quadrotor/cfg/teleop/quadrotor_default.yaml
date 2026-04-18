@@ -18,7 +18,7 @@ initial_state: on_ground
 
 actions:
   takeoff:
-    height: 0.3
+    height: 1.0
     climb_rate: 0.0     # 0 = snap to hover height (ramp TODO)
   land:
     descent_rate: 0.0   # 0 = snap to ground (ramp TODO)
@@ -41,7 +41,7 @@ transitions:
   # Hover safety: auto-land after 60s of inactivity.
   # (Demonstrates the timeout trigger; value can be overridden per-robot by a
   # sibling YAML, e.g. teleop/xi35_aggressive.yaml.)
-  - { from: hover,            timeout: 60.0, to: on_ground, action: land }
+  # - { from: hover,            timeout: 60.0, to: on_ground, action: land }
 
   # Emergency stop: always allowed, independent of sub-state.
   - { from: on_ground,        event: estop, to: estop, action: emergency_stop }

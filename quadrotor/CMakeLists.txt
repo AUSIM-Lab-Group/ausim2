@@ -85,6 +85,32 @@ add_executable(quadrotor
 target_link_options(quadrotor PRIVATE "LINKER:--disable-new-dtags")
 target_link_libraries(quadrotor PRIVATE quadrotor_sim_core)
 
+add_executable(takeoff_goal_provider_test
+  tests/takeoff_goal_provider_test.cpp
+)
+
+target_include_directories(takeoff_goal_provider_test
+  PRIVATE
+    "${CMAKE_SOURCE_DIR}/ausim_common/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(takeoff_goal_provider_test PRIVATE cxx_std_17)
+target_link_libraries(takeoff_goal_provider_test PRIVATE quadrotor_sim_core)
+
+add_executable(reset_simulation_test
+  tests/reset_simulation_test.cpp
+)
+
+target_include_directories(reset_simulation_test
+  PRIVATE
+    "${CMAKE_SOURCE_DIR}/ausim_common/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(reset_simulation_test PRIVATE cxx_std_17)
+target_link_libraries(reset_simulation_test PRIVATE quadrotor_sim_core)
+
 set(_quadrotor_runtime_rpaths)
 if(MUJOCO_RESOLVED_LIBRARY_DIR)
   list(APPEND _quadrotor_runtime_rpaths "${MUJOCO_RESOLVED_LIBRARY_DIR}")

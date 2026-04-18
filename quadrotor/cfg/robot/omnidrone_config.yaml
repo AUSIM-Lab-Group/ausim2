@@ -38,12 +38,15 @@ controller:
 
 interfaces:
   cmd_vel_topic: cmd_vel
+  joy_cmd_vel_topic: /joy/cmd_vel
   odom_topic: odom
   imu_topic: imu/data
   clock_topic: /clock
-  reset_service: sim/reset
-  takeoff_service: takeoff
-  teleop_event_topic: teleop/event
+  joy_action_services:
+    - { service: /joy/action1, event: takeoff }
+    - { service: /joy/action2, event: land }
+    - { service: /joy/action3, event: reset }
+    - { service: /joy/action4, event: estop }
   robot_mode_topic: teleop/mode
 
 mode_machine: ../teleop/quadrotor_default.yaml

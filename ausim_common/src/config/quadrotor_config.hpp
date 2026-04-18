@@ -98,14 +98,18 @@ struct Ros2Config {
   bool publish_clock = true;
 };
 
+struct JoyActionServiceConfig {
+  std::string service;
+  std::string event;
+};
+
 struct RosInterfaceConfig {
   std::string cmd_vel_topic = "cmd_vel";
+  std::string joy_cmd_vel_topic = "/joy/cmd_vel";
   std::string odom_topic = "odom";
   std::string imu_topic = "imu/data";
   std::string clock_topic = "/clock";
-  std::string reset_service = "";
-  std::string takeoff_service = "";
-  std::string teleop_event_topic = "";
+  std::vector<JoyActionServiceConfig> joy_action_services;
   std::string robot_mode_topic = "";
 };
 

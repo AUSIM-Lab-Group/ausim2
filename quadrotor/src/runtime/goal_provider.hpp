@@ -72,6 +72,7 @@ class CommandGoalProvider : public GoalProvider {
   bool initialized_ = false;
   bool hold_state_initialized_ = false;
   bool previous_command_valid_ = false;
+  bool action_hold_active_ = false;
   Eigen::Vector3d spawn_position_ = Eigen::Vector3d::Zero();
   Eigen::Vector3d hold_position_ = Eigen::Vector3d::Zero();
   double desired_yaw_ = 0.0;

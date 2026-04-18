@@ -144,3 +144,15 @@ target_include_directories(robot_mode_state_machine_test
 
 target_compile_features(robot_mode_state_machine_test PRIVATE cxx_std_17)
 target_link_libraries(robot_mode_state_machine_test PRIVATE ausim_common_runtime)
+
+add_executable(joy_interface_config_test
+  tests/joy_interface_config_test.cpp
+)
+
+target_include_directories(joy_interface_config_test
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(joy_interface_config_test PRIVATE cxx_std_17)
+target_link_libraries(joy_interface_config_test PRIVATE ausim_common_runtime)

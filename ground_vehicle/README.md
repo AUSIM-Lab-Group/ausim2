@@ -86,10 +86,12 @@ ground_vehicle:
 
 interfaces:
   cmd_vel_topic:       cmd_vel
+  joy_cmd_vel_topic:   /joy/cmd_vel
   odom_topic:          odom
   imu_topic:           imu/data
-  reset_service:       sim/reset
-  teleop_event_topic:  teleop/event
+  joy_action_services:
+    - { service: /joy/action3, event: reset }
+    - { service: /joy/action4, event: estop }
   robot_mode_topic:    teleop/mode
 
 mode_machine: ../teleop/scout_default.yaml
@@ -106,12 +108,13 @@ mode_machine: ../teleop/scout_default.yaml
 | 方向 | 话题 | 类型 |
 |------|------|------|
 | 订阅 | `/scout1/cmd_vel`         | `geometry_msgs/Twist` |
-| 订阅 | `/scout1/teleop/event`    | `std_msgs/String` |
+| 订阅 | `/joy/cmd_vel`            | `geometry_msgs/Twist` |
 | 发布 | `/scout1/odom`            | `nav_msgs/Odometry` |
 | 发布 | `/scout1/imu/data`        | `sensor_msgs/Imu` |
 | 发布 | `/scout1/teleop/mode`     | `std_msgs/String` |
 | 发布 | `/clock`                  | `rosgraph_msgs/Clock` |
-| 服务 | `/scout1/sim/reset`       | `std_srvs/Trigger` |
+| 服务 | `/joy/action3`            | `std_srvs/Trigger` |
+| 服务 | `/joy/action4`            | `std_srvs/Trigger` |
 | TF   | `scout1/odom → scout1/base_link` | — |
 
 ## Teleop 状态机
@@ -140,10 +143,10 @@ manual_drive --condition:motion_inactive-> stopped
 
 | 方式 | 命令 |
 |------|------|
-| 事件 topic | `ros2 topic pub /scout1/teleop/event std_msgs/msg/String "{data: estop}" --once` |
-| 复位服务 | `ros2 service call /scout1/sim/reset std_srvs/srv/Trigger "{}"` |
+| 动作 service | `ros2 service call /joy/action3 std_srvs/srv/Trigger "{}"` |
+| 动作 service | `ros2 service call /joy/action4 std_srvs/srv/Trigger "{}"` |
 | 速度指令 | `ros2 topic pub /scout1/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angular: {z: 0.2}}" -r 10` |
-| 手柄 / 键盘 | `third_party/remote_control`，事件绑定详见其 README |
+| RC 输入 | `third_party/remote_control`，默认把手柄 / 键盘转换到 `/joy/cmd_vel` 与 `/joy/actionN` |
 
 ### 自定义
 

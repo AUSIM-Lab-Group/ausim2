@@ -466,6 +466,7 @@ void QuadrotorSim::Step() {
   }
   PrepareDynamicObstaclesForStep();
   mj_step(model_, data_);
+  ProcessPendingResetSimulation();
 }
 
 void QuadrotorSim::Run() {
@@ -559,7 +560,7 @@ void QuadrotorSim::ApplyControl(const mjModel* model, mjData* data) {
 bool QuadrotorSim::HandleDiscreteCommand(const DiscreteCommand& command, const RuntimeInput& input) {
   switch (command.kind) {
     case DiscreteCommandKind::kResetSimulation:
-      ResetSimulation();
+      pending_reset_simulation_ = true;
       ClearVelocityCommand();
       return true;
     case DiscreteCommandKind::kGenericEvent:
@@ -574,16 +575,30 @@ void QuadrotorSim::ResetSimulation() {
   if (model_ == nullptr || data_ == nullptr) {
     return;
   }
+  pending_reset_simulation_ = false;
   mj_resetData(model_, data_);
   mj_forward(model_, data_);
   next_log_time_ = 0.0;
   control_step_count_ = 0;
   runtime_.Reset();
-  last_discrete_command_sequence_ = 0;
-  last_discrete_command_status_ = DiscreteCommandAckStatus::kNone;
   for (auto& stream : camera_streams_) {
     stream.next_render_time = 0.0;
     stream.sequence = 0;
+  }
+}
+
+void QuadrotorSim::ProcessPendingResetSimulation() {
+  if (!pending_reset_simulation_) {
+    return;
+  }
+
+  ResetSimulation();
+
+  if (viewer_ != nullptr) {
+    viewer_->load_error[0] = '\0';
+    viewer_->scrub_index = 0;
+    viewer_->speed_changed = true;
+    viewer_->pending_.ui_update_simulation = true;
   }
 }
 
@@ -735,6 +750,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
         sim.InjectNoise(sim.key);
         PrepareDynamicObstaclesForStep();
         mj_step(model_, data_);
+        ProcessPendingResetSimulation();
 
         if (const char* message = Diverged(model_->opt.disableflags, data_)) {
           sim.run = 0;
@@ -758,6 +774,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
           sim.InjectNoise(sim.key);
           PrepareDynamicObstaclesForStep();
           mj_step(model_, data_);
+          ProcessPendingResetSimulation();
 
           if (const char* message = Diverged(model_->opt.disableflags, data_)) {
             sim.run = 0;

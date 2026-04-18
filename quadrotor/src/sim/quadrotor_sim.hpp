@@ -45,6 +45,7 @@ class QuadrotorSim {
   static void ControlCallback(const mjModel* model, mjData* data);
   void ApplyControl(const mjModel* model, mjData* data);
   bool HandleDiscreteCommand(const DiscreteCommand& command, const RuntimeInput& input);
+  void ProcessPendingResetSimulation();
 
   void ResetSimulation();
   void LogStateIfNeeded(const TelemetrySnapshot& snapshot) const;
@@ -116,6 +117,7 @@ class QuadrotorSim {
   CameraRenderer camera_renderer_;
   bool camera_rendering_ready_ = false;
   bool camera_rendering_failed_ = false;
+  bool pending_reset_simulation_ = false;
   std::uint64_t last_discrete_command_sequence_ = 0;
   DiscreteCommandAckStatus last_discrete_command_status_ = DiscreteCommandAckStatus::kNone;
 

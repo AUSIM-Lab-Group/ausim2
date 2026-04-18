@@ -2,8 +2,7 @@ remote_control_node:
   ros__parameters:
     topics:
       joy: /joy
-      cmd_vel: /uav1/cmd_vel
-      teleop_event: /uav1/teleop/event
+      cmd_vel: /joy/cmd_vel
     publish_rate_hz: 30.0
     joy_timeout: 0.5
     deadzone: 0.15
@@ -23,29 +22,42 @@ remote_control_node:
         z: 0.5
       angular:
         yaw: 1.0
-    # Generic event -> (joystick combo, keyboard key) bindings.
-    # The remote_control node treats event names as opaque strings and forwards
-    # them to /teleop/event (or the takeoff/reset services for legacy compat).
-    # The simulator side decides what each event means via its state-machine
-    # YAML (quadrotor/cfg/teleop/*.yaml).
-    events:
-      takeoff:
+    # Action slot -> (service, joystick combo, keyboard key) bindings.
+    # The remote_control node only knows RC output slots and their service
+    # endpoints. Receiver-side config decides what each action means.
+    actions:
+      action1:
+        service: /joy/action1
         buttons: [4, 0]
         keyboard: "t"
-      land:
+      action2:
+        service: /joy/action2
         buttons: [5, 0]
         keyboard: "g"
-      reset:
+      action3:
+        service: /joy/action3
         buttons: [6, 7]
         keyboard: "x"
-      mode_next:
-        # ROS2 params cannot infer the element type of an empty array here.
-        # `-1` is the node's historical "disabled joystick combo" sentinel.
-        buttons: [-1]
-        keyboard: "m"
-      estop:
+      action4:
+        service: /joy/action4
         buttons: [-1]
         keyboard: "q"
+      action5:
+        service: ""
+        buttons: [-1]
+        keyboard: ""
+      action6:
+        service: ""
+        buttons: [-1]
+        keyboard: ""
+      action7:
+        service: ""
+        buttons: [-1]
+        keyboard: ""
+      action8:
+        service: ""
+        buttons: [-1]
+        keyboard: ""
     command_cooldown: 0.5
     motion_suppress_after_command: 0.3
     keyboard:
