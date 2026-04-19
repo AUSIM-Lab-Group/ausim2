@@ -1,11 +1,11 @@
+#include "converts/data/lidar.hpp"
+
 #include "ros/publisher/data/lidar_data_publisher.hpp"
 
-#include <cmath>
 #include <cstdint>
-#include <limits>
+#include <cstring>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/msg/point_field.hpp>
@@ -25,41 +25,7 @@ void LidarDataPublisher::Publish(const ipc::LidarPacket& packet) {
     return;
   }
 
-  // Compute XYZ for each valid ray and collect into a flat float buffer.
-  // Ray layout in packet.data: index = h_index * v_ray_num + v_index
-  //
-  // Azimuth  (horizontal): h_index * (fov_h / h_ray_num) degrees, 0..fov_h
-  // Elevation (vertical):  symmetric around 0, -fov_v/2 .. +fov_v/2 degrees
-  const float fov_h_rad = packet.fov_h_deg * static_cast<float>(M_PI) / 180.0f;
-  const float fov_v_rad = packet.fov_v_deg * static_cast<float>(M_PI) / 180.0f;
-  const float azim_step = (h > 1) ? fov_h_rad / static_cast<float>(h) : 0.0f;
-  const float elev_step = (v > 1) ? fov_v_rad / static_cast<float>(v - 1) : 0.0f;
-  const float elev_start = -fov_v_rad / 2.0f;
-
-  // Pre-allocate assuming all points hit; shrink at end.
-  std::vector<float> xyz;
-  xyz.reserve(total * 3);
-
-  const float max_range = std::numeric_limits<float>::infinity();
-
-  for (int hi = 0; hi < h; ++hi) {
-    const float azim = static_cast<float>(hi) * azim_step;
-    const float cos_azim = std::cos(azim);
-    const float sin_azim = std::sin(azim);
-
-    for (int vi = 0; vi < v; ++vi) {
-      const float d = packet.data[hi * v + vi];
-      if (!std::isfinite(d) || d <= 0.0f) {
-        continue;
-      }
-
-      const float elev = elev_start + static_cast<float>(vi) * elev_step;
-      const float cos_elev = std::cos(elev);
-      xyz.push_back(d * cos_elev * cos_azim);
-      xyz.push_back(d * cos_elev * sin_azim);
-      xyz.push_back(d * std::sin(elev));
-    }
-  }
+  const std::vector<float> xyz = converts::BuildLidarPointCloudXYZ(packet);
 
   const uint32_t n_points = static_cast<uint32_t>(xyz.size() / 3);
 

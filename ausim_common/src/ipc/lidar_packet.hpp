@@ -13,7 +13,10 @@ struct LidarPacket {
   int32_t v_ray_num = 0;
   float fov_h_deg = 360.0f;
   float fov_v_deg = 30.0f;
+  float range_min_m = 0.0f;
+  float range_max_m = 0.0f;
   // Pad to 360 * 32 = 11520 entries (≈ 46 KB). Actual valid entries: h_ray_num * v_ray_num.
+  // Sample layout matches the MuJoCo plugin: index = v_index * h_ray_num + h_index.
   static constexpr int kMaxRays = 360 * 32;
   float data[kMaxRays] = {};
 };

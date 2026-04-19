@@ -130,6 +130,11 @@ struct CameraDepthConfig {
   int worker_threads = 0;
 };
 
+struct SensorTransformConfig {
+  std::array<double, 3> translation = {0.0, 0.0, 0.0};  // x, y, z [m]
+  std::array<double, 4> rotation = {0.0, 0.0, 0.0, 1.0};  // quaternion x, y, z, w
+};
+
 struct SensorConfig {
   std::string name;
   std::string type;
@@ -138,6 +143,8 @@ struct SensorConfig {
   std::string topic;
   double rate_hz = 30.0;
   CameraDepthConfig depth;
+  bool publish_tf = false;
+  SensorTransformConfig transform;
 };
 
 enum class CameraStreamKind {

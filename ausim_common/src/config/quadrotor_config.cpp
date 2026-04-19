@@ -113,6 +113,18 @@ void LoadSensors(const YAML::Node& sensors_node, std::vector<SensorConfig>* sens
     AssignIfPresent(sensor_node, "frame_id", &sensor.frame_id);
     AssignIfPresent(sensor_node, "topic", &sensor.topic);
     AssignIfPresent(sensor_node, "rate_hz", &sensor.rate_hz);
+    AssignIfPresent(sensor_node, "publish_tf", &sensor.publish_tf);
+    const YAML::Node transform_node = sensor_node["transform"];
+    if (transform_node && transform_node.IsMap()) {
+      const YAML::Node translation_node = transform_node["translation"];
+      if (translation_node && translation_node.IsSequence() && translation_node.size() == 3) {
+        sensor.transform.translation = {translation_node[0].as<double>(), translation_node[1].as<double>(), translation_node[2].as<double>()};
+      }
+      const YAML::Node rotation_node = transform_node["rotation"];
+      if (rotation_node && rotation_node.IsSequence() && rotation_node.size() == 4) {
+        sensor.transform.rotation = {rotation_node[0].as<double>(), rotation_node[1].as<double>(), rotation_node[2].as<double>(), rotation_node[3].as<double>()};
+      }
+    }
     const YAML::Node depth_node = sensor_node["depth"];
     AssignIfPresent(depth_node, "enabled", &sensor.depth.enabled);
     AssignIfPresent(depth_node, "frame_id", &sensor.depth.frame_id);

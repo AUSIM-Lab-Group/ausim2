@@ -14,9 +14,11 @@
 #include <utility>
 #include <vector>
 
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <tf2_ros/static_transform_broadcaster.h>
 
 #include "converts/data/image.hpp"
 #include "converts/ipc/bridge_packets.hpp"
@@ -253,6 +255,37 @@ class RosBridgeProcess {
 
       publishers_ = BuildPublishers(node_, config_, odom_frame, base_frame, imu_frame);
 
+      // Publish one-shot static TF for each sensor that declares a transform.
+      bool any_sensor_tf = false;
+      for (const SensorConfig& s : config_.sensors) {
+        if (s.enabled && s.publish_tf) {
+          any_sensor_tf = true;
+          break;
+        }
+      }
+      if (any_sensor_tf) {
+        static_tf_broadcaster_ = std::make_unique<tf2_ros::StaticTransformBroadcaster>(node_);
+        std::vector<geometry_msgs::msg::TransformStamped> static_transforms;
+        for (const SensorConfig& sensor : config_.sensors) {
+          if (!sensor.enabled || !sensor.publish_tf) {
+            continue;
+          }
+          geometry_msgs::msg::TransformStamped t;
+          t.header.stamp = rclcpp::Time(0);
+          t.header.frame_id = base_frame;
+          t.child_frame_id = ResolveFrameId(config_, sensor.frame_id);
+          t.transform.translation.x = sensor.transform.translation[0];
+          t.transform.translation.y = sensor.transform.translation[1];
+          t.transform.translation.z = sensor.transform.translation[2];
+          t.transform.rotation.x = sensor.transform.rotation[0];
+          t.transform.rotation.y = sensor.transform.rotation[1];
+          t.transform.rotation.z = sensor.transform.rotation[2];
+          t.transform.rotation.w = sensor.transform.rotation[3];
+          static_transforms.push_back(t);
+        }
+        static_tf_broadcaster_->sendTransform(static_transforms);
+      }
+
       subscribers_.push_back(
           std::make_unique<CmdVelCommandSubscriber>(node_, cmd_vel_topic, [this](const data::CmdVelData& message) { PublishCommand(message); }));
       if (!joy_cmd_vel_topic.empty() && joy_cmd_vel_topic != cmd_vel_topic) {
@@ -370,6 +403,7 @@ class RosBridgeProcess {
     publishers_.clear();
     image_publishers_.clear();
     lidar_publisher_.reset();
+    static_tf_broadcaster_.reset();
     latest_camera_frames_.clear();
     last_published_camera_sequences_.clear();
     camera_frame_published_.clear();
@@ -616,6 +650,7 @@ class RosBridgeProcess {
   std::vector<std::unique_ptr<ITelemetryPublisher>> publishers_;
   std::vector<std::unique_ptr<ImageDataPublisher>> image_publishers_;
   std::unique_ptr<LidarDataPublisher> lidar_publisher_;
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_broadcaster_;
   std::vector<std::unique_ptr<ICommandSubscriber>> subscribers_;
   std::vector<rclcpp::Service<TriggerService>::SharedPtr> joy_action_services_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr robot_mode_publisher_;

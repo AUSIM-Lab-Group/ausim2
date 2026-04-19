@@ -85,6 +85,8 @@ class ScoutSim {
   int lidar_v_ray_num_ = 0;
   float lidar_fov_h_deg_ = 0.0f;
   float lidar_fov_v_deg_ = 0.0f;
+  float lidar_range_min_m_ = 0.0f;
+  float lidar_range_max_m_ = 0.0f;
   WheelSpeeds last_wheel_speeds_;
   std::string last_command_source_ = "hold";
   bool last_command_valid_ = false;

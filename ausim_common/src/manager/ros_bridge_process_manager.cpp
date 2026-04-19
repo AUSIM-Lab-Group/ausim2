@@ -270,6 +270,8 @@ void RosBridgeProcessManager::LidarLoop() {
         packet.v_ray_num = snap->v_ray_num;
         packet.fov_h_deg = snap->fov_h_deg;
         packet.fov_v_deg = snap->fov_v_deg;
+        packet.range_min_m = snap->range_min_m;
+        packet.range_max_m = snap->range_max_m;
         for (int i = 0; i < n; ++i) {
           packet.data[i] = snap->ranges[i];
         }

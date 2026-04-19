@@ -57,6 +57,7 @@ add_library(ausim_common_ros_bridge_core STATIC
   src/converts/data/clock.cpp
   src/converts/data/cmd_vel.cpp
   src/converts/data/common.cpp
+  src/converts/data/lidar.cpp
   src/converts/data/image.cpp
   src/converts/data/imu.cpp
   src/converts/data/odom.cpp
@@ -169,3 +170,15 @@ target_include_directories(sensor_config_dedup_test
 
 target_compile_features(sensor_config_dedup_test PRIVATE cxx_std_17)
 target_link_libraries(sensor_config_dedup_test PRIVATE ausim_common_runtime)
+
+add_executable(lidar_data_publisher_test
+  tests/lidar_data_publisher_test.cpp
+)
+
+target_include_directories(lidar_data_publisher_test
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(lidar_data_publisher_test PRIVATE cxx_std_17)
+target_link_libraries(lidar_data_publisher_test PRIVATE ausim_common_ros_bridge_core)

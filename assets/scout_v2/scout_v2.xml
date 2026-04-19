@@ -102,9 +102,10 @@
       <config key="fov_h"      value="360" />
       <config key="fov_v"      value="30"  />
       <config key="size"       value="360 16" />
-      <config key="dis_range"  value="0.1 20" />
+      <config key="dis_range"  value="0.1 10" />
       <config key="sensor_data_types" value="data" />
       <config key="draw_hip_point" value="1 0.015 0 1 0 0.8" />
+      <config key="num_thread" value="8"/>
     </plugin>
   </sensor>
 </mujoco>

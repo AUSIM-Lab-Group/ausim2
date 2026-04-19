@@ -4,7 +4,7 @@ models:
     robot_config: ground_vehicle/cfg/robot/scout_v2_config.yaml
     scene_xml: assets/scout_v2/scene.xml
     dynamic_obstacle:
-      enabled: false
+      enabled: true
       config_path: third_party/dynamic_obs_generator/obstacle.yaml
 
 

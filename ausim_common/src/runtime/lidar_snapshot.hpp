@@ -11,8 +11,10 @@ struct LidarSnapshot {
   int v_ray_num = 0;
   float fov_h_deg = 360.0f;
   float fov_v_deg = 30.0f;
+  float range_min_m = 0.0f;
+  float range_max_m = 0.0f;
   // Distance values in metres, size == h_ray_num * v_ray_num.
-  // Index: h * v_ray_num + v.  Infinity means no hit.
+  // Index: v_index * h_ray_num + h_index.  The ray caster writes range_max_m for no-hit samples.
   std::vector<float> ranges;
 };
 

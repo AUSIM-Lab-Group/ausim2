@@ -55,6 +55,12 @@ sensors:
     topic: lidar/points
     frame_id: lidar_link
     rate_hz: 10.0
+    publish_tf: true
+    transform:
+      # Position of lidar16_cam in base_link frame, derived from scout_v2.xml:
+      #   sensors body pos (-0.005, -0.045, -0.095) + lidar16_cam pos (0.12, 0.045, 0.55)
+      translation: [0.115, 0.0, 0.455]
+      rotation: [0.0, 0.0, 0.0, 1.0]  # quaternion x, y, z, w (aligned with base_link)
 
 frames:
   odom: odom

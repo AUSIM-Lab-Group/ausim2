@@ -258,6 +258,22 @@ bool ParseLidarSize(const std::string& text, int* h_ray_num, int* v_ray_num) {
   return true;
 }
 
+bool ParseLidarRange(const std::string& text, float* range_min_m, float* range_max_m) {
+  if (range_min_m == nullptr || range_max_m == nullptr) {
+    return false;
+  }
+
+  std::istringstream stream(text);
+  float range_min = 0.0f;
+  float range_max = 0.0f;
+  if (!(stream >> range_min >> range_max)) {
+    return false;
+  }
+  *range_min_m = range_min;
+  *range_max_m = range_max;
+  return true;
+}
+
 bool ParseScalarDouble(const std::string& text, double* value) {
   if (value == nullptr) {
     return false;
@@ -422,6 +438,8 @@ void ScoutSim::ResolveBindings() {
   lidar_v_ray_num_ = 0;
   lidar_fov_h_deg_ = 0.0f;
   lidar_fov_v_deg_ = 0.0f;
+  lidar_range_min_m_ = 0.0f;
+  lidar_range_max_m_ = 0.0f;
 
   for (const ausim::SensorConfig& sensor : config_.common.sensors) {
     if (sensor.type != "lidar" || !sensor.enabled) {
@@ -438,7 +456,8 @@ void ScoutSim::ResolveBindings() {
       const std::optional<std::string> size_attr = ReadPluginAttribute(model_, plugin_instance, "size");
       const std::optional<std::string> fov_h_attr = ReadPluginAttribute(model_, plugin_instance, "fov_h");
       const std::optional<std::string> fov_v_attr = ReadPluginAttribute(model_, plugin_instance, "fov_v");
-      if (!size_attr.has_value() || !fov_h_attr.has_value() || !fov_v_attr.has_value()) {
+      const std::optional<std::string> range_attr = ReadPluginAttribute(model_, plugin_instance, "dis_range");
+      if (!size_attr.has_value() || !fov_h_attr.has_value() || !fov_v_attr.has_value() || !range_attr.has_value()) {
         continue;
       }
 
@@ -460,6 +479,9 @@ void ScoutSim::ResolveBindings() {
       }
       lidar_fov_h_deg_ = static_cast<float>(fov_h);
       lidar_fov_v_deg_ = static_cast<float>(fov_v);
+      if (!ParseLidarRange(*range_attr, &lidar_range_min_m_, &lidar_range_max_m_)) {
+        throw std::runtime_error("Scout lidar plugin attribute 'dis_range' must be two scalar numbers.");
+      }
       break;
     }
 
@@ -609,6 +631,8 @@ void ScoutSim::PublishLidar() {
   snap.v_ray_num = lidar_v_ray_num_;
   snap.fov_h_deg = lidar_fov_h_deg_;
   snap.fov_v_deg = lidar_fov_v_deg_;
+  snap.range_min_m = lidar_range_min_m_;
+  snap.range_max_m = lidar_range_max_m_;
   snap.ranges.resize(n);
   for (int i = 0; i < n; ++i) {
     snap.ranges[i] = static_cast<float>(data_->sensordata[lidar_sensor_.adr + i]);
