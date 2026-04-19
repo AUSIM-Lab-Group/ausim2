@@ -79,6 +79,7 @@ trajectory:
 
 viewer:
   enabled: true
+  show_mode_state_overlay: false
 
 ros2:
   node_name: sim_bridge
@@ -106,6 +107,8 @@ mode_machine: ../teleop/quadrotor_default.yaml
 ```
 
 `control_mode` / `example_mode` / `goal` / `trajectory` 现在放在 `cfg/sim_config.yaml` 里，作为全局仿真配置。
+
+`viewer.show_mode_state_overlay: true` 时，会在 MuJoCo viewer 右上角叠加显示当前状态机子状态，例如 `on_ground` / `hover`。
 
 `model.aircraft_forward_axis` 表示"飞机机头在模型 body 坐标系里的方向"。Crazyflie 约定：
 - 模型 `+x`：飞机右侧，模型 `+y`：飞机机头，故为 `[0.0, 1.0, 0.0]`

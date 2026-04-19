@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "converts/ipc/bridge_packets.hpp"
+#include "ipc/lidar_packet.hpp"
 #include "ipc/socket_packet.hpp"
 #include "ipc/socket_stream.hpp"
 #include "runtime/data_board_interface.hpp"
@@ -56,6 +57,7 @@ void RosBridgeProcessManager::Start() {
   int command_fds[2] = {-1, -1};
   int discrete_command_fds[2] = {-1, -1};
   int image_fds[2] = {-1, -1};
+  int lidar_fds[2] = {-1, -1};
   if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, telemetry_fds) != 0) {
     throw SystemError("Failed to create telemetry socketpair");
   }
@@ -80,11 +82,23 @@ void RosBridgeProcessManager::Start() {
     ipc::ShutdownAndClose(&discrete_command_fds[1]);
     throw SystemError("Failed to create image socketpair");
   }
+  if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, lidar_fds) != 0) {
+    ipc::ShutdownAndClose(&telemetry_fds[0]);
+    ipc::ShutdownAndClose(&telemetry_fds[1]);
+    ipc::ShutdownAndClose(&command_fds[0]);
+    ipc::ShutdownAndClose(&command_fds[1]);
+    ipc::ShutdownAndClose(&discrete_command_fds[0]);
+    ipc::ShutdownAndClose(&discrete_command_fds[1]);
+    ipc::ShutdownAndClose(&image_fds[0]);
+    ipc::ShutdownAndClose(&image_fds[1]);
+    throw SystemError("Failed to create lidar socketpair");
+  }
 
   telemetry_send_fd_ = telemetry_fds[0];
   command_recv_fd_ = command_fds[0];
   discrete_command_recv_fd_ = discrete_command_fds[0];
   image_send_fd_ = image_fds[0];
+  lidar_send_fd_ = lidar_fds[0];
   ipc::SetNonBlocking(telemetry_send_fd_);
 
   child_pid_ = fork();
@@ -109,6 +123,7 @@ void RosBridgeProcessManager::Start() {
     close(command_fds[0]);
     close(discrete_command_fds[0]);
     close(image_fds[0]);
+    close(lidar_fds[0]);
 
     std::vector<std::string> args;
     args.push_back(launch_config_.executable_path.string());
@@ -121,6 +136,8 @@ void RosBridgeProcessManager::Start() {
     args.push_back(std::to_string(discrete_command_fds[1]));
     args.push_back("--image-fd");
     args.push_back(std::to_string(image_fds[1]));
+    args.push_back("--lidar-fd");
+    args.push_back(std::to_string(lidar_fds[1]));
 
     std::vector<char*> argv;
     argv.reserve(args.size() + 1);
@@ -138,6 +155,7 @@ void RosBridgeProcessManager::Start() {
   close(command_fds[1]);
   close(discrete_command_fds[1]);
   close(image_fds[1]);
+  close(lidar_fds[1]);
 
   running_.store(true);
   command_thread_ = std::thread(&RosBridgeProcessManager::CommandLoop, this);
@@ -145,6 +163,13 @@ void RosBridgeProcessManager::Start() {
   telemetry_thread_ = std::thread(&RosBridgeProcessManager::TelemetryLoop, this);
   if (!camera_channel_names_.empty()) {
     camera_thread_ = std::thread(&RosBridgeProcessManager::CameraLoop, this);
+  }
+  // Start lidar loop if any lidar sensor is configured.
+  for (const ausim::SensorConfig& s : config_.sensors) {
+    if (s.type == "lidar" && s.enabled) {
+      lidar_thread_ = std::thread(&RosBridgeProcessManager::LidarLoop, this);
+      break;
+    }
   }
 
   std::this_thread::sleep_for(kStartupProbeDelay);
@@ -158,6 +183,7 @@ void RosBridgeProcessManager::Stop() {
   ipc::ShutdownAndClose(&command_recv_fd_);
   ipc::ShutdownAndClose(&discrete_command_recv_fd_);
   ipc::ShutdownAndClose(&image_send_fd_);
+  ipc::ShutdownAndClose(&lidar_send_fd_);
 
   if (telemetry_thread_.joinable()) {
     telemetry_thread_.join();
@@ -170,6 +196,9 @@ void RosBridgeProcessManager::Stop() {
   }
   if (camera_thread_.joinable()) {
     camera_thread_.join();
+  }
+  if (lidar_thread_.joinable()) {
+    lidar_thread_.join();
   }
 
   if (child_pid_ > 0) {
@@ -206,6 +235,48 @@ void RosBridgeProcessManager::TelemetryLoop() {
       const ipc::TelemetryPacket packet = converts::ToTelemetryPacket(*snapshot);
       ipc::SendPacket(telemetry_send_fd_, packet, true);
     }
+    std::this_thread::sleep_until(next_tick);
+  }
+}
+
+void RosBridgeProcessManager::LidarLoop() {
+  // Find the first enabled lidar sensor config for rate and name.
+  double rate_hz = 10.0;
+  std::string lidar_name;
+  for (const ausim::SensorConfig& s : config_.sensors) {
+    if (s.type == "lidar" && s.enabled) {
+      rate_hz = s.rate_hz > 0.0 ? s.rate_hz : 10.0;
+      lidar_name = s.source_name;
+      break;
+    }
+  }
+  if (lidar_name.empty()) {
+    return;
+  }
+
+  const auto period = std::chrono::duration<double>(1.0 / rate_hz);
+  auto next_tick = std::chrono::steady_clock::now();
+
+  while (running_.load()) {
+    next_tick += std::chrono::duration_cast<std::chrono::steady_clock::duration>(period);
+
+    const std::optional<LidarSnapshot> snap = ReadLidarSnapshot(lidar_name);
+    if (snap.has_value()) {
+      const int n = static_cast<int>(snap->ranges.size());
+      if (n > 0 && n <= ipc::LidarPacket::kMaxRays) {
+        ipc::LidarPacket packet;
+        packet.sim_time = snap->sim_time;
+        packet.h_ray_num = snap->h_ray_num;
+        packet.v_ray_num = snap->v_ray_num;
+        packet.fov_h_deg = snap->fov_h_deg;
+        packet.fov_v_deg = snap->fov_v_deg;
+        for (int i = 0; i < n; ++i) {
+          packet.data[i] = snap->ranges[i];
+        }
+        ipc::SendPacket(lidar_send_fd_, packet, true);
+      }
+    }
+
     std::this_thread::sleep_until(next_tick);
   }
 }

@@ -45,6 +45,7 @@ class ScoutSim {
   void ApplyControl();
   bool HandleDiscreteCommand(const ausim::DiscreteCommand& command);
   void PublishTelemetry(bool log_state = true);
+  void PublishLidar();
   void LogStateIfNeeded(const ausim::TelemetrySnapshot& snapshot) const;
   void RunHeadless();
   void RunWithViewer();
@@ -78,6 +79,7 @@ class ScoutSim {
   SensorBinding gyro_sensor_;
   SensorBinding accelerometer_sensor_;
   SensorBinding quaternion_sensor_;
+  SensorBinding lidar_sensor_;
   WheelSpeeds last_wheel_speeds_;
   std::string last_command_source_ = "hold";
   bool last_command_valid_ = false;

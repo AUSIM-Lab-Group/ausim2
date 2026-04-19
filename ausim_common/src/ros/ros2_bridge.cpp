@@ -20,11 +20,13 @@
 
 #include "converts/data/image.hpp"
 #include "converts/ipc/bridge_packets.hpp"
+#include "ipc/lidar_packet.hpp"
 #include "ipc/socket_packet.hpp"
 #include "ipc/socket_stream.hpp"
 #include "ros/publisher/data/clock_data_publisher.hpp"
 #include "ros/publisher/data/image_data_publisher.hpp"
 #include "ros/publisher/data/imu_data_publisher.hpp"
+#include "ros/publisher/data/lidar_data_publisher.hpp"
 #include "ros/publisher/data/odom_data_publisher.hpp"
 #include "ros/publisher/data/transform_data_publisher.hpp"
 #include "ros/publisher/i_telemetry_publisher.hpp"
@@ -201,12 +203,13 @@ std::vector<std::unique_ptr<ITelemetryPublisher>> BuildPublishers(const std::sha
 
 class RosBridgeProcess {
  public:
-  RosBridgeProcess(RosBridgeConfig config, int telemetry_fd, int command_fd, int discrete_command_fd, int image_fd)
+  RosBridgeProcess(RosBridgeConfig config, int telemetry_fd, int command_fd, int discrete_command_fd, int image_fd, int lidar_fd)
       : config_(std::move(config)),
         telemetry_fd_(telemetry_fd),
         command_fd_(command_fd),
         discrete_command_fd_(discrete_command_fd),
-        image_fd_(image_fd) {}
+        image_fd_(image_fd),
+        lidar_fd_(lidar_fd) {}
 
   ~RosBridgeProcess() { Stop(); }
 
@@ -285,6 +288,12 @@ class RosBridgeProcess {
           publishers_.push_back(std::make_unique<ImuDataPublisher>(node_, topic, frame));
         } else if (sensor.type == "camera") {
           continue;
+        } else if (sensor.type == "lidar") {
+          if (lidar_fd_ >= 0) {
+            lidar_publisher_ = std::make_unique<LidarDataPublisher>(node_, topic, frame);
+          } else {
+            RCLCPP_WARN(node_->get_logger(), "Lidar sensor '%s' configured but no --lidar-fd provided.", sensor.name.c_str());
+          }
         } else {
           RCLCPP_WARN(node_->get_logger(), "Sensor '%s' of type '%s' is not implemented yet.", sensor.name.c_str(), sensor.type.c_str());
         }
@@ -305,11 +314,15 @@ class RosBridgeProcess {
       telemetry_timer_ = node_->create_wall_timer(period, [this]() {
         PublishTelemetry();
         PublishCameraFrames();
+        PublishLidar();
       });
 
       telemetry_thread_ = std::thread([this]() { TelemetryLoop(); });
       if (!image_publishers_.empty()) {
         image_thread_ = std::thread([this]() { ImageLoop(); });
+      }
+      if (lidar_publisher_ && lidar_fd_ >= 0) {
+        lidar_thread_ = std::thread([this]() { LidarLoop(); });
       }
       started_ = true;
       RosStartupDebugLog("ROS bridge child started");
@@ -325,6 +338,7 @@ class RosBridgeProcess {
       ipc::ShutdownAndClose(&command_fd_);
       ipc::ShutdownAndClose(&discrete_command_fd_);
       ipc::ShutdownAndClose(&image_fd_);
+      ipc::ShutdownAndClose(&lidar_fd_);
       return;
     }
 
@@ -337,12 +351,16 @@ class RosBridgeProcess {
     ipc::ShutdownAndClose(&command_fd_);
     ipc::ShutdownAndClose(&discrete_command_fd_);
     ipc::ShutdownAndClose(&image_fd_);
+    ipc::ShutdownAndClose(&lidar_fd_);
 
     if (telemetry_thread_.joinable()) {
       telemetry_thread_.join();
     }
     if (image_thread_.joinable()) {
       image_thread_.join();
+    }
+    if (lidar_thread_.joinable()) {
+      lidar_thread_.join();
     }
 
     telemetry_timer_.reset();
@@ -351,6 +369,7 @@ class RosBridgeProcess {
     subscribers_.clear();
     publishers_.clear();
     image_publishers_.clear();
+    lidar_publisher_.reset();
     latest_camera_frames_.clear();
     last_published_camera_sequences_.clear();
     camera_frame_published_.clear();
@@ -540,6 +559,45 @@ class RosBridgeProcess {
     }
   }
 
+  void LidarLoop() {
+    while (!stop_requested_.load()) {
+      ipc::LidarPacket packet;
+      switch (ipc::ReceivePacket(lidar_fd_, &packet)) {
+        case ipc::PacketReceiveStatus::kPacket: {
+          std::lock_guard<std::mutex> lock(lidar_mutex_);
+          latest_lidar_ = packet;
+          break;
+        }
+        case ipc::PacketReceiveStatus::kClosed:
+          RequestStop();
+          return;
+        case ipc::PacketReceiveStatus::kWouldBlock:
+          continue;
+        case ipc::PacketReceiveStatus::kError:
+          if (!stop_requested_.load()) {
+            std::cerr << "ausim_ros_bridge warning: lidar socket receive failed\n";
+          }
+          RequestStop();
+          return;
+      }
+    }
+  }
+
+  void PublishLidar() {
+    if (!lidar_publisher_) {
+      return;
+    }
+    std::optional<ipc::LidarPacket> packet;
+    {
+      std::lock_guard<std::mutex> lock(lidar_mutex_);
+      packet = latest_lidar_;
+    }
+    if (packet.has_value()) {
+      lidar_publisher_->Publish(*packet);
+      latest_lidar_.reset();  // Publish each scan exactly once.
+    }
+  }
+
   void RequestStop() {
     stop_requested_.store(true);
     if (executor_) {
@@ -552,19 +610,24 @@ class RosBridgeProcess {
   int command_fd_ = -1;
   int discrete_command_fd_ = -1;
   int image_fd_ = -1;
+  int lidar_fd_ = -1;
   std::shared_ptr<rclcpp::Node> node_;
   std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
   std::vector<std::unique_ptr<ITelemetryPublisher>> publishers_;
   std::vector<std::unique_ptr<ImageDataPublisher>> image_publishers_;
+  std::unique_ptr<LidarDataPublisher> lidar_publisher_;
   std::vector<std::unique_ptr<ICommandSubscriber>> subscribers_;
   std::vector<rclcpp::Service<TriggerService>::SharedPtr> joy_action_services_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr robot_mode_publisher_;
   rclcpp::TimerBase::SharedPtr telemetry_timer_;
   std::thread telemetry_thread_;
   std::thread image_thread_;
+  std::thread lidar_thread_;
   std::mutex telemetry_mutex_;
   std::mutex image_mutex_;
+  std::mutex lidar_mutex_;
   std::optional<ipc::TelemetryPacket> latest_telemetry_;
+  std::optional<ipc::LidarPacket> latest_lidar_;
   std::vector<std::shared_ptr<CameraFrame>> latest_camera_frames_;
   std::vector<std::uint32_t> last_published_camera_sequences_;
   std::vector<bool> camera_frame_published_;
@@ -576,8 +639,8 @@ class RosBridgeProcess {
 
 }  // namespace
 
-int RunRosBridgeProcess(const QuadrotorConfig& config, int telemetry_fd, int command_fd, int discrete_command_fd, int image_fd) {
-  RosBridgeProcess process(BuildRosBridgeConfig(config), telemetry_fd, command_fd, discrete_command_fd, image_fd);
+int RunRosBridgeProcess(const QuadrotorConfig& config, int telemetry_fd, int command_fd, int discrete_command_fd, int image_fd, int lidar_fd) {
+  RosBridgeProcess process(BuildRosBridgeConfig(config), telemetry_fd, command_fd, discrete_command_fd, image_fd, lidar_fd);
   return process.Run();
 }
 

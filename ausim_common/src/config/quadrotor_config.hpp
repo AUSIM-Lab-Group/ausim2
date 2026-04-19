@@ -71,6 +71,7 @@ struct ViewerConfig {
   bool fallback_to_headless = true;
   bool mjui_enabled = true;
   bool vsync = true;
+  bool show_mode_state_overlay = false;
 };
 
 struct ModelConfig {
@@ -141,6 +142,9 @@ struct SensorConfig {
   int height = 240;
   double rate_hz = 30.0;
   CameraDepthConfig depth;
+  // Lidar-specific geometry (degrees). Defaults match the scout_v2 MJCF plugin config.
+  double fov_h = 360.0;
+  double fov_v = 30.0;
 };
 
 enum class CameraStreamKind {

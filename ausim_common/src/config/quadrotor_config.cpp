@@ -123,6 +123,8 @@ void LoadSensors(const YAML::Node& sensors_node, std::vector<SensorConfig>* sens
     AssignIfPresent(sensor_node, "width", &sensor.width);
     AssignIfPresent(sensor_node, "height", &sensor.height);
     AssignIfPresent(sensor_node, "rate_hz", &sensor.rate_hz);
+    AssignIfPresent(sensor_node, "fov_h", &sensor.fov_h);
+    AssignIfPresent(sensor_node, "fov_v", &sensor.fov_v);
     const YAML::Node depth_node = sensor_node["depth"];
     AssignIfPresent(depth_node, "enabled", &sensor.depth.enabled);
     AssignIfPresent(depth_node, "frame_id", &sensor.depth.frame_id);
@@ -334,6 +336,7 @@ void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, Quadro
   AssignIfPresent(viewer_node, "fallback_to_headless", &config->viewer.fallback_to_headless);
   AssignIfPresent(viewer_node, "mjui_enabled", &config->viewer.mjui_enabled);
   AssignIfPresent(viewer_node, "vsync", &config->viewer.vsync);
+  AssignIfPresent(viewer_node, "show_mode_state_overlay", &config->viewer.show_mode_state_overlay);
 
   const YAML::Node bindings_node = root["bindings"];
   const YAML::Node actuators_node = bindings_node ? bindings_node["actuators"] : YAML::Node{};

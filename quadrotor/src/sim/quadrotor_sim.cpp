@@ -602,6 +602,21 @@ void QuadrotorSim::ProcessPendingResetSimulation() {
   }
 }
 
+void QuadrotorSim::UpdateViewerModeOverlay() {
+  if (viewer_ == nullptr) {
+    return;
+  }
+
+  viewer_->user_texts_new_.clear();
+  if (config_.viewer.show_mode_state_overlay) {
+    const RobotModeSnapshot snapshot = runtime_.ModeSnapshot();
+    if (!snapshot.sub_state.empty()) {
+      viewer_->user_texts_new_.emplace_back(mjFONT_NORMAL, mjGRID_TOPRIGHT, "State", snapshot.sub_state);
+    }
+  }
+  viewer_->newtextrequest.store(1);
+}
+
 void QuadrotorSim::RunHeadless() {
   constexpr int kStepsPerCycle = 5;
   InitializeCameraRendering();
@@ -685,6 +700,7 @@ void QuadrotorSim::PhysicsThreadMain() {
       const std::unique_lock<std::recursive_mutex> lock(viewer_->mtx);
       mj_forward(model_, data_);
       SetLoadError(*viewer_, "");
+      UpdateViewerModeOverlay();
     } else if (!LoadModelIntoViewer(*viewer_, config_.model.scene_xml, false)) {
       viewer_->exitrequest.store(true);
       return;
@@ -728,10 +744,10 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    const std::unique_lock<std::recursive_mutex> lock(sim.mtx);
-    if (model_ == nullptr || data_ == nullptr) {
-      continue;
-    }
+      const std::unique_lock<std::recursive_mutex> lock(sim.mtx);
+      if (model_ == nullptr || data_ == nullptr) {
+        continue;
+      }
 
     if (sim.run) {
       bool stepped = false;
@@ -758,6 +774,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
         } else {
           stepped = true;
           RenderCameraFramesIfNeeded();
+          UpdateViewerModeOverlay();
         }
       } else {
         bool measured = false;
@@ -784,6 +801,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
 
           stepped = true;
           RenderCameraFramesIfNeeded();
+          UpdateViewerModeOverlay();
           if (data_->time < previous_sim) {
             break;
           }
@@ -804,6 +822,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
         mju_copy(data_->qacc_warmstart, data_->qacc, model_->nv);
       }
       sim.speed_changed = true;
+      UpdateViewerModeOverlay();
     }
   }
 }

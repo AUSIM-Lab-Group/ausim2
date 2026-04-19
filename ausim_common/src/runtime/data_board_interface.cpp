@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <string>
 
 #include "runtime/data_board_channels.hpp"
 
@@ -9,6 +10,8 @@ namespace ausim {
 namespace {
 
 std::string CameraFrameChannel(const std::string& channel_name) { return std::string(runtime_board::kCameraFramePrefix) + channel_name; }
+
+std::string LidarSnapshotChannel(const std::string& name) { return std::string(runtime_board::kLidarSnapshotPrefix) + name; }
 
 }  // namespace
 
@@ -99,5 +102,13 @@ void WriteTelemetrySnapshot(const TelemetrySnapshot& snapshot) { TelemetrySnapsh
 std::optional<CameraFrame> ReadCameraFrame(const std::string& channel_name) { return CameraFrameReader(channel_name).ReadOptional(); }
 
 void WriteCameraFrame(const std::string& channel_name, const CameraFrame& frame) { CameraFrameWriter(channel_name) = frame; }
+
+std::optional<LidarSnapshot> ReadLidarSnapshot(const std::string& name) {
+  return db::DataBoard().Read<LidarSnapshot>(LidarSnapshotChannel(name)).ReadOptional();
+}
+
+void WriteLidarSnapshot(const std::string& name, const LidarSnapshot& snap) {
+  db::DataBoard().Write<LidarSnapshot>(LidarSnapshotChannel(name)) = snap;
+}
 
 }  // namespace ausim

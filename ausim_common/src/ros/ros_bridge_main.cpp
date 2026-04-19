@@ -19,6 +19,7 @@ struct CliOptions {
   int command_fd = -1;
   int discrete_command_fd = -1;
   int image_fd = -1;
+  int lidar_fd = -1;
 };
 
 fs::path ResolveExistingPath(const std::vector<fs::path>& candidates) {
@@ -106,6 +107,11 @@ int main(int argc, char** argv) {
           throw std::runtime_error("--image-fd requires a file descriptor.");
         }
         cli.image_fd = std::stoi(argv[++i]);
+      } else if (arg == "--lidar-fd") {
+        if (i + 1 >= argc) {
+          throw std::runtime_error("--lidar-fd requires a file descriptor.");
+        }
+        cli.lidar_fd = std::stoi(argv[++i]);
       } else {
         if (!cli.merged_config_path.empty()) {
           throw std::runtime_error("Only one positional legacy config path is supported.");
@@ -119,7 +125,7 @@ int main(int argc, char** argv) {
     }
 
     const ausim::QuadrotorConfig config = LoadConfig(cli);
-    return ausim::RunRosBridgeProcess(config, cli.telemetry_fd, cli.command_fd, cli.discrete_command_fd, cli.image_fd);
+    return ausim::RunRosBridgeProcess(config, cli.telemetry_fd, cli.command_fd, cli.discrete_command_fd, cli.image_fd, cli.lidar_fd);
   } catch (const std::exception& error) {
     std::cerr << "ausim_ros_bridge error: " << error.what() << '\n';
     return 1;

@@ -64,6 +64,7 @@ add_library(ausim_common_ros_bridge_core STATIC
   src/ros/publisher/data/clock_data_publisher.cpp
   src/ros/publisher/data/image_data_publisher.cpp
   src/ros/publisher/data/imu_data_publisher.cpp
+  src/ros/publisher/data/lidar_data_publisher.cpp
   src/ros/publisher/data/odom_data_publisher.cpp
   src/ros/publisher/data/transform_data_publisher.cpp
   src/ros/ros2_bridge.cpp

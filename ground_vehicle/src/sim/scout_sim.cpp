@@ -23,6 +23,7 @@
 #include "mujoco-3.6.0/simulate/glfw_adapter.h"
 #include "mujoco-3.6.0/simulate/simulate.h"
 #include "runtime/data_board_interface.hpp"
+#include "runtime/lidar_snapshot.hpp"
 
 namespace fs = std::filesystem;
 
@@ -364,6 +365,14 @@ void ScoutSim::ResolveBindings() {
   ResolveSensor(&gyro_sensor_);
   ResolveSensor(&accelerometer_sensor_);
   ResolveSensor(&quaternion_sensor_);
+
+  for (const ausim::SensorConfig& sensor : config_.common.sensors) {
+    if (sensor.type == "lidar" && sensor.enabled && !sensor.source_name.empty()) {
+      lidar_sensor_.name = sensor.source_name;
+      ResolveSensor(&lidar_sensor_);
+      break;
+    }
+  }
 }
 
 void ScoutSim::ResolveSensor(SensorBinding* binding) const {
@@ -483,6 +492,40 @@ void ScoutSim::PublishTelemetry(bool log_state) {
   if (log_state) {
     LogStateIfNeeded(snapshot);
   }
+
+  PublishLidar();
+}
+
+void ScoutSim::PublishLidar() {
+  if (!lidar_sensor_.resolved || lidar_sensor_.dim <= 0) {
+    return;
+  }
+
+  // Find the matching sensor config for geometry metadata.
+  const ausim::SensorConfig* lidar_cfg = nullptr;
+  for (const ausim::SensorConfig& s : config_.common.sensors) {
+    if (s.type == "lidar" && s.source_name == lidar_sensor_.name) {
+      lidar_cfg = &s;
+      break;
+    }
+  }
+  if (lidar_cfg == nullptr) {
+    return;
+  }
+
+  const int n = lidar_sensor_.dim;
+  ausim::LidarSnapshot snap;
+  snap.sim_time = data_->time;
+  snap.h_ray_num = lidar_cfg->width;
+  snap.v_ray_num = lidar_cfg->height;
+  snap.fov_h_deg = static_cast<float>(lidar_cfg->fov_h);
+  snap.fov_v_deg = static_cast<float>(lidar_cfg->fov_v);
+  snap.ranges.resize(n);
+  for (int i = 0; i < n; ++i) {
+    snap.ranges[i] = static_cast<float>(data_->sensordata[lidar_sensor_.adr + i]);
+  }
+
+  ausim::WriteLidarSnapshot(lidar_sensor_.name, snap);
 }
 
 void ScoutSim::LogStateIfNeeded(const ausim::TelemetrySnapshot& snapshot) const {
@@ -722,7 +765,7 @@ bool ScoutSim::LoadModelIntoViewer(mj::Simulate& sim, const fs::path& model_path
     InstallModelPointers(load_result.model, new_data, model_path, replace_existing);
   }
 
-  if (!load_result.message.empty()) {
+  if (load_result.pause_after_load && !load_result.message.empty()) {
     SetLoadError(sim, load_result.message);
   } else {
     SetLoadError(sim, "");

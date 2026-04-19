@@ -1,8 +1,10 @@
 #pragma once
 
 #include <optional>
+#include <string>
 
 #include "common/db/data_board.hpp"
+#include "runtime/lidar_snapshot.hpp"
 #include "runtime/runtime_types.hpp"
 
 namespace ausim {
@@ -30,6 +32,9 @@ std::optional<TelemetrySnapshot> ReadTelemetrySnapshot();
 void WriteTelemetrySnapshot(const TelemetrySnapshot& snapshot);
 std::optional<CameraFrame> ReadCameraFrame(const std::string& channel_name);
 void WriteCameraFrame(const std::string& channel_name, const CameraFrame& frame);
+
+std::optional<LidarSnapshot> ReadLidarSnapshot(const std::string& name);
+void WriteLidarSnapshot(const std::string& name, const LidarSnapshot& snap);
 
 }  // namespace ausim
 

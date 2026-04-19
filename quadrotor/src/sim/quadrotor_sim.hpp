@@ -46,6 +46,7 @@ class QuadrotorSim {
   void ApplyControl(const mjModel* model, mjData* data);
   bool HandleDiscreteCommand(const DiscreteCommand& command, const RuntimeInput& input);
   void ProcessPendingResetSimulation();
+  void UpdateViewerModeOverlay();
 
   void ResetSimulation();
   void LogStateIfNeeded(const TelemetrySnapshot& snapshot) const;
