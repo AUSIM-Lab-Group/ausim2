@@ -14,6 +14,7 @@
 #include "control/differential_drive_controller.hpp"
 #include "runtime/robot_mode_state_machine.hpp"
 #include "runtime/runtime_types.hpp"
+#include "sim/dynamic_obstacle_runtime.hpp"
 #include "sim/wheel_actuator_writer.hpp"
 
 namespace mujoco {
@@ -38,6 +39,8 @@ class ScoutSim {
   void LoadModel();
   void Step();
   void Run();
+  const mjModel* model() const { return model_; }
+  const mjData* data() const { return data_; }
 
  private:
   void ResolveBindings();
@@ -57,6 +60,8 @@ class ScoutSim {
   void PhysicsLoop(mujoco::Simulate& sim);
   bool LoadModelIntoViewer(mujoco::Simulate& sim, const std::filesystem::path& model_path, bool replace_existing);
   void InstallModelPointers(mjModel* new_model, mjData* new_data, const std::filesystem::path& model_path, bool replace_existing);
+  void InitializeDynamicObstacleManager();
+  bool PrepareDynamicObstaclesForStep();
   void ResetSimulation();
   bool ShouldContinue() const;
   void SleepToMatchRealtime(const std::chrono::high_resolution_clock::time_point& step_start) const;
@@ -95,6 +100,7 @@ class ScoutSim {
   mutable double next_log_time_ = 0.0;
   std::atomic_bool stop_requested_ = false;
   bool visualization_state_initialized_ = false;
+  ausim::DynamicObstacleRuntime dynamic_obstacle_runtime_;
 
   static ScoutSim* active_instance_;
 };

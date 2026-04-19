@@ -13,8 +13,8 @@
 #include <Eigen/Core>
 
 #include "config/quadrotor_config.hpp"
-#include "dynamic_obs_generator/dynamic_obstacle_manager.hpp"
 #include "runtime/vehicle_runtime.hpp"
+#include "sim/dynamic_obstacle_runtime.hpp"
 #include "sim/camera_renderer.hpp"
 #include "sim/mujoco_actuator_writer.hpp"
 #include "sim/mujoco_bindings.hpp"
@@ -122,8 +122,7 @@ class QuadrotorSim {
   std::uint64_t last_discrete_command_sequence_ = 0;
   DiscreteCommandAckStatus last_discrete_command_status_ = DiscreteCommandAckStatus::kNone;
 
-  // Dynamic obstacle manager
-  std::unique_ptr<dynamic_obstacle::DynamicObstacleManager> obstacle_manager_;
+  ausim::DynamicObstacleRuntime dynamic_obstacle_runtime_;
 
   static QuadrotorSim* active_instance_;
 };

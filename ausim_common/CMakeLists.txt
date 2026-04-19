@@ -53,6 +53,23 @@ target_link_libraries(ausim_common_runtime
     yaml-cpp
 )
 
+add_library(ausim_mujoco_runtime STATIC
+  src/sim/dynamic_obstacle_runtime.cpp
+)
+
+target_include_directories(ausim_mujoco_runtime
+  PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(ausim_mujoco_runtime PUBLIC cxx_std_17)
+target_link_libraries(ausim_mujoco_runtime
+  PUBLIC
+    ausim_common_runtime
+    dynamic_obs_generator
+    "${MUJOCO_IMPORTED_TARGET}"
+)
+
 add_library(ausim_common_ros_bridge_core STATIC
   src/converts/data/clock.cpp
   src/converts/data/cmd_vel.cpp
@@ -127,6 +144,7 @@ endif()
 
 install(TARGETS
   ausim_common_runtime
+  ausim_mujoco_runtime
   ausim_common_ros_bridge_core
   ausim_ros_bridge
   quadrotor_ros_bridge

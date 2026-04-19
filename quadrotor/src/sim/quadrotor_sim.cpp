@@ -613,6 +613,7 @@ void QuadrotorSim::ResetSimulation() {
     stream.next_render_time = 0.0;
     stream.sequence = 0;
   }
+  dynamic_obstacle_runtime_.ResetToCurrentTime();
 }
 
 void QuadrotorSim::ProcessPendingResetSimulation() {
@@ -914,7 +915,7 @@ void QuadrotorSim::InstallModelPointers(mjModel* new_model, mjData* new_data, co
 
   mjModel* old_model = model_;
   mjData* old_data = data_;
-  obstacle_manager_.reset();
+  dynamic_obstacle_runtime_.Clear();
 
   new_model->opt.timestep = config_.simulation.dt;
   model_ = new_model;
@@ -1365,58 +1366,17 @@ void QuadrotorSim::LogStateIfNeeded(const TelemetrySnapshot& snapshot) const {
 }
 
 void QuadrotorSim::InitializeDynamicObstacleManager() {
-  // Skip if not enabled
-  if (!config_.dynamic_obstacle.enabled) {
-    obstacle_manager_.reset();
-    return;
-  }
-
-  // Check if config path is provided
-  if (config_.dynamic_obstacle.config_path.empty()) {
-    std::cerr << "[QuadrotorSim] Warning: dynamic_obstacle.enabled=true but config_path is not set." << std::endl;
-    std::cerr << "[QuadrotorSim] Warning: Please set dynamic_obstacle.config_path via registry/config/env override." << std::endl;
-    obstacle_manager_.reset();
-    return;
-  }
-
-  try {
-    auto manager = std::make_unique<dynamic_obstacle::DynamicObstacleManager>();
-    auto obstacle_config = dynamic_obstacle::LoadConfigFromYaml(config_.dynamic_obstacle.config_path);
-
-    if (manager->Initialize(obstacle_config, model_, data_)) {
-      if (manager->IsEnabled()) {
-        obstacle_manager_ = std::move(manager);
-        std::cout << "[QuadrotorSim] Dynamic obstacle manager initialized successfully." << std::endl;
-        if (obstacle_config.debug) {
-          std::cout << obstacle_manager_->GetDebugInfo() << std::endl;
-        }
-      } else {
-        obstacle_manager_.reset();
-        std::cout << "[QuadrotorSim] Dynamic obstacles resolved to a static scene. "
-                  << "Runtime obstacle updates are disabled." << std::endl;
-      }
-    } else {
-      obstacle_manager_.reset();
-      std::cerr << "[QuadrotorSim] Failed to initialize dynamic obstacle manager." << std::endl;
-    }
-  } catch (const std::exception& e) {
-    obstacle_manager_.reset();
-    std::cerr << "[QuadrotorSim] Exception initializing dynamic obstacle manager: " << e.what() << std::endl;
-  }
+  dynamic_obstacle_runtime_.Initialize(config_.dynamic_obstacle, model_, data_, "[QuadrotorSim]");
 }
 
 bool QuadrotorSim::PrepareDynamicObstaclesForStep() {
-  if (obstacle_manager_ == nullptr || model_ == nullptr || data_ == nullptr) {
+  if (model_ == nullptr || data_ == nullptr) {
     return false;
   }
 
   const double next_sim_time = data_->time + model_->opt.timestep;
-  const bool update_due = obstacle_manager_->RequiresPhysicsRateUpdates() || HasDueDepthStreamAfterStep(next_sim_time);
-  if (!update_due) {
-    return false;
-  }
-
-  return obstacle_manager_->ApplyTrajectory(next_sim_time);
+  const bool update_due = dynamic_obstacle_runtime_.RequiresPhysicsRateUpdates() || HasDueDepthStreamAfterStep(next_sim_time);
+  return dynamic_obstacle_runtime_.PrepareForStep(next_sim_time, update_due);
 }
 
 }  // namespace quadrotor

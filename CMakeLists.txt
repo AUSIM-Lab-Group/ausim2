@@ -44,6 +44,7 @@ resolve_mujoco_dependency(
 )
 
 add_subdirectory(third_party/mujoco_ray_caster)
+add_subdirectory(third_party/dynamic_obs_generator)
 add_subdirectory(ausim_common)
 add_subdirectory(quadrotor)
 add_subdirectory(ground_vehicle)

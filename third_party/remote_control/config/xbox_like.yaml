@@ -11,10 +11,10 @@ remote_control_node:
     axes:
       linear:
         x: 4
-        y: 0
+        y: 3
         z: 1
       angular:
-        yaw: 3
+        yaw: 0
     scale:
       linear:
         x: 0.6

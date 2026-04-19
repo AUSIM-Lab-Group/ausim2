@@ -40,8 +40,6 @@ target_link_libraries(ausim_mujoco_viewer
     "${MUJOCO_IMPORTED_TARGET}"
 )
 
-add_subdirectory("${QUADROTOR_THIRD_PARTY_DIR}/dynamic_obs_generator" "dynamic_obs_generator_build")
-
 add_library(quadrotor_sim_core STATIC
   src/app/quadrotor_app.cpp
   src/control/motor_mixer.cpp
@@ -73,6 +71,7 @@ target_link_libraries(quadrotor_sim_core
   glfw
   yaml-cpp
   ausim_common_runtime
+  ausim_mujoco_runtime
   ausim_mujoco_viewer
   dynamic_obs_generator
   "${MUJOCO_IMPORTED_TARGET}"

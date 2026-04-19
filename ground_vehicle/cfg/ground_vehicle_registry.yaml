@@ -5,6 +5,6 @@ models:
     scene_xml: assets/scout_v2/scene.xml
     dynamic_obstacle:
       enabled: true
-      config_path: third_party/dynamic_obs_generator/obstacle.yaml
+      config_path: third_party/dynamic_obs_generator/obstacle_scout.yaml
 
 

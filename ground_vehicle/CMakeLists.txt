@@ -39,7 +39,9 @@ target_link_libraries(ground_vehicle_sim_core
   glfw
   yaml-cpp
   ausim_common_runtime
+  ausim_mujoco_runtime
   ausim_mujoco_viewer
+  dynamic_obs_generator
   "${MUJOCO_IMPORTED_TARGET}"
 )
 
@@ -49,6 +51,19 @@ add_executable(scout
 
 target_link_options(scout PRIVATE "LINKER:--disable-new-dtags")
 target_link_libraries(scout PRIVATE ground_vehicle_sim_core)
+
+add_executable(dynamic_obstacle_test
+  tests/dynamic_obstacle_test.cpp
+)
+
+target_include_directories(dynamic_obstacle_test
+  PRIVATE
+    "${CMAKE_SOURCE_DIR}/ausim_common/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(dynamic_obstacle_test PRIVATE cxx_std_17)
+target_link_libraries(dynamic_obstacle_test PRIVATE ground_vehicle_sim_core "${MUJOCO_IMPORTED_TARGET}")
 
 if(MUJOCO_RESOLVED_LIBRARY_DIR)
   set_target_properties(scout PROPERTIES

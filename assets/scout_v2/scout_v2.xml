@@ -37,7 +37,7 @@
       <inertial pos="0 0 0" mass="40" diaginertia="2.288641 5.103976 3.431465"/>
       <geom class="visual" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.298039 0.298039 0.298039 1" mesh="base_link"/>
       <geom class="collision" type="mesh" rgba="0.298039 0.298039 0.298039 1" mesh="base_link"/>
-      <camera name="track" pos="-2 0 1.5" xyaxes="0 -1 0 1 0 2" mode="trackcom"/>
+      <camera name="track" pos="-2 0 1.5" xyaxes="0 -1 0   1 -0.52 1.93" mode="fixed"/>
       <site name="imu" pos="0 0 0.05" group="3"/>
       <site name="front_mount" pos="0.325 0 0.112701" group="3"/>
       <site name="rear_mount" pos="-0.325 0 0.112701" group="3"/>
@@ -49,8 +49,8 @@
       </body>
 
       <body name="sensors" pos="-0.005 -0.045 -0.095" euler="0 0 0">
-        <geom class="visual" type="mesh" contype="0" conaffinity="0" group="2" density="0" rgba="0.298039 0.298039 0.298039 1" pos="0 -0.0225 0" mesh="lidar16"/>
-        <geom class="visual" type="mesh" contype="0" conaffinity="0" group="2" density="0" rgba="0.298039 0.298039 0.298039 1" mesh="realsense_d435"/>
+        <geom class="visual" type="mesh" contype="0" conaffinity="0" group="2" density="0" rgba="0.078 0.157 0.471 0.9" pos="0 -0.0225 0" mesh="lidar16"/>
+        <geom class="visual" type="mesh" contype="0" conaffinity="0" group="2" density="0" rgba="1 1 1 0.9" mesh="realsense_d435"/>
         <camera name="D435" pos="0.4 0.045 0.415" xyaxes="0 -1 0 0 0 1" focal="1.283 1.285" sensorsize="1.777778 1" resolution="640 360"/>
         <!-- lidar16 扫描相机：绑定在激光雷达几何中心，xyaxes 令相机朝 +X 方向 -->
         <camera name="lidar16_cam" pos="0.12 0.045 0.55" xyaxes="0 -1 0 0 0 1"/>

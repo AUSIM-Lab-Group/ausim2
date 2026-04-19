@@ -394,6 +394,7 @@ void ScoutSim::InstallModelPointers(mjModel* new_model, mjData* new_data, const 
   mode_machine_.Reset();
   active_instance_ = this;
   mj_forward(model_, data_);
+  InitializeDynamicObstacleManager();
   PublishTelemetry(false);
 
   if (replace_existing) {
@@ -525,6 +526,7 @@ void ScoutSim::Step() {
   }
 
   ApplyControl();
+  PrepareDynamicObstaclesForStep();
   mj_step(model_, data_);
   PublishTelemetry();
 }
@@ -666,6 +668,7 @@ void ScoutSim::ResetSimulation() {
 
   mj_resetData(model_, data_);
   mj_forward(model_, data_);
+  dynamic_obstacle_runtime_.ResetToCurrentTime();
   next_log_time_ = 0.0;
   last_wheel_speeds_ = WheelSpeeds{};
   last_command_source_ = "hold";
@@ -673,6 +676,17 @@ void ScoutSim::ResetSimulation() {
   last_discrete_command_sequence_ = 0;
   last_discrete_command_status_ = ausim::DiscreteCommandAckStatus::kNone;
   mode_machine_.Reset();
+}
+
+void ScoutSim::InitializeDynamicObstacleManager() {
+  dynamic_obstacle_runtime_.Initialize(config_.common.dynamic_obstacle, model_, data_, "[ScoutSim]");
+}
+
+bool ScoutSim::PrepareDynamicObstaclesForStep() {
+  if (model_ == nullptr || data_ == nullptr) {
+    return false;
+  }
+  return dynamic_obstacle_runtime_.PrepareForStep(data_->time + model_->opt.timestep, true);
 }
 
 void ScoutSim::Run() {
@@ -937,6 +951,7 @@ void ScoutSim::PhysicsLoop(mj::Simulate& sim) {
 
         sim.InjectNoise(sim.key);
         ApplyControl();
+        PrepareDynamicObstaclesForStep();
         mj_step(model_, data_);
         PublishTelemetry();
 
@@ -960,6 +975,7 @@ void ScoutSim::PhysicsLoop(mj::Simulate& sim) {
 
           sim.InjectNoise(sim.key);
           ApplyControl();
+          PrepareDynamicObstaclesForStep();
           mj_step(model_, data_);
           PublishTelemetry();
 

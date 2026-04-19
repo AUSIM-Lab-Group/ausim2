@@ -14,30 +14,25 @@
   </asset>
   <worldbody>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
-    <geom name="dynamic_obs_0" type="cylinder" size="0.025 0.75" pos="3.01525 1.72293 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.82 0.26 0.26 1" />
-    <geom name="dynamic_obs_1" type="box" size="0.025 0.025 0.75" pos="4.73958 0.507217 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.2 0.62 0.4 1" />
-    <geom name="dynamic_obs_2" type="cylinder" size="0.025 0.75" pos="1.82323 -1.21287 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.22 0.42 0.8 1" />
-    <geom name="dynamic_obs_3" type="box" size="0.025 0.025 0.75" pos="4.92429 -0.60683 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.84 0.68 0.2 1" />
-    <geom name="dynamic_obs_4" type="cylinder" size="0.025 0.75" pos="2.23225 -0.0469588 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.58 0.32 0.78 1" />
-    <geom name="dynamic_obs_5" type="box" size="0.025 0.025 0.75" pos="1.39133 0.0769713 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.14 0.64 0.7 1" />
-    <geom name="dynamic_obs_6" type="cylinder" size="0.025 0.75" pos="1.02156 1.74434 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.82 0.26 0.26 1" />
-    <geom name="dynamic_obs_7" type="box" size="0.025 0.025 0.75" pos="1.42814 -1.3605 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.2 0.62 0.4 1" />
-    <geom name="dynamic_obs_8" type="cylinder" size="0.025 0.75" pos="3.36718 1.58147 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.22 0.42 0.8 1" />
-    <geom name="dynamic_obs_9" type="box" size="0.025 0.025 0.75" pos="1.46545 1.90523 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.84 0.68 0.2 1" />
-    <geom name="dynamic_obs_10" type="cylinder" size="0.025 0.75" pos="1.9517 -1.48525 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.58 0.32 0.78 1" />
-    <geom name="dynamic_obs_11" type="box" size="0.025 0.025 0.75" pos="2.63839 -0.44352 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.14 0.64 0.7 1" />
-    <geom name="dynamic_obs_12" type="cylinder" size="0.025 0.75" pos="0.614414 1.38682 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.82 0.26 0.26 1" />
-    <geom name="dynamic_obs_13" type="box" size="0.025 0.025 0.75" pos="3.13114 0.577191 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.2 0.62 0.4 1" />
-    <geom name="dynamic_obs_14" type="cylinder" size="0.025 0.75" pos="0.705238 -1.15403 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.22 0.42 0.8 1" />
-    <geom name="dynamic_obs_15" type="box" size="0.025 0.025 0.75" pos="3.61587 -1.32946 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.84 0.68 0.2 1" />
-    <geom name="dynamic_obs_16" type="cylinder" size="0.025 0.75" pos="1.95545 1.49361 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.58 0.32 0.78 1" />
-    <geom name="dynamic_obs_17" type="box" size="0.025 0.025 0.75" pos="1.92056 -1.9745 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.14 0.64 0.7 1" />
-    <geom name="dynamic_obs_18" type="cylinder" size="0.025 0.75" pos="4.98422 -0.884201 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.82 0.26 0.26 1" />
-    <geom name="dynamic_obs_19" type="box" size="0.025 0.025 0.75" pos="1.45716 0.206474 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.2 0.62 0.4 1" />
-    <geom name="dynamic_obs_20" type="cylinder" size="0.025 0.75" pos="1.41189 0.886946 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.22 0.42 0.8 1" />
-    <geom name="dynamic_obs_21" type="box" size="0.025 0.025 0.75" pos="0.76621 0.970309 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.84 0.68 0.2 1" />
-    <geom name="dynamic_obs_22" type="cylinder" size="0.025 0.75" pos="4.36939 -1.17052 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.58 0.32 0.78 1" />
-    <geom name="dynamic_obs_23" type="box" size="0.025 0.025 0.75" pos="3.11315 0.0940525 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.14 0.64 0.7 1" />
-    <geom name="dynamic_obs_24" type="cylinder" size="0.025 0.75" pos="2.40487 -0.681933 0.75" quat="1 0 0 0" contype="0" conaffinity="0" rgba="0.82 0.26 0.26 1" />
+    <geom name="dynamic_obs_0" type="cylinder" size="0.3 0.75" pos="17.2615 -3.80184 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.82 0.26 0.26 1" />
+    <geom name="dynamic_obs_1" type="box" size="0.15 0.15 0.75" pos="11.8099 2.36609 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.2 0.62 0.4 1" />
+    <geom name="dynamic_obs_2" type="cylinder" size="0.3 0.75" pos="4.2312 -3.43946 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.22 0.42 0.8 1" />
+    <geom name="dynamic_obs_3" type="box" size="0.15 0.15 0.75" pos="20.0358 -3.35136 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.84 0.68 0.2 1" />
+    <geom name="dynamic_obs_4" type="cylinder" size="0.3 0.75" pos="11.2375 1.36734 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.58 0.32 0.78 1" />
+    <geom name="dynamic_obs_5" type="box" size="0.15 0.15 0.75" pos="15.362 -0.769457 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.14 0.64 0.7 1" />
+    <geom name="dynamic_obs_6" type="cylinder" size="0.3 0.75" pos="2.60554 -3.48452 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.82 0.26 0.26 1" />
+    <geom name="dynamic_obs_7" type="box" size="0.15 0.15 0.75" pos="1.27998 -4.17569 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.2 0.62 0.4 1" />
+    <geom name="dynamic_obs_8" type="cylinder" size="0.3 0.75" pos="18.4736 -2.78279 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.22 0.42 0.8 1" />
+    <geom name="dynamic_obs_9" type="box" size="0.15 0.15 0.75" pos="17.8544 0.984037 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.84 0.68 0.2 1" />
+    <geom name="dynamic_obs_10" type="cylinder" size="0.3 0.75" pos="0.863214 1.57474 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.58 0.32 0.78 1" />
+    <geom name="dynamic_obs_11" type="box" size="0.15 0.15 0.75" pos="2.0359 2.59687 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.14 0.64 0.7 1" />
+    <geom name="dynamic_obs_12" type="cylinder" size="0.3 0.75" pos="4.04156 0.908757 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.82 0.26 0.26 1" />
+    <geom name="dynamic_obs_13" type="box" size="0.15 0.15 0.75" pos="16.6617 2.497 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.2 0.62 0.4 1" />
+    <geom name="dynamic_obs_14" type="cylinder" size="0.3 0.75" pos="9.9989 1.2203 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.22 0.42 0.8 1" />
+    <geom name="dynamic_obs_15" type="box" size="0.15 0.15 0.75" pos="14.8628 1.57109 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.84 0.68 0.2 1" />
+    <geom name="dynamic_obs_16" type="cylinder" size="0.3 0.75" pos="15.3905 3.19934 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.58 0.32 0.78 1" />
+    <geom name="dynamic_obs_17" type="box" size="0.15 0.15 0.75" pos="6.22113 4.59896 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.14 0.64 0.7 1" />
+    <geom name="dynamic_obs_18" type="cylinder" size="0.3 0.75" pos="19.4474 -3.07987 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.82 0.26 0.26 1" />
+    <geom name="dynamic_obs_19" type="box" size="0.15 0.15 0.75" pos="8.44309 -1.4694 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.2 0.62 0.4 1" />
   </worldbody>
 </mujoco>
