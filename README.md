@@ -110,8 +110,8 @@ source /opt/ros/humble/setup.bash
 - [third_party/mujoco-3.6.0/model/replicate/README.md](third_party/mujoco-3.6.0/model/replicate/README.md)：MuJoCo replicate 示例模型说明
 - [third_party/mujoco-3.6.0/model/plugin/sdf/asset/README.md](third_party/mujoco-3.6.0/model/plugin/sdf/asset/README.md)：MuJoCo SDF 插件资产说明
 - [reference/vision_msgs-humble/README.md](reference/vision_msgs-humble/README.md)：vision_msgs 参考资料说明
-- [reference/vision_msgs-humble/vision_msgs_rviz_plugins/README.md](reference/vision_msgs-humble/vision_msgs_rviz_plugins/README.md)：RViz 插件英文说明
-- [reference/vision_msgs-humble/vision_msgs_rviz_plugins/README.zh-CN.md](reference/vision_msgs-humble/vision_msgs_rviz_plugins/README.zh-CN.md)：RViz 插件中文说明
+- [reference/vision_msgs-humble/vision_msgs_rviz_plugins/README.md](third_party/vision_msgs_rviz_plugins/README.md)：RViz 插件英文说明
+- [reference/vision_msgs-humble/vision_msgs_rviz_plugins/README.zh-CN.md](third_party/vision_msgs_rviz_plugins/README.zh-CN.md)：RViz 插件中文说明
 
 ## 6. TODO（待更新）
 
