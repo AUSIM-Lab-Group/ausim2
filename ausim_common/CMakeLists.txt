@@ -99,6 +99,7 @@ target_compile_features(ausim_common_ros_bridge_core PUBLIC cxx_std_17)
 target_link_libraries(ausim_common_ros_bridge_core ausim_common_runtime)
 
 find_package(ament_cmake REQUIRED)
+find_package(ausim_msg REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -200,3 +201,16 @@ target_include_directories(lidar_data_publisher_test
 
 target_compile_features(lidar_data_publisher_test PRIVATE cxx_std_17)
 target_link_libraries(lidar_data_publisher_test PRIVATE ausim_common_ros_bridge_core)
+
+add_executable(ausim_msg_interface_test
+  tests/ausim_msg_interface_test.cpp
+)
+
+target_compile_features(ausim_msg_interface_test PRIVATE cxx_std_17)
+target_include_directories(ausim_msg_interface_test PRIVATE ${ausim_msg_INCLUDE_DIRS})
+ament_target_dependencies(
+  ausim_msg_interface_test
+  ausim_msg
+  geometry_msgs
+  std_msgs
+)

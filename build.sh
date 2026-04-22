@@ -3,6 +3,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${SCRIPT_DIR}/build"
+ROS_WORKSPACE_DIR="${BUILD_DIR}/ros_ws"
+ROS_WORKSPACE_BUILD_DIR="${ROS_WORKSPACE_DIR}/build"
+ROS_WORKSPACE_INSTALL_DIR="${ROS_WORKSPACE_DIR}/install"
 ROS_SETUP="/opt/ros/humble/setup.bash"
 
 APT_BUILD_PACKAGES=(
@@ -18,8 +21,11 @@ ROS_CHECK_PACKAGES=(
   ros-humble-rclcpp
   ros-humble-geometry-msgs
   ros-humble-nav-msgs
+  ros-humble-rosidl-default-generators
   ros-humble-sensor-msgs
   ros-humble-rosgraph-msgs
+  ros-humble-std-msgs
+  ros-humble-std-srvs
   ros-humble-tf2
   ros-humble-tf2-ros
 )
@@ -120,7 +126,34 @@ check_ros_environment() {
   # shellcheck disable=SC1090
   source "${ROS_SETUP}"
   set -u
+
+  if ! command -v colcon >/dev/null 2>&1; then
+    die "未找到 colcon。请先安装 colcon 后重试。"
+  fi
+
   log "ROS2 Humble 环境检查通过：${ROS_SETUP}"
+}
+
+run_ros_interface_build() {
+  log "开始构建 ROS 接口包 overlay，目录：${ROS_WORKSPACE_DIR}"
+
+  mkdir -p "${ROS_WORKSPACE_DIR}"
+
+  COLCON_LOG_PATH="${ROS_WORKSPACE_DIR}/log" \
+  colcon build \
+    --paths "${SCRIPT_DIR}/third_party/ausim_msg" \
+    --build-base "${ROS_WORKSPACE_BUILD_DIR}" \
+    --install-base "${ROS_WORKSPACE_INSTALL_DIR}" \
+    --merge-install
+
+  [ -f "${ROS_WORKSPACE_INSTALL_DIR}/setup.bash" ] || die "ROS 接口包 overlay 构建后缺少 ${ROS_WORKSPACE_INSTALL_DIR}/setup.bash"
+
+  set +u
+  # shellcheck source=/dev/null
+  source "${ROS_WORKSPACE_INSTALL_DIR}/setup.bash"
+  set -u
+
+  log "ROS 接口包 overlay 构建完成：${ROS_WORKSPACE_INSTALL_DIR}/setup.bash"
 }
 
 run_cmake_build() {
@@ -150,6 +183,7 @@ main() {
   collect_missing_apt_packages
   install_missing_apt_packages
   check_ros_environment
+  run_ros_interface_build
   run_cmake_build
   log "构建完成。产物位于 ${BUILD_DIR}"
 }
