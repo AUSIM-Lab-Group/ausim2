@@ -30,6 +30,7 @@ interfaces:
   cmd_vel_topic: cmd_vel
   joy_cmd_vel_topic: /joy/cmd_vel
   robot_mode_topic: teleop/mode
+  robot_mode_structured_topic: teleop/mode_structured
   joy_action_services:
     - service: /joy/action1
       event: takeoff
@@ -44,6 +45,7 @@ interfaces:
   Expect(config.interfaces.cmd_vel_topic == "cmd_vel", "expected cmd_vel_topic to stay unchanged");
   Expect(config.interfaces.joy_cmd_vel_topic == "/joy/cmd_vel", "expected joy_cmd_vel_topic to be loaded");
   Expect(config.interfaces.robot_mode_topic == "teleop/mode", "expected robot_mode_topic to be loaded");
+  Expect(config.interfaces.robot_mode_structured_topic == "teleop/mode_structured", "expected robot_mode_structured_topic to be loaded");
   Expect(config.interfaces.joy_action_services.size() == 3, "expected three joy action services");
   Expect(config.interfaces.joy_action_services[0].service == "/joy/action1", "expected first joy action service path");
   Expect(config.interfaces.joy_action_services[0].event == "takeoff", "expected first joy action event");

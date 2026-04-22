@@ -32,6 +32,7 @@
 #include "ros/publisher/data/odom_data_publisher.hpp"
 #include "ros/publisher/data/transform_data_publisher.hpp"
 #include "ros/publisher/i_telemetry_publisher.hpp"
+#include "ros/publisher/semantic/robot_mode_publisher.hpp"
 #include "ros/subscriber/data/cmd_vel_command_subscriber.hpp"
 #include "ros/subscriber/i_command_subscriber.hpp"
 #include "runtime/robot_mode_state_machine.hpp"
@@ -200,6 +201,11 @@ std::vector<std::unique_ptr<ITelemetryPublisher>> BuildPublishers(const std::sha
     publishers.push_back(std::make_unique<TransformDataPublisher>(node, odom_frame, base_frame));
   }
 
+  if (!config.interfaces.robot_mode_structured_topic.empty()) {
+    publishers.push_back(std::make_unique<RobotModePublisher>(node, ResolveTopicName(config, config.interfaces.robot_mode_structured_topic),
+                                                              config.identity));
+  }
+
   return publishers;
 }
 
@@ -305,7 +311,8 @@ class RosBridgeProcess {
       }
 
       if (!config_.interfaces.robot_mode_topic.empty()) {
-        robot_mode_publisher_ = node_->create_publisher<std_msgs::msg::String>(ResolveTopicName(config_, config_.interfaces.robot_mode_topic), 10);
+        legacy_robot_mode_publisher_ =
+            node_->create_publisher<std_msgs::msg::String>(ResolveTopicName(config_, config_.interfaces.robot_mode_topic), 10);
       }
 
       // Sensor publishers driven by sensors[] config.
@@ -398,7 +405,7 @@ class RosBridgeProcess {
 
     telemetry_timer_.reset();
     joy_action_services_.clear();
-    robot_mode_publisher_.reset();
+    legacy_robot_mode_publisher_.reset();
     subscribers_.clear();
     publishers_.clear();
     image_publishers_.clear();
@@ -560,15 +567,13 @@ class RosBridgeProcess {
     for (auto& pub : publishers_) {
       pub->Publish(*packet);
     }
-    if (robot_mode_publisher_) {
-      // TODO(robot_mode_msg): migrate this String/JSON to a structured message
-      // (ausim_common/msg/RobotMode.msg) once the custom msg package lands.
+    if (legacy_robot_mode_publisher_) {
       std_msgs::msg::String mode_message;
       mode_message.data = std::string("{\"top_state\":\"") +
                           RobotTopLevelStateName(static_cast<RobotTopLevelState>(packet->robot_top_level_state)) +
                           "\",\"sub_state\":\"" + packet->robot_mode_sub_state.data() + "\",\"accepts_motion\":" +
                           (packet->robot_mode_accepts_motion != 0 ? "true" : "false") + "}";
-      robot_mode_publisher_->publish(mode_message);
+      legacy_robot_mode_publisher_->publish(mode_message);
     }
   }
 
@@ -653,7 +658,7 @@ class RosBridgeProcess {
   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_broadcaster_;
   std::vector<std::unique_ptr<ICommandSubscriber>> subscribers_;
   std::vector<rclcpp::Service<TriggerService>::SharedPtr> joy_action_services_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr robot_mode_publisher_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr legacy_robot_mode_publisher_;
   rclcpp::TimerBase::SharedPtr telemetry_timer_;
   std::thread telemetry_thread_;
   std::thread image_thread_;

@@ -4,9 +4,14 @@
 #include <string>
 
 #include "ausim_msg/create_aabb.hpp"
+#include "ausim_msg/msg/device_capability.hpp"
+#include "ausim_msg/msg/device_status.hpp"
 #include "ausim_msg/msg/detection2_d_array.hpp"
 #include "ausim_msg/msg/detection3_d_array.hpp"
 #include "ausim_msg/msg/label_info.hpp"
+#include "ausim_msg/msg/robot_mode.hpp"
+#include "ausim_msg/msg/simulation_event.hpp"
+#include "ausim_msg/msg/simulation_event_ack.hpp"
 
 namespace {
 
@@ -92,6 +97,45 @@ void TestLabelInfo() {
   ExpectNear(info.threshold, 0.35, 1e-6, "expected threshold value");
 }
 
+void TestSemanticMessages() {
+  ausim_msg::msg::RobotMode robot_mode;
+  robot_mode.vehicle_id = "uav1";
+  robot_mode.ros_namespace = "/uav1";
+  robot_mode.top_state = ausim_msg::msg::RobotMode::TOP_STATE_AUTO;
+  robot_mode.sub_state = "mission";
+  robot_mode.accepts_motion = true;
+  robot_mode.last_discrete_command_sequence = 42;
+  robot_mode.last_discrete_command_status = ausim_msg::msg::RobotMode::ACK_SUCCESS;
+
+  Expect(robot_mode.top_state == ausim_msg::msg::RobotMode::TOP_STATE_AUTO, "expected RobotMode top state constant");
+  Expect(robot_mode.last_discrete_command_status == ausim_msg::msg::RobotMode::ACK_SUCCESS, "expected RobotMode ack constant");
+
+  ausim_msg::msg::SimulationEvent event;
+  event.kind = ausim_msg::msg::SimulationEvent::KIND_GENERIC_EVENT;
+  event.event_name = "takeoff";
+  event.sequence = 7;
+  Expect(event.sequence == 7, "expected simulation event sequence");
+
+  ausim_msg::msg::SimulationEventAck ack;
+  ack.status = ausim_msg::msg::SimulationEventAck::STATUS_UNSUPPORTED;
+  ack.detail = "not available";
+  Expect(ack.status == ausim_msg::msg::SimulationEventAck::STATUS_UNSUPPORTED, "expected event ack status");
+
+  ausim_msg::msg::DeviceCapability capability;
+  capability.device_name = "front_camera";
+  capability.device_type = "camera";
+  capability.data_topics.push_back("/uav1/camera/image_raw");
+  capability.traits.push_back("rgb");
+  Expect(capability.data_topics.size() == 1, "expected one capability topic");
+
+  ausim_msg::msg::DeviceStatus status;
+  status.device_name = "front_camera";
+  status.enabled = true;
+  status.healthy = true;
+  status.state = "streaming";
+  Expect(status.healthy, "expected device status to be healthy");
+}
+
 }  // namespace
 
 int main() {
@@ -99,5 +143,6 @@ int main() {
   TestCreateAABB3D();
   TestNestedDetectionMessages();
   TestLabelInfo();
+  TestSemanticMessages();
   return 0;
 }

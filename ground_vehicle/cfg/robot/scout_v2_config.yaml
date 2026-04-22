@@ -45,6 +45,7 @@ interfaces:
     - { service: /joy/action3, event: reset }
     - { service: /joy/action4, event: estop }
   robot_mode_topic: teleop/mode
+  robot_mode_structured_topic: teleop/mode_structured
 
 mode_machine: ../teleop/scout_default.yaml
 

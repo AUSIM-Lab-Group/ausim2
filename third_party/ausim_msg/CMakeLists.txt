@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(ament_cmake REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -21,18 +22,23 @@ set(msg_files
   msg/Detection2DArray.msg
   msg/Detection3D.msg
   msg/Detection3DArray.msg
+  msg/DeviceCapability.msg
+  msg/DeviceStatus.msg
   msg/LabelInfo.msg
   msg/ObjectHypothesis.msg
   msg/ObjectHypothesisWithPose.msg
   msg/Point2D.msg
   msg/Pose2D.msg
+  msg/RobotMode.msg
+  msg/SimulationEvent.msg
+  msg/SimulationEventAck.msg
   msg/VisionClass.msg
   msg/VisionInfo.msg
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
-  DEPENDENCIES std_msgs geometry_msgs
+  DEPENDENCIES builtin_interfaces std_msgs geometry_msgs
 )
 
 install(DIRECTORY include/${PROJECT_NAME}/

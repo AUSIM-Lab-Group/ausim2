@@ -71,6 +71,7 @@ target_link_libraries(ausim_mujoco_runtime
 )
 
 add_library(ausim_common_ros_bridge_core STATIC
+  src/converts/ausim_msg/robot_mode.cpp
   src/converts/data/clock.cpp
   src/converts/data/cmd_vel.cpp
   src/converts/data/common.cpp
@@ -85,6 +86,7 @@ add_library(ausim_common_ros_bridge_core STATIC
   src/ros/publisher/data/lidar_data_publisher.cpp
   src/ros/publisher/data/odom_data_publisher.cpp
   src/ros/publisher/data/transform_data_publisher.cpp
+  src/ros/publisher/semantic/robot_mode_publisher.cpp
   src/ros/ros2_bridge.cpp
   src/ros/subscriber/data/cmd_vel_command_subscriber.cpp
   src/ros/subscriber/data/teleop_event_subscriber.cpp
@@ -100,6 +102,7 @@ target_link_libraries(ausim_common_ros_bridge_core ausim_common_runtime)
 
 find_package(ament_cmake REQUIRED)
 find_package(ausim_msg REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -112,6 +115,7 @@ find_package(tf2_ros REQUIRED)
 
 ament_target_dependencies(
   ausim_common_ros_bridge_core
+  ausim_msg
   rclcpp
   geometry_msgs
   nav_msgs
@@ -211,6 +215,19 @@ target_include_directories(ausim_msg_interface_test PRIVATE ${ausim_msg_INCLUDE_
 ament_target_dependencies(
   ausim_msg_interface_test
   ausim_msg
+  builtin_interfaces
   geometry_msgs
   std_msgs
 )
+
+add_executable(robot_mode_semantic_test
+  tests/robot_mode_semantic_test.cpp
+)
+
+target_include_directories(robot_mode_semantic_test
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(robot_mode_semantic_test PRIVATE cxx_std_17)
+target_link_libraries(robot_mode_semantic_test PRIVATE ausim_common_ros_bridge_core)

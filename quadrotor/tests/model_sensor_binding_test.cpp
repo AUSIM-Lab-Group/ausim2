@@ -86,6 +86,7 @@ interfaces:
   imu_topic: imu/data
   clock_topic: /clock
   robot_mode_topic: teleop/mode
+  robot_mode_structured_topic: teleop/mode_structured
 
 frames:
   odom: odom

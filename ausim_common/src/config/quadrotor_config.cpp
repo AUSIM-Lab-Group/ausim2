@@ -366,6 +366,7 @@ void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, Quadro
   AssignIfPresent(interfaces_node, "clock_topic", &config->interfaces.clock_topic);
   LoadJoyActionServices(interfaces_node, &config->interfaces.joy_action_services);
   AssignIfPresent(interfaces_node, "robot_mode_topic", &config->interfaces.robot_mode_topic);
+  AssignIfPresent(interfaces_node, "robot_mode_structured_topic", &config->interfaces.robot_mode_structured_topic);
 
   const YAML::Node frames_node = root["frames"];
   AssignIfPresent(frames_node, "odom", &config->frames.odom);

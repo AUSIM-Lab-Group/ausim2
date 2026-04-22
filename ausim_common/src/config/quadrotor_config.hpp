@@ -112,6 +112,7 @@ struct RosInterfaceConfig {
   std::string clock_topic = "/clock";
   std::vector<JoyActionServiceConfig> joy_action_services;
   std::string robot_mode_topic = "";
+  std::string robot_mode_structured_topic = "";
 };
 
 struct RosFrameConfig {
