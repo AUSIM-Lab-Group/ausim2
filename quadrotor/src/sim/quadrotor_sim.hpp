@@ -39,6 +39,11 @@ class QuadrotorSim {
   const mjModel* model() const { return model_; }
   const mjData* data() const { return data_; }
 
+#ifdef AUSIM_TESTING
+  void TestViewerStepOnce();
+  void TestViewerPauseTick(bool pause_update);
+#endif
+
  private:
   struct CameraStreamRuntime;
 
@@ -74,6 +79,7 @@ class QuadrotorSim {
   bool IsDepthStreamRenderable(const CameraStreamRuntime& stream) const;
   bool HasRenderableDepthStream() const;
   bool HasDueDepthStreamAfterStep(double next_sim_time) const;
+  void FinalizeStep(bool render_camera_frames, bool update_viewer_overlay);
 
   // Dynamic obstacle management
   void InitializeDynamicObstacleManager();

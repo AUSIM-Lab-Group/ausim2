@@ -528,9 +528,33 @@ void ScoutSim::Step() {
   ApplyControl();
   PrepareDynamicObstaclesForStep();
   mj_step(model_, data_);
-  PublishTelemetry();
-  PublishDynamicObstaclesSnapshotIfDue();
+  FinalizeStep();
 }
+
+#ifdef AUSIM_TESTING
+void ScoutSim::TestViewerStepOnce() {
+  if (model_ == nullptr || data_ == nullptr) {
+    throw std::runtime_error("Simulation is not loaded.");
+  }
+
+  ApplyControl();
+  PrepareDynamicObstaclesForStep();
+  mj_step(model_, data_);
+  FinalizeStep();
+}
+
+void ScoutSim::TestViewerPauseTick(bool pause_update) {
+  if (model_ == nullptr || data_ == nullptr) {
+    throw std::runtime_error("Simulation is not loaded.");
+  }
+
+  mj_forward(model_, data_);
+  if (pause_update) {
+    mju_copy(data_->qacc_warmstart, data_->qacc, model_->nv);
+  }
+  FinalizeStep(false);
+}
+#endif
 
 void ScoutSim::ApplyControl() {
   if (const std::optional<ausim::DiscreteCommand> discrete_command = ausim::ReadDiscreteCommand();
@@ -620,6 +644,11 @@ void ScoutSim::PublishTelemetry(bool log_state) {
   }
 
   PublishLidar();
+}
+
+void ScoutSim::FinalizeStep(bool log_state) {
+  PublishTelemetry(log_state);
+  PublishDynamicObstaclesSnapshotIfDue();
 }
 
 void ScoutSim::PublishLidar() {
@@ -977,7 +1006,7 @@ void ScoutSim::PhysicsLoop(mj::Simulate& sim) {
         ApplyControl();
         PrepareDynamicObstaclesForStep();
         mj_step(model_, data_);
-        PublishTelemetry();
+        FinalizeStep();
 
         if (const char* message = Diverged(model_->opt.disableflags, data_)) {
           sim.run = 0;
@@ -1001,7 +1030,7 @@ void ScoutSim::PhysicsLoop(mj::Simulate& sim) {
           ApplyControl();
           PrepareDynamicObstaclesForStep();
           mj_step(model_, data_);
-          PublishTelemetry();
+          FinalizeStep();
 
           if (const char* message = Diverged(model_->opt.disableflags, data_)) {
             sim.run = 0;
@@ -1029,7 +1058,7 @@ void ScoutSim::PhysicsLoop(mj::Simulate& sim) {
         mju_copy(data_->qacc_warmstart, data_->qacc, model_->nv);
       }
       sim.speed_changed = true;
-      PublishTelemetry(false);
+      FinalizeStep(false);
     }
   }
 }

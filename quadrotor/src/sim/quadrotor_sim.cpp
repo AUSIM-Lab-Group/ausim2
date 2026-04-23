@@ -498,6 +498,32 @@ void QuadrotorSim::Step() {
   PublishDynamicObstaclesSnapshotIfDue();
 }
 
+#ifdef AUSIM_TESTING
+void QuadrotorSim::TestViewerStepOnce() {
+  if (model_ == nullptr || data_ == nullptr) {
+    throw std::runtime_error("Simulation is not loaded.");
+  }
+
+  PrepareDynamicObstaclesForStep();
+  mj_step(model_, data_);
+  ProcessPendingResetSimulation();
+  FinalizeStep(true, true);
+}
+
+void QuadrotorSim::TestViewerPauseTick(bool pause_update) {
+  if (model_ == nullptr || data_ == nullptr) {
+    throw std::runtime_error("Simulation is not loaded.");
+  }
+
+  mj_forward(model_, data_);
+  if (pause_update) {
+    mju_copy(data_->qacc_warmstart, data_->qacc, model_->nv);
+  }
+  UpdateViewerModeOverlay();
+  PublishDynamicObstaclesSnapshotIfDue();
+}
+#endif
+
 void QuadrotorSim::Run() {
   stop_requested_.store(false);
   InitializeVisualizationState();
@@ -631,6 +657,16 @@ void QuadrotorSim::ProcessPendingResetSimulation() {
     viewer_->speed_changed = true;
     viewer_->pending_.ui_update_simulation = true;
   }
+}
+
+void QuadrotorSim::FinalizeStep(bool render_camera_frames, bool update_viewer_overlay) {
+  if (render_camera_frames) {
+    RenderCameraFramesIfNeeded();
+  }
+  if (update_viewer_overlay) {
+    UpdateViewerModeOverlay();
+  }
+  PublishDynamicObstaclesSnapshotIfDue();
 }
 
 void QuadrotorSim::UpdateViewerModeOverlay() {
@@ -803,9 +839,8 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
           sim.run = 0;
           SetLoadError(sim, message);
         } else {
+          FinalizeStep(true, true);
           stepped = true;
-          RenderCameraFramesIfNeeded();
-          UpdateViewerModeOverlay();
         }
       } else {
         bool measured = false;
@@ -830,9 +865,8 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
             break;
           }
 
+          FinalizeStep(true, true);
           stepped = true;
-          RenderCameraFramesIfNeeded();
-          UpdateViewerModeOverlay();
           if (data_->time < previous_sim) {
             break;
           }
@@ -854,6 +888,7 @@ void QuadrotorSim::PhysicsLoop(mj::Simulate& sim) {
       }
       sim.speed_changed = true;
       UpdateViewerModeOverlay();
+      PublishDynamicObstaclesSnapshotIfDue();
     }
   }
 }

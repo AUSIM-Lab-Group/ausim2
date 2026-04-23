@@ -32,6 +32,8 @@ target_compile_definitions(ground_vehicle_sim_core
   PUBLIC
     GROUND_VEHICLE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
     QUADROTOR_SOURCE_DIR="${CMAKE_SOURCE_DIR}/quadrotor"
+  PRIVATE
+    AUSIM_TESTING
 )
 
 target_link_libraries(ground_vehicle_sim_core
@@ -64,6 +66,20 @@ target_include_directories(dynamic_obstacle_test
 
 target_compile_features(dynamic_obstacle_test PRIVATE cxx_std_17)
 target_link_libraries(dynamic_obstacle_test PRIVATE ground_vehicle_sim_core "${MUJOCO_IMPORTED_TARGET}")
+
+add_executable(scout_dynamic_obstacle_viewer_publish_test
+  tests/dynamic_obstacle_viewer_publish_test.cpp
+)
+
+target_include_directories(scout_dynamic_obstacle_viewer_publish_test
+  PRIVATE
+    "${CMAKE_SOURCE_DIR}/ausim_common/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(scout_dynamic_obstacle_viewer_publish_test PRIVATE cxx_std_17)
+target_compile_definitions(scout_dynamic_obstacle_viewer_publish_test PRIVATE AUSIM_TESTING)
+target_link_libraries(scout_dynamic_obstacle_viewer_publish_test PRIVATE ground_vehicle_sim_core "${MUJOCO_IMPORTED_TARGET}")
 
 if(MUJOCO_RESOLVED_LIBRARY_DIR)
   set_target_properties(scout PROPERTIES

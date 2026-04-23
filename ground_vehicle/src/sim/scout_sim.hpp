@@ -42,12 +42,18 @@ class ScoutSim {
   const mjModel* model() const { return model_; }
   const mjData* data() const { return data_; }
 
+#ifdef AUSIM_TESTING
+  void TestViewerStepOnce();
+  void TestViewerPauseTick(bool pause_update);
+#endif
+
  private:
   void ResolveBindings();
   void ResolveSensor(SensorBinding* binding) const;
   void ApplyControl();
   bool HandleDiscreteCommand(const ausim::DiscreteCommand& command);
   void PublishTelemetry(bool log_state = true);
+  void FinalizeStep(bool log_state = true);
   void PublishLidar();
   void LogStateIfNeeded(const ausim::TelemetrySnapshot& snapshot) const;
   void RunHeadless();

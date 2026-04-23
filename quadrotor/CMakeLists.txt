@@ -64,6 +64,8 @@ target_compile_features(quadrotor_sim_core PUBLIC cxx_std_17)
 target_compile_definitions(quadrotor_sim_core
   PUBLIC
     QUADROTOR_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+  PRIVATE
+    AUSIM_TESTING
 )
 
 target_link_libraries(quadrotor_sim_core
@@ -135,6 +137,20 @@ target_include_directories(dynamic_obstacle_no_depth_test
 
 target_compile_features(dynamic_obstacle_no_depth_test PRIVATE cxx_std_17)
 target_link_libraries(dynamic_obstacle_no_depth_test PRIVATE quadrotor_sim_core)
+
+add_executable(quadrotor_dynamic_obstacle_viewer_publish_test
+  tests/dynamic_obstacle_viewer_publish_test.cpp
+)
+
+target_include_directories(quadrotor_dynamic_obstacle_viewer_publish_test
+  PRIVATE
+    "${CMAKE_SOURCE_DIR}/ausim_common/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(quadrotor_dynamic_obstacle_viewer_publish_test PRIVATE cxx_std_17)
+target_compile_definitions(quadrotor_dynamic_obstacle_viewer_publish_test PRIVATE AUSIM_TESTING)
+target_link_libraries(quadrotor_dynamic_obstacle_viewer_publish_test PRIVATE quadrotor_sim_core)
 
 set(_quadrotor_runtime_rpaths)
 if(MUJOCO_RESOLVED_LIBRARY_DIR)

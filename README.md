@@ -81,7 +81,10 @@
 
 ```bash
 source /opt/ros/humble/setup.bash
+source build/ros_ws/install/setup.bash
 ```
+
+像 `/dyn_obstacle` 这类使用 `ausim_msg/msg/BoundingBox3DArray` 的自定义消息话题，若未 source `build/ros_ws/install/setup.bash`，`ros2 topic echo` 无法正确解析消息类型。
 
 ## 4. 模块文档
 
