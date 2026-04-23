@@ -38,6 +38,8 @@ class DynamicObstacleManager {
   struct RuntimeObstacle {
     int geom_id = -1;
     int geom_pos_adr = -1;
+    int mocap_body_id = -1;
+    int mocap_addr = -1;
     std::string name;
     double initial_x = 0.0;
     double initial_y = 0.0;
@@ -56,6 +58,7 @@ class DynamicObstacleManager {
     double min_z = 0.0;
     double max_z = 0.0;
     bool collidable = false;
+    bool is_mocap = false;
   };
 
   struct WorkRange {
@@ -64,7 +67,8 @@ class DynamicObstacleManager {
   };
 
   void ScanSceneObstacles();
-  RuntimeObstacle BuildRuntimeObstacle(int geom_id) const;
+  int FindObstacleGeomForBody(int body_id, const std::string& body_name) const;
+  RuntimeObstacle BuildRuntimeObstacle(int geom_id, int mocap_body_id = -1) const;
   void ApplySingleObstacleTrajectory(RuntimeObstacle& obs, double sim_time, double* geom_pos);
   void ApplyTrajectoryRange(
       std::size_t begin,

@@ -10,8 +10,8 @@ random_seed: 0
 dynamic: true
 
 # Keep generated obstacles out of MuJoCo contact dynamics.
-# false: depth/RGB visible, no physical collision; keeps updates at sensor cadence
-# true: physical collision enabled; forces obstacle updates at physics cadence
+# false: depth/RGB visible, no physical collision; keeps the direct geom path
+# true: physical collision enabled; generator wraps each obstacle in a mocap body
 collision_enabled: true
 
 # Enable verbose per-obstacle initialization logs and full debug dumps.
@@ -60,6 +60,8 @@ parallel_threshold: 16
 # Example XML additions:
 #   <geom name="dynamic_obs_0" type="cylinder" size="0.3 0.5"
 #         pos="1.0 2.0 1.0" rgba="0.7 0.2 0.2 1" contype="0" conaffinity="0"/>
-#   <geom name="dynamic_obs_1" type="box" size="0.3 0.3 0.5"
-#         pos="2.0 1.0 0.5" rgba="0.2 0.7 0.2 1" contype="0" conaffinity="0"/>
+#   <body name="dynamic_obs_1" mocap="true" pos="2.0 1.0 0.5">
+#     <geom name="dynamic_obs_1_geom" type="box" size="0.3 0.3 0.5"
+#           rgba="0.2 0.7 0.2 1" contype="1" conaffinity="1"/>
+#   </body>
 # ---------------------------------------------------------------------------

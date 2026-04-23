@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(CTest)
+
 # Resolve MuJoCo dependency if not already done
 if(NOT DEFINED MUJOCO_IMPORTED_TARGET)
   set(MUJOCO_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../mujoco-3.6.0" CACHE PATH
@@ -45,3 +47,16 @@ target_link_libraries(dynamic_obs_generator
 
 # Install the obstacle.yaml template
 install(FILES obstacle.yaml DESTINATION share/dynamic_obs_generator)
+
+if(BUILD_TESTING)
+  add_executable(dynamic_obstacle_manager_test
+    tests/dynamic_obstacle_manager_test.cpp
+  )
+
+  target_link_libraries(dynamic_obstacle_manager_test
+    PRIVATE
+      dynamic_obs_generator
+  )
+
+  add_test(NAME dynamic_obstacle_manager_test COMMAND dynamic_obstacle_manager_test)
+endif()

@@ -4,12 +4,14 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
+#include <unordered_set>
 
 namespace {
 
 constexpr double kStaticSpeedEpsilon = 1e-6;
 constexpr double kTwoPi = 6.28318530717958647692;
 constexpr std::size_t kPreferredObstaclesPerThread = 8;
+constexpr const char* kDynamicObstaclePrefix = "dynamic_obs_";
 
 double ClampToBounds(double value, double min_value, double max_value) {
   if (value < min_value) {
@@ -44,6 +46,10 @@ double ComputeReflectedCoordinate(
     return min_value + offset;
   }
   return max_value - (offset - span);
+}
+
+bool HasDynamicObstaclePrefix(const std::string& name) {
+  return name.rfind(kDynamicObstaclePrefix, 0) == 0;
 }
 
 }  // namespace
@@ -121,25 +127,43 @@ bool DynamicObstacleManager::Initialize(
 void DynamicObstacleManager::ScanSceneObstacles() {
   moving_obstacles_.clear();
   obstacle_count_ = 0;
+  std::unordered_set<int> handled_geom_ids;
 
-  for (int geom_id = 0; geom_id < model_->ngeom; ++geom_id) {
-    const char* geom_name = mj_id2name(model_, mjOBJ_GEOM, geom_id);
-    if (geom_name == nullptr) {
+  for (int body_id = 0; body_id < model_->nbody; ++body_id) {
+    const char* body_name = mj_id2name(model_, mjOBJ_BODY, body_id);
+    if (body_name == nullptr) {
       continue;
     }
 
-    const std::string name(geom_name);
-    if (name.rfind("dynamic_obs_", 0) != 0) {
+    const std::string name(body_name);
+    if (!HasDynamicObstaclePrefix(name) || model_->body_mocapid[body_id] < 0) {
       continue;
     }
 
+    const int geom_id = FindObstacleGeomForBody(body_id, name);
+    if (geom_id < 0) {
+      if (config_.debug) {
+        std::cerr << "[DynamicObstacleManager] Skipping mocap obstacle body '" << name
+                  << "' because no matching child geom was found." << std::endl;
+      }
+      continue;
+    }
+
+    handled_geom_ids.insert(geom_id);
     ++obstacle_count_;
-    RuntimeObstacle obs = BuildRuntimeObstacle(geom_id);
+
+    RuntimeObstacle obs = BuildRuntimeObstacle(geom_id, body_id);
     if (config_.debug) {
       std::cout << "[DynamicObstacleManager] Found obstacle: " << obs.name
                 << " at (" << obs.initial_x << ", " << obs.initial_y << ", "
                 << obs.initial_z << "), collidable="
-                << (obs.collidable ? "yes" : "no") << std::endl;
+                << (obs.collidable ? "yes" : "no")
+                << ", path=" << (obs.is_mocap ? "mocap" : "direct") << std::endl;
+    }
+    if (obs.collidable && !obs.is_mocap) {
+      std::cerr << "[DynamicObstacleManager] Warning: collidable dynamic_obs must use a mocap body. "
+                   "Teleporting a collidable geom can destabilize contact solving."
+                << " Obstacle: " << obs.name << std::endl;
     }
 
     if (!config_.HasDynamicMotion()) {
@@ -156,25 +180,126 @@ void DynamicObstacleManager::ScanSceneObstacles() {
         &obs.velocity_x,
         &obs.velocity_y,
         &obs.velocity_z);
-    requires_physics_rate_updates_ = requires_physics_rate_updates_ || obs.collidable;
+    requires_physics_rate_updates_ =
+        requires_physics_rate_updates_ || (obs.collidable && !obs.is_mocap);
+    moving_obstacles_.push_back(obs);
+  }
+
+  for (int geom_id = 0; geom_id < model_->ngeom; ++geom_id) {
+    if (handled_geom_ids.count(geom_id) != 0) {
+      continue;
+    }
+
+    const char* geom_name = mj_id2name(model_, mjOBJ_GEOM, geom_id);
+    if (geom_name == nullptr) {
+      continue;
+    }
+
+    const std::string name(geom_name);
+    if (!HasDynamicObstaclePrefix(name)) {
+      continue;
+    }
+
+    ++obstacle_count_;
+    RuntimeObstacle obs = BuildRuntimeObstacle(geom_id);
+    if (config_.debug) {
+      std::cout << "[DynamicObstacleManager] Found obstacle: " << obs.name
+                << " at (" << obs.initial_x << ", " << obs.initial_y << ", "
+                << obs.initial_z << "), collidable="
+                << (obs.collidable ? "yes" : "no")
+                << ", path=" << (obs.is_mocap ? "mocap" : "direct") << std::endl;
+    }
+    if (obs.collidable && !obs.is_mocap) {
+      std::cerr << "[DynamicObstacleManager] Warning: collidable dynamic_obs must use a mocap body. "
+                   "Teleporting a collidable geom can destabilize contact solving."
+                << " Obstacle: " << obs.name << std::endl;
+    }
+
+    if (!config_.HasDynamicMotion()) {
+      continue;
+    }
+
+    obs.speed = GenerateRandomSpeed();
+    if (obs.speed <= kStaticSpeedEpsilon) {
+      continue;
+    }
+
+    GenerateRandomVelocity(
+        obs.speed,
+        &obs.velocity_x,
+        &obs.velocity_y,
+        &obs.velocity_z);
+    requires_physics_rate_updates_ =
+        requires_physics_rate_updates_ || (obs.collidable && !obs.is_mocap);
     moving_obstacles_.push_back(obs);
   }
 }
 
-DynamicObstacleManager::RuntimeObstacle DynamicObstacleManager::BuildRuntimeObstacle(int geom_id) const {
+int DynamicObstacleManager::FindObstacleGeomForBody(int body_id, const std::string& body_name) const {
+  int fallback_geom_id = -1;
+  const std::string preferred_geom_name = body_name + "_geom";
+  for (int geom_id = 0; geom_id < model_->ngeom; ++geom_id) {
+    if (model_->geom_bodyid[geom_id] != body_id) {
+      continue;
+    }
+
+    if (fallback_geom_id < 0) {
+      fallback_geom_id = geom_id;
+    }
+
+    const char* geom_name = mj_id2name(model_, mjOBJ_GEOM, geom_id);
+    if (geom_name == nullptr) {
+      continue;
+    }
+    if (preferred_geom_name == geom_name || body_name == geom_name) {
+      return geom_id;
+    }
+  }
+
+  return fallback_geom_id;
+}
+
+DynamicObstacleManager::RuntimeObstacle DynamicObstacleManager::BuildRuntimeObstacle(
+    int geom_id,
+    int mocap_body_id) const {
   RuntimeObstacle obs;
   obs.geom_id = geom_id;
   obs.geom_pos_adr = geom_id * 3;
 
-  if (const char* geom_name = mj_id2name(model_, mjOBJ_GEOM, geom_id); geom_name != nullptr) {
+  const char* geom_name = mj_id2name(model_, mjOBJ_GEOM, geom_id);
+  if (geom_name != nullptr) {
     obs.name = geom_name;
   }
   obs.collidable =
       model_->geom_contype[geom_id] != 0 || model_->geom_conaffinity[geom_id] != 0;
 
-  obs.initial_x = model_->geom_pos[obs.geom_pos_adr + 0];
-  obs.initial_y = model_->geom_pos[obs.geom_pos_adr + 1];
-  obs.initial_z = model_->geom_pos[obs.geom_pos_adr + 2];
+  if (mocap_body_id >= 0) {
+    obs.is_mocap = true;
+    obs.mocap_body_id = mocap_body_id;
+    if (const char* body_name = mj_id2name(model_, mjOBJ_BODY, mocap_body_id);
+        body_name != nullptr) {
+      obs.name = body_name;
+    }
+
+    const int mocap_id = model_->body_mocapid[mocap_body_id];
+    if (mocap_id >= 0) {
+      obs.mocap_addr = mocap_id * 3;
+    }
+
+    const double* initial_pos = nullptr;
+    if (data_ != nullptr && obs.mocap_addr >= 0) {
+      initial_pos = data_->mocap_pos + obs.mocap_addr;
+    } else {
+      initial_pos = model_->body_pos + mocap_body_id * 3;
+    }
+    obs.initial_x = initial_pos[0];
+    obs.initial_y = initial_pos[1];
+    obs.initial_z = initial_pos[2];
+  } else {
+    obs.initial_x = model_->geom_pos[obs.geom_pos_adr + 0];
+    obs.initial_y = model_->geom_pos[obs.geom_pos_adr + 1];
+    obs.initial_z = model_->geom_pos[obs.geom_pos_adr + 2];
+  }
 
   const int size_adr = geom_id * 3;
   const mjtGeom geom_type = static_cast<mjtGeom>(model_->geom_type[geom_id]);
@@ -433,6 +558,15 @@ void DynamicObstacleManager::ApplySingleObstacleTrajectory(
         obs.initial_z, obs.velocity_z, obs.min_z, obs.max_z, sim_time);
   }
 
+  if (obs.is_mocap) {
+    if (obs.mocap_addr >= 0 && data_ != nullptr) {
+      data_->mocap_pos[obs.mocap_addr + 0] = new_x;
+      data_->mocap_pos[obs.mocap_addr + 1] = new_y;
+      data_->mocap_pos[obs.mocap_addr + 2] = new_z;
+    }
+    return;
+  }
+
   geom_pos[obs.geom_pos_adr + 0] = new_x;
   geom_pos[obs.geom_pos_adr + 1] = new_y;
   geom_pos[obs.geom_pos_adr + 2] = new_z;
@@ -453,6 +587,7 @@ std::string DynamicObstacleManager::GetDebugInfo() const {
   oss << "    random_seed: " << config_.random_seed << "\n";
   oss << "    obstacle_count: " << config_.obstacle_count << "\n";
   oss << "    speed range: [" << config_.min_speed << ", " << config_.max_speed << "] m/s\n";
+  oss << "    collision_enabled: " << (config_.collision_enabled ? "true" : "false") << "\n";
   oss << "    update_threads: " << config_.update_threads << "\n";
   oss << "    parallel_threshold: " << config_.parallel_threshold << "\n";
   oss << "    active_update_threads: " << total_update_threads_ << "\n";
@@ -472,7 +607,8 @@ std::string DynamicObstacleManager::GetDebugInfo() const {
           << ", speed=" << obs.speed << " m/s"
           << ", velocity=(" << obs.velocity_x << ", " << obs.velocity_y << ", "
           << obs.velocity_z << ")"
-          << ", collidable=" << (obs.collidable ? "yes" : "no") << "\n";
+          << ", collidable=" << (obs.collidable ? "yes" : "no")
+          << ", path=" << (obs.is_mocap ? "mocap" : "direct") << "\n";
     }
   } else if (!moving_obstacles_.empty()) {
     oss << "  Moving obstacle details hidden (set debug=true to print each obstacle).\n";

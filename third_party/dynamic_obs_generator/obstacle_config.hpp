@@ -43,6 +43,7 @@ struct ObstacleConfig {
   // Motion parameters
   double min_speed = 0.0;   // m/s
   double max_speed = 1.0;   // m/s
+  bool collision_enabled = false;
   int update_threads = 0;   // 0 = auto, 1 = single-threaded, >1 = total update threads
   int parallel_threshold = 16;  // minimum moving obstacles before enabling worker threads
 

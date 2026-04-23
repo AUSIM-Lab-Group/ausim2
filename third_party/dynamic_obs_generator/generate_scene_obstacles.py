@@ -265,12 +265,17 @@ def remove_dynamic_obstacles(root: xml_et.Element) -> int:
     removed = 0
     for parent in root.iter():
         for child in list(parent):
-            if child.tag != "geom":
-                continue
             name = child.attrib.get("name", "")
-            if name.startswith(OBSTACLE_NAME_PREFIX):
-                parent.remove(child)
-                removed += 1
+            if not name.startswith(OBSTACLE_NAME_PREFIX):
+                continue
+            if child.tag not in {"geom", "body"}:
+                continue
+            if child.tag == "body" and child.attrib.get("mocap") != "true":
+                continue
+            if child.tag == "geom" and parent.tag == "body" and parent.attrib.get("mocap") == "true":
+                continue
+            parent.remove(child)
+            removed += 1
     return removed
 
 
@@ -407,11 +412,24 @@ def inject_obstacles(worldbody: xml_et.Element, obstacles: list[GeneratedObstacl
     conaffinity = "1" if collision_enabled else "0"
 
     for index, obstacle in enumerate(obstacles):
-        geom = xml_et.SubElement(worldbody, "geom")
-        geom.attrib["name"] = obstacle.name
+        parent = worldbody
+        geom_name = obstacle.name
+        if collision_enabled:
+            parent = xml_et.SubElement(
+                worldbody,
+                "body",
+                name=obstacle.name,
+                mocap="true",
+                pos=list_to_str(obstacle.position),
+            )
+            geom_name = f"{obstacle.name}_geom"
+
+        geom = xml_et.SubElement(parent, "geom")
+        geom.attrib["name"] = geom_name
+        if not collision_enabled:
+            geom.attrib["pos"] = list_to_str(obstacle.position)
         geom.attrib["type"] = obstacle.geom_type
         geom.attrib["size"] = list_to_str(obstacle.size)
-        geom.attrib["pos"] = list_to_str(obstacle.position)
         geom.attrib["quat"] = IDENTITY_QUAT
         geom.attrib["contype"] = contype
         geom.attrib["conaffinity"] = conaffinity

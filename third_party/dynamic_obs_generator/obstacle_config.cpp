@@ -198,6 +198,7 @@ ObstacleConfig LoadConfigFromYaml(const std::string& path) {
   // Speed parameters
   AssignIfPresent(root, "min_speed", &config.min_speed);
   AssignIfPresent(root, "max_speed", &config.max_speed);
+  AssignIfPresent(root, "collision_enabled", &config.collision_enabled);
   AssignIfPresent(root, "update_threads", &config.update_threads);
   AssignIfPresent(root, "parallel_threshold", &config.parallel_threshold);
 

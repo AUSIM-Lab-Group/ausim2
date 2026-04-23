@@ -18,23 +18,27 @@ dynamic_obs_generator/
 
 ### 1. 在你的场景 XML 中添加障碍物
 
-在 MuJoCo XML 的 `<worldbody>` 内添加带有 `dynamic_obs_` 前缀名称的 geom：
+在 MuJoCo XML 的 `<worldbody>` 内添加带有 `dynamic_obs_` 前缀名称的障碍物。无碰撞模式可直接使用 geom；需要物理碰撞时，必须使用 mocap body 包裹：
 
 ```xml
 <worldbody>
   <!-- 你的其他内容 -->
 
-  <!-- 动态障碍物示例 -->
+  <!-- 仅可视化/无碰撞 -->
   <geom name="dynamic_obs_0" type="cylinder" size="0.3 0.5"
         pos="1.0 2.0 1.0" rgba="0.7 0.2 0.2 1" contype="0" conaffinity="0"/>
-  <geom name="dynamic_obs_1" type="box" size="0.3 0.3 0.5"
-        pos="2.0 1.0 0.5" rgba="0.2 0.7 0.2 1" contype="0" conaffinity="0"/>
-  <geom name="dynamic_obs_2" type="sphere" size="0.4"
-        pos="0.5 0.5 1.0" rgba="0.2 0.2 0.7 1" contype="0" conaffinity="0"/>
+
+  <!-- 可碰撞：必须使用 mocap body -->
+  <body name="dynamic_obs_1" mocap="true" pos="2.0 1.0 0.5">
+    <geom name="dynamic_obs_1_geom" type="box" size="0.3 0.3 0.5"
+          rgba="0.2 0.7 0.2 1" contype="1" conaffinity="1"/>
+  </body>
 </worldbody>
 ```
 
-**命名规则**: geom 名称必须以 `dynamic_obs_` 开头，后跟数字（如 `dynamic_obs_0`, `dynamic_obs_1`, `dynamic_obs_2`）
+**命名规则**:
+- direct geom 路径: geom 名称必须以 `dynamic_obs_` 开头
+- mocap 路径: body 名称必须以 `dynamic_obs_` 开头，子 geom 推荐命名为 `<body_name>_geom`
 
 **属性说明**:
 - `type`: 形状类型 - `cylinder`, `box`, `sphere`, `cube`
@@ -42,6 +46,7 @@ dynamic_obs_generator/
 - `pos`: 初始位置 (x, y, z)
 - `rgba`: 颜色（红=0.7 0.2 0.2，绿色=0.2 0.7 0.2，蓝色=0.2 0.2 0.7）
 - `contype="0" conaffinity="0"`: 默认无物理碰撞（仅可视化）
+- `mocap="true"`: 可碰撞障碍物的推荐驱动方式；运行时通过 `data->mocap_pos` 更新，不直接 teleport geom
 
 ### 2. 启用动态障碍物
 
@@ -109,6 +114,7 @@ cmake --build build -j
 | `obstacle_count` | int | 10 | 最多扫描的障碍物数量 |
 | `min_speed` | float | 0.0 | 最小速度 |
 | `max_speed` | float | 0.5 | 最大速度 |
+| `collision_enabled` | bool | false | 生成可碰撞障碍；启用时 Python 侧会生成 mocap body 包裹 |
 | `range.x_min/max` | float | -3.0/3.0 | X 范围边界 |
 | `range.y_min/max` | float | -3.0/3.0 | Y 范围边界 |
 | `range.z_min/max` | float | 0.0/2.0 | Z 范围边界 |
@@ -125,17 +131,21 @@ cmake --build build -j
 
 ## 工作原理
 
-1. **生成**: `generate_scene_obstacles.py` 在启动仿真前基于 `obstacle.yaml` 向场景 XML 注入 `dynamic_obs_*` geoms
-2. **扫描**: `DynamicObstacleManager` 在初始化时扫描模型中所有 `dynamic_obs_*` 命名的 geom
-3. **记录**: 读取每个 geom 的初始位置、尺寸和运动参数
-4. **轨迹播放**: 默认对非物理障碍按深度传感器节拍直接播放预定位置；如果障碍参与碰撞，则退回物理步频更新
-5. **碰撞**: 障碍物碰到边界时仅反转对应轴向速度
+1. **生成**: `generate_scene_obstacles.py` 在启动仿真前基于 `obstacle.yaml` 注入障碍物
+2. **分支**:
+   - `collision_enabled: false` 时生成 direct geom，运行时直接写 `model->geom_pos`
+   - `collision_enabled: true` 时生成 `mocap="true"` body，运行时写 `data->mocap_pos`
+3. **扫描**: `DynamicObstacleManager` 初始化时优先识别 `dynamic_obs_*` mocap body，其次回退到 direct geom
+4. **轨迹播放**:
+   - mocap 路径保持接触求解兼容，通常可继续按轨迹播放器节拍更新
+   - direct geom 路径适合纯视觉障碍；如果用户手写了可碰撞 direct geom，管理器会警告并继续工作
+5. **边界处理**: 障碍物碰到边界时仅反转对应轴向速度
 
 ## 限制
 
-- 障碍物 geom 必须在 XML 场景中预定义（MuJoCo 不支持运行时创建新 geom）
-- 障碍物名称必须以 `dynamic_obs_` 开头
-- 如果场景中没有匹配的 geom，管理器会输出警告
+- 障碍物仍需在启动前写入 XML（MuJoCo 不支持运行时创建新 geom）
+- 需要物理碰撞的障碍物必须用 mocap body 包裹；对可碰撞裸 geom 的 teleport 只保留为兼容路径，并会输出 warning
+- 如果场景中没有匹配的 `dynamic_obs_*` body/geom，管理器会输出警告
 
 ## Python 场景生成工具
 
