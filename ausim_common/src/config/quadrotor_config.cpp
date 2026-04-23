@@ -5,10 +5,12 @@
 #include <filesystem>
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <yaml-cpp/yaml.h>
 
@@ -281,7 +283,118 @@ void LoadDynamicObstaclePublishConfig(const fs::path& obstacle_config_path, Dyna
   }
 }
 
-void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, QuadrotorConfig* config, bool apply_global_simulation_config = true) {
+std::optional<fs::path> ResolveRepoRoot(const fs::path& path) {
+  fs::path current = fs::absolute(path).parent_path();
+  while (!current.empty()) {
+    if (fs::exists(current / "em_run.sh") &&
+        fs::exists(current / "ground_vehicle" / "cfg") &&
+        fs::exists(current / "quadrotor" / "cfg")) {
+      return current;
+    }
+    if (!current.has_parent_path() || current.parent_path() == current) {
+      break;
+    }
+    current = current.parent_path();
+  }
+  return std::nullopt;
+}
+
+std::vector<fs::path> ResolveDynamicObstacleRegistryPaths(const fs::path& config_path) {
+  std::vector<fs::path> paths;
+
+  if (const char* override_value = std::getenv("AUSIM_MODEL_REGISTRY_OVERRIDE");
+      override_value != nullptr && override_value[0] != '\0') {
+    std::stringstream stream(override_value);
+    std::string entry;
+    while (std::getline(stream, entry, ':')) {
+      if (!entry.empty()) {
+        paths.push_back(fs::absolute(entry));
+      }
+    }
+    return paths;
+  }
+
+  const std::optional<fs::path> repo_root = ResolveRepoRoot(config_path);
+  if (!repo_root.has_value()) {
+    return paths;
+  }
+
+  paths.push_back(*repo_root / "quadrotor" / "cfg" / "quadrotor_registry.yaml");
+  paths.push_back(*repo_root / "ground_vehicle" / "cfg" / "ground_vehicle_registry.yaml");
+  return paths;
+}
+
+fs::path ResolveRegistryValuePath(const fs::path& registry_path, const std::string& value) {
+  const fs::path candidate(value);
+  if (candidate.is_absolute()) {
+    return candidate.lexically_normal();
+  }
+
+  const std::optional<fs::path> repo_root = ResolveRepoRoot(registry_path);
+  if (repo_root.has_value()) {
+    return (*repo_root / candidate).lexically_normal();
+  }
+  return (registry_path.parent_path() / candidate).lexically_normal();
+}
+
+void ApplyDynamicObstacleRegistryFallback(const fs::path& sim_config_path,
+                                         const std::optional<fs::path>& robot_config_path,
+                                         DynamicObstacleConfig* config) {
+  if (config == nullptr) {
+    return;
+  }
+
+  const fs::path resolved_sim_config_path = fs::absolute(sim_config_path).lexically_normal();
+  const std::optional<fs::path> resolved_robot_config_path =
+      robot_config_path.has_value() ? std::make_optional(fs::absolute(*robot_config_path).lexically_normal()) : std::nullopt;
+
+  for (const fs::path& registry_path : ResolveDynamicObstacleRegistryPaths(sim_config_path)) {
+    if (!fs::exists(registry_path)) {
+      continue;
+    }
+
+    const YAML::Node root = YAML::LoadFile(registry_path.string());
+    const YAML::Node models_node = root["models"];
+    if (!models_node || !models_node.IsSequence()) {
+      continue;
+    }
+
+    for (const YAML::Node& model_node : models_node) {
+      if (!model_node || !model_node.IsMap()) {
+        continue;
+      }
+      if (!model_node["sim_config"] || !model_node["robot_config"]) {
+        continue;
+      }
+
+      const fs::path entry_sim_config = ResolveRegistryValuePath(registry_path, model_node["sim_config"].as<std::string>());
+      const fs::path entry_robot_config = ResolveRegistryValuePath(registry_path, model_node["robot_config"].as<std::string>());
+      if (entry_sim_config != resolved_sim_config_path) {
+        continue;
+      }
+      if (resolved_robot_config_path.has_value() && entry_robot_config != *resolved_robot_config_path) {
+        continue;
+      }
+
+      const YAML::Node dynamic_node = model_node["dynamic_obstacle"];
+      if (!dynamic_node || !dynamic_node.IsMap()) {
+        return;
+      }
+
+      AssignIfPresent(dynamic_node, "enabled", &config->enabled);
+      if (dynamic_node["config_path"]) {
+        config->config_path = ResolveRegistryValuePath(registry_path, dynamic_node["config_path"].as<std::string>()).string();
+      }
+      return;
+    }
+  }
+}
+
+void ApplyConfigRoot(const YAML::Node& root,
+                     const fs::path& config_path,
+                     QuadrotorConfig* config,
+                     bool apply_global_simulation_config = true,
+                     bool* dynamic_obstacle_config_seen = nullptr) {
   if (!root || !root.IsMap()) {
     return;
   }
@@ -332,6 +445,9 @@ void ApplyConfigRoot(const YAML::Node& root, const fs::path& config_path, Quadro
 
     const YAML::Node dynamic_obstacle_node = root["dynamic_obstacle"];
     if (dynamic_obstacle_node) {
+      if (dynamic_obstacle_config_seen != nullptr) {
+        *dynamic_obstacle_config_seen = true;
+      }
       AssignIfPresent(dynamic_obstacle_node, "enabled", &config->dynamic_obstacle.enabled);
       if (dynamic_obstacle_node["config_path"]) {
         config->dynamic_obstacle.config_path = ResolvePath(config_path, dynamic_obstacle_node["config_path"].as<std::string>()).string();
@@ -449,8 +565,9 @@ QuadrotorConfig LoadConfigFile(const fs::path& path, const fs::path& explicit_ro
 
   const YAML::Node root = YAML::LoadFile(config_path.string());
   QuadrotorConfig config;
+  bool dynamic_obstacle_config_seen = false;
   config.model.scene_xml = DefaultSceneXmlPath();
-  ApplyConfigRoot(root, config_path, &config, true);
+  ApplyConfigRoot(root, config_path, &config, true, &dynamic_obstacle_config_seen);
 
   const std::optional<fs::path> robot_config_path = ResolveRobotConfigPath(root, config_path, explicit_robot_path, require_robot_config);
   if (robot_config_path.has_value()) {
@@ -458,7 +575,11 @@ QuadrotorConfig LoadConfigFile(const fs::path& path, const fs::path& explicit_ro
     if (!fs::exists(resolved_robot_config_path)) {
       throw std::runtime_error("Robot config file does not exist: " + resolved_robot_config_path.string());
     }
-    ApplyConfigRoot(YAML::LoadFile(resolved_robot_config_path.string()), resolved_robot_config_path, &config, false);
+    ApplyConfigRoot(YAML::LoadFile(resolved_robot_config_path.string()), resolved_robot_config_path, &config, false, &dynamic_obstacle_config_seen);
+  }
+
+  if (!dynamic_obstacle_config_seen) {
+    ApplyDynamicObstacleRegistryFallback(config_path, robot_config_path, &config.dynamic_obstacle);
   }
 
   ApplyDynamicObstacleEnvOverrides(&config);

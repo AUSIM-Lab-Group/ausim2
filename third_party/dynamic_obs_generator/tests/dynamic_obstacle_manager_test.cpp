@@ -92,6 +92,14 @@ void Require(bool condition, const std::string& message) {
   }
 }
 
+void RequireNear(double actual, double expected, double tolerance, const std::string& label) {
+  if (std::abs(actual - expected) > tolerance) {
+    std::ostringstream stream;
+    stream << label << ": expected " << expected << ", got " << actual;
+    throw std::runtime_error(stream.str());
+  }
+}
+
 void TestMocapObstaclesUseMocapPoseUpdates() {
   const std::string xml = R"(
 <mujoco>
@@ -140,6 +148,44 @@ void TestMocapObstaclesUseMocapPoseUpdates() {
           "non-mocap obstacle should keep the direct geom_pos path");
 }
 
+void TestFillSnapshotUsesWorldPoseForMocapObstacles() {
+  const std::string xml = R"(
+<mujoco>
+  <worldbody>
+    <body name="dynamic_obs_0" mocap="true" pos="1 2 0.5">
+      <geom name="dynamic_obs_0_geom" type="box" size="0.2 0.2 0.2" contype="1" conaffinity="1"/>
+    </body>
+  </worldbody>
+</mujoco>
+)";
+
+  MujocoScene scene(xml);
+  DynamicObstacleManager manager;
+  ObstacleConfig config = MakeConfig();
+
+  Require(manager.Initialize(config, scene.model(), scene.data()), "Initialize should succeed");
+  Require(manager.ApplyTrajectory(1.0), "ApplyTrajectory should update mocap obstacle pose");
+
+  mj_forward(scene.model(), scene.data());
+
+  ausim::DynamicObstaclesSnapshot snapshot;
+  Require(manager.FillSnapshot(snapshot, 1.0, "world"), "FillSnapshot should succeed");
+  Require(snapshot.entries.size() == 1, "Expected one snapshot obstacle entry");
+
+  const int body_id = mj_name2id(scene.model(), mjOBJ_BODY, "dynamic_obs_0");
+  Require(body_id >= 0, "mocap body should exist");
+  const int mocap_id = scene.model()->body_mocapid[body_id];
+  Require(mocap_id >= 0, "mocap body should have a mocap id");
+  const int mocap_addr = mocap_id * 3;
+
+  const ausim::DynamicObstacleEntry& entry = snapshot.entries.front();
+  Require(!NearlyEqual(entry.pos[0], 0.0) || !NearlyEqual(entry.pos[1], 0.0) || !NearlyEqual(entry.pos[2], 0.0),
+          "snapshot should not report the mocap obstacle at the local geom origin");
+  RequireNear(entry.pos[0], scene.data()->mocap_pos[mocap_addr + 0], 1e-9, "snapshot mocap x");
+  RequireNear(entry.pos[1], scene.data()->mocap_pos[mocap_addr + 1], 1e-9, "snapshot mocap y");
+  RequireNear(entry.pos[2], scene.data()->mocap_pos[mocap_addr + 2], 1e-9, "snapshot mocap z");
+}
+
 void TestCollidableNonMocapObstacleWarns() {
   const std::string xml = R"(
 <mujoco>
@@ -170,6 +216,7 @@ void TestCollidableNonMocapObstacleWarns() {
 int main() {
   try {
     TestMocapObstaclesUseMocapPoseUpdates();
+    TestFillSnapshotUsesWorldPoseForMocapObstacles();
     TestCollidableNonMocapObstacleWarns();
   } catch (const std::exception& ex) {
     std::cerr << ex.what() << std::endl;

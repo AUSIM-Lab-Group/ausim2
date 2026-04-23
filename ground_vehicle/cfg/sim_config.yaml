@@ -6,10 +6,6 @@ simulation:
   print_interval: 0.0
   track_camera_name: track
 
-dynamic_obstacle:
-  enabled: false
-  config_path: ../../third_party/dynamic_obs_generator/obstacle_scout.yaml
-
 viewer:
   enabled: true
   fallback_to_headless: true

@@ -12,6 +12,8 @@ namespace ausim {
 
 class DynObstacleDataPublisher : public IDynObstaclePublisher {
  public:
+  static rclcpp::QoS DefaultQos();
+
   DynObstacleDataPublisher(const std::shared_ptr<rclcpp::Node>& node, std::string topic_name, std::string default_frame_id);
 
   void Publish(const DynamicObstaclesSnapshot& snapshot) override;

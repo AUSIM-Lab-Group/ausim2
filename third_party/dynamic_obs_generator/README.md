@@ -50,7 +50,7 @@ dynamic_obs_generator/
 
 ### 2. 启用动态障碍物
 
-在 `sim_config.yaml` 中：
+在模型 registry（推荐）或合并配置中：
 
 ```yaml
 dynamic_obstacle:

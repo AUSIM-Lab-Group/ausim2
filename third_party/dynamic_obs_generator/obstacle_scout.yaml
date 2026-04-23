@@ -51,8 +51,11 @@ update_threads: 0
 # Minimum number of moving obstacles before enabling worker threads
 parallel_threshold: 16
 
+# Controls only ROS publication of the current obstacle boxes.
+# Scene generation / runtime enablement is driven by the selected model registry
+# (or an explicit dynamic_obstacle config override), not by this flag.
 publish:
-  enabled: false
+  enabled: true
   topic: /dyn_obstacle
   frame_id: world
   rate_hz: 20.0

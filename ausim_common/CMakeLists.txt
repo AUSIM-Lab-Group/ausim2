@@ -244,3 +244,27 @@ target_include_directories(dynamic_obstacle_packet_test
 
 target_compile_features(dynamic_obstacle_packet_test PRIVATE cxx_std_17)
 target_link_libraries(dynamic_obstacle_packet_test PRIVATE ausim_common_runtime)
+
+add_executable(dynamic_obstacle_registry_config_test
+  tests/dynamic_obstacle_registry_config_test.cpp
+)
+
+target_include_directories(dynamic_obstacle_registry_config_test
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(dynamic_obstacle_registry_config_test PRIVATE cxx_std_17)
+target_link_libraries(dynamic_obstacle_registry_config_test PRIVATE ausim_common_runtime)
+
+add_executable(dyn_obstacle_data_publisher_qos_test
+  tests/dyn_obstacle_data_publisher_qos_test.cpp
+)
+
+target_include_directories(dyn_obstacle_data_publisher_qos_test
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_compile_features(dyn_obstacle_data_publisher_qos_test PRIVATE cxx_std_17)
+target_link_libraries(dyn_obstacle_data_publisher_qos_test PRIVATE ausim_common_ros_bridge_core)

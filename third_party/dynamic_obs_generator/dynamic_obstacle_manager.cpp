@@ -548,13 +548,17 @@ bool DynamicObstacleManager::FillSnapshot(ausim::DynamicObstaclesSnapshot& out, 
   for (const RuntimeObstacle& obs : scene_obstacles_) {
     ausim::DynamicObstacleEntry entry;
     entry.name = obs.name;
-    entry.pos[0] = model_->geom_pos[obs.geom_pos_adr + 0];
-    entry.pos[1] = model_->geom_pos[obs.geom_pos_adr + 1];
-    entry.pos[2] = model_->geom_pos[obs.geom_pos_adr + 2];
-    entry.quat[0] = 1.0;
-    entry.quat[1] = 0.0;
-    entry.quat[2] = 0.0;
-    entry.quat[3] = 0.0;
+    const int geom_pos_addr = obs.geom_id * 3;
+    entry.pos[0] = data_->geom_xpos[geom_pos_addr + 0];
+    entry.pos[1] = data_->geom_xpos[geom_pos_addr + 1];
+    entry.pos[2] = data_->geom_xpos[geom_pos_addr + 2];
+
+    mjtNum quat[4] = {1.0, 0.0, 0.0, 0.0};
+    mju_mat2Quat(quat, data_->geom_xmat + obs.geom_id * 9);
+    entry.quat[0] = quat[0];
+    entry.quat[1] = quat[1];
+    entry.quat[2] = quat[2];
+    entry.quat[3] = quat[3];
     entry.size[0] = obs.half_x * 2.0;
     entry.size[1] = obs.half_y * 2.0;
     entry.size[2] = obs.half_z * 2.0;

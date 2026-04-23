@@ -6,8 +6,10 @@
 
 namespace ausim {
 
+rclcpp::QoS DynObstacleDataPublisher::DefaultQos() { return rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local(); }
+
 DynObstacleDataPublisher::DynObstacleDataPublisher(const std::shared_ptr<rclcpp::Node>& node, std::string topic_name, std::string default_frame_id)
-    : publisher_(node->create_publisher<ausim_msg::msg::BoundingBox3DArray>(std::move(topic_name), 10)),
+    : publisher_(node->create_publisher<ausim_msg::msg::BoundingBox3DArray>(std::move(topic_name), DefaultQos())),
       default_frame_id_(std::move(default_frame_id)) {}
 
 void DynObstacleDataPublisher::Publish(const DynamicObstaclesSnapshot& snapshot) {

@@ -14,64 +14,64 @@
   </asset>
   <worldbody>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
-    <body name="dynamic_obs_0" mocap="true" pos="3.07053 2.63049 0.75">
+    <body name="dynamic_obs_0" mocap="true" pos="7.79758 1.52461 0.75">
       <geom name="dynamic_obs_0_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.82 0.26 0.26 1" />
     </body>
-    <body name="dynamic_obs_1" mocap="true" pos="14.8674 -2.55526 0.75">
+    <body name="dynamic_obs_1" mocap="true" pos="3.29025 -2.1403 0.75">
       <geom name="dynamic_obs_1_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.2 0.62 0.4 1" />
     </body>
-    <body name="dynamic_obs_2" mocap="true" pos="12.9167 2.74938 0.75">
+    <body name="dynamic_obs_2" mocap="true" pos="13.8062 -3.48696 0.75">
       <geom name="dynamic_obs_2_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.22 0.42 0.8 1" />
     </body>
-    <body name="dynamic_obs_3" mocap="true" pos="6.06876 3.38985 0.75">
+    <body name="dynamic_obs_3" mocap="true" pos="18.768 0.842627 0.75">
       <geom name="dynamic_obs_3_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.84 0.68 0.2 1" />
     </body>
-    <body name="dynamic_obs_4" mocap="true" pos="10.108 -3.29861 0.75">
+    <body name="dynamic_obs_4" mocap="true" pos="11.0038 1.49256 0.75">
       <geom name="dynamic_obs_4_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.58 0.32 0.78 1" />
     </body>
-    <body name="dynamic_obs_5" mocap="true" pos="11.6708 -4.72933 0.75">
+    <body name="dynamic_obs_5" mocap="true" pos="11.8789 -2.79489 0.75">
       <geom name="dynamic_obs_5_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.14 0.64 0.7 1" />
     </body>
-    <body name="dynamic_obs_6" mocap="true" pos="5.32615 2.36404 0.75">
+    <body name="dynamic_obs_6" mocap="true" pos="18.7954 4.18189 0.75">
       <geom name="dynamic_obs_6_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.82 0.26 0.26 1" />
     </body>
-    <body name="dynamic_obs_7" mocap="true" pos="9.61 1.85245 0.75">
+    <body name="dynamic_obs_7" mocap="true" pos="8.23195 -0.970742 0.75">
       <geom name="dynamic_obs_7_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.2 0.62 0.4 1" />
     </body>
-    <body name="dynamic_obs_8" mocap="true" pos="19.8548 2.3492 0.75">
+    <body name="dynamic_obs_8" mocap="true" pos="1.0748 1.50179 0.75">
       <geom name="dynamic_obs_8_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.22 0.42 0.8 1" />
     </body>
-    <body name="dynamic_obs_9" mocap="true" pos="15.9865 2.82622 0.75">
+    <body name="dynamic_obs_9" mocap="true" pos="17.4125 -3.87182 0.75">
       <geom name="dynamic_obs_9_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.84 0.68 0.2 1" />
     </body>
-    <body name="dynamic_obs_10" mocap="true" pos="9.90903 0.536964 0.75">
+    <body name="dynamic_obs_10" mocap="true" pos="9.48184 -2.26863 0.75">
       <geom name="dynamic_obs_10_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.58 0.32 0.78 1" />
     </body>
-    <body name="dynamic_obs_11" mocap="true" pos="18.136 2.35553 0.75">
+    <body name="dynamic_obs_11" mocap="true" pos="19.3188 0.507641 0.75">
       <geom name="dynamic_obs_11_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.14 0.64 0.7 1" />
     </body>
-    <body name="dynamic_obs_12" mocap="true" pos="6.47813 -0.127847 0.75">
+    <body name="dynamic_obs_12" mocap="true" pos="19.5299 4.06369 0.75">
       <geom name="dynamic_obs_12_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.82 0.26 0.26 1" />
     </body>
-    <body name="dynamic_obs_13" mocap="true" pos="18.7677 -2.79812 0.75">
+    <body name="dynamic_obs_13" mocap="true" pos="3.58215 -3.00948 0.75">
       <geom name="dynamic_obs_13_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.2 0.62 0.4 1" />
     </body>
-    <body name="dynamic_obs_14" mocap="true" pos="8.32893 0.758974 0.75">
+    <body name="dynamic_obs_14" mocap="true" pos="7.7688 4.6769 0.75">
       <geom name="dynamic_obs_14_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.22 0.42 0.8 1" />
     </body>
-    <body name="dynamic_obs_15" mocap="true" pos="0.868865 -2.66971 0.75">
+    <body name="dynamic_obs_15" mocap="true" pos="8.02248 -4.55958 0.75">
       <geom name="dynamic_obs_15_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.84 0.68 0.2 1" />
     </body>
-    <body name="dynamic_obs_16" mocap="true" pos="19.0546 1.40232 0.75">
+    <body name="dynamic_obs_16" mocap="true" pos="19.3171 -2.8599 0.75">
       <geom name="dynamic_obs_16_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.58 0.32 0.78 1" />
     </body>
-    <body name="dynamic_obs_17" mocap="true" pos="5.12204 4.58708 0.75">
+    <body name="dynamic_obs_17" mocap="true" pos="1.50678 -3.00007 0.75">
       <geom name="dynamic_obs_17_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.14 0.64 0.7 1" />
     </body>
-    <body name="dynamic_obs_18" mocap="true" pos="6.10578 -0.938651 0.75">
+    <body name="dynamic_obs_18" mocap="true" pos="4.77838 1.39445 0.75">
       <geom name="dynamic_obs_18_geom" type="cylinder" size="0.3 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.82 0.26 0.26 1" />
     </body>
-    <body name="dynamic_obs_19" mocap="true" pos="4.66018 -1.92572 0.75">
+    <body name="dynamic_obs_19" mocap="true" pos="5.57878 1.72802 0.75">
       <geom name="dynamic_obs_19_geom" type="box" size="0.15 0.15 0.75" quat="1 0 0 0" contype="1" conaffinity="1" rgba="0.2 0.62 0.4 1" />
     </body>
   </worldbody>
