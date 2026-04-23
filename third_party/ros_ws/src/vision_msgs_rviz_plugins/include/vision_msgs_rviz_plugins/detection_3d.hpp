@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VISION_MSGS_RVIZ_PLUGINS__DETECTION_3D_ARRAY_HPP_
-#define VISION_MSGS_RVIZ_PLUGINS__DETECTION_3D_ARRAY_HPP_
+#ifndef VISION_MSGS_RVIZ_PLUGINS__DETECTION_3D_HPP_
+#define VISION_MSGS_RVIZ_PLUGINS__DETECTION_3D_HPP_
 
 #include <QWidget>
 #include <memory>
@@ -26,10 +26,6 @@
 #include <rviz_default_plugins/displays/marker/markers/text_view_facing_marker.hpp>
 #include <rviz_rendering/objects/billboard_line.hpp>
 
-#include <vision_msgs/msg/bounding_box3_d.hpp>
-#include <vision_msgs/msg/detection3_d.hpp>
-#include <vision_msgs/msg/detection3_d_array.hpp>
-
 
 #include "vision_msgs_rviz_plugins/detection_3d_common.hpp"
 #include "vision_msgs_rviz_plugins/visibility_control.hpp"
@@ -39,33 +35,33 @@ typedef std::shared_ptr<rviz_rendering::BillboardLine> BillboardLinePtr;
 namespace rviz_plugins
 {
 
-class Detection3DArrayDisplay
-  : public Detection3DCommon<vision_msgs::msg::Detection3DArray>
+class Detection3DDisplay
+  : public Detection3DCommon<ausim_msg::msg::Detection3D>
 {
   Q_OBJECT
 
 public:
   using Marker = visualization_msgs::msg::Marker;
-  using BoundingBox3D = vision_msgs::msg::BoundingBox3D;
-  using Detection3DArray = vision_msgs::msg::Detection3DArray;
+  using BoundingBox3D = ausim_msg::msg::BoundingBox3D;
+  using Detection3D = ausim_msg::msg::Detection3D;
 
-  DETECTION_3D_ARRAY_DISPLAY_HPP_PUBLIC
-  Detection3DArrayDisplay();
-  DETECTION_3D_ARRAY_DISPLAY_HPP_PUBLIC
-  ~Detection3DArrayDisplay();
-  DETECTION_3D_ARRAY_DISPLAY_HPP_PUBLIC
+  DETECTION_3D_DISPLAY_HPP_PUBLIC
+  Detection3DDisplay();
+  DETECTION_3D_DISPLAY_HPP_PUBLIC
+  ~Detection3DDisplay();
+  DETECTION_3D_DISPLAY_HPP_PUBLIC
   void onInitialize() override;
-  DETECTION_3D_ARRAY_DISPLAY_HPP_PUBLIC
+  DETECTION_3D_DISPLAY_HPP_PUBLIC
   void load(const rviz_common::Config & config) override;
-  DETECTION_3D_ARRAY_DISPLAY_HPP_PUBLIC
+  DETECTION_3D_DISPLAY_HPP_PUBLIC
   void update(float wall_dt, float ros_dt) override;
-  DETECTION_3D_ARRAY_DISPLAY_HPP_PUBLIC
+  DETECTION_3D_DISPLAY_HPP_PUBLIC
   void reset() override;
 
 private:
   // Convert boxes into markers, push them to the display queue
-  void processMessage(Detection3DArray::ConstSharedPtr array) override;
-  vision_msgs::msg::Detection3DArray::ConstSharedPtr latest_msg;
+  void processMessage(Detection3D::ConstSharedPtr array) override;
+  ausim_msg::msg::Detection3D::ConstSharedPtr latest_msg;
 
 protected:
   bool only_edge_, show_score_;
@@ -78,11 +74,11 @@ protected:
 protected Q_SLOTS:
   void updateEdge();
   void updateLineWidth();
-  void updateAlpha();
   void updateLifetime();
+  void updateAlpha();
   void updateShowScores();
   void updateColorConfigs();
 };
 }  // namespace rviz_plugins
 
-#endif  // VISION_MSGS_RVIZ_PLUGINS__DETECTION_3D_ARRAY_HPP_
+#endif  // VISION_MSGS_RVIZ_PLUGINS__DETECTION_3D_HPP_

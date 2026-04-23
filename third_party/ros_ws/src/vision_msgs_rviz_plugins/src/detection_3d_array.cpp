@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vision_msgs_rviz_plugins/detection_3d.hpp>
+#include <vision_msgs_rviz_plugins/detection_3d_array.hpp>
 
 #include <memory>
 
 namespace rviz_plugins
 {
 
-Detection3DDisplay::Detection3DDisplay()
+Detection3DArrayDisplay::Detection3DArrayDisplay()
 {
   only_edge_property_ = new rviz_common::properties::BoolProperty(
     "Only Edge", false, "Display only edges of the boxes", this, SLOT(updateEdge()));
@@ -33,10 +33,10 @@ Detection3DDisplay::Detection3DDisplay()
     "ConfigPath", "", "Path to yaml config for rgb color mappings", this,
     SLOT(updateColorConfigs()));
   lifetime_property_ = new rviz_common::properties::IntProperty(
-    "Lifetime", 0, "Detection 3D lifetime", this, SLOT(updateLifetime()));
+    "Lifetime", 0, "Detection 3D array lifetime", this, SLOT(updateLifetime()));
 }
 
-Detection3DDisplay::~Detection3DDisplay()
+Detection3DArrayDisplay::~Detection3DArrayDisplay()
 {
   delete only_edge_property_;
   delete line_width_property_;
@@ -44,13 +44,13 @@ Detection3DDisplay::~Detection3DDisplay()
   delete show_score_property_;
 }
 
-void Detection3DDisplay::onInitialize()
+void Detection3DArrayDisplay::onInitialize()
 {
   RTDClass::onInitialize();
   m_marker_common->initialize(context_, scene_node_);
 
-  topic_property_->setValue("detection3_d");
-  topic_property_->setDescription("Detection3D topic to subscribe to.");
+  topic_property_->setValue("detection3_d_array");
+  topic_property_->setDescription("Detection3DArray topic to subscribe to.");
 
   line_width_property_->setMax(0.1);
   line_width_property_->setMin(0.01);
@@ -67,14 +67,14 @@ void Detection3DDisplay::onInitialize()
   show_score_ = show_score_property_->getBool();
 }
 
-void Detection3DDisplay::load(const rviz_common::Config & config)
+void Detection3DArrayDisplay::load(const rviz_common::Config & config)
 {
   Display::load(config);
   m_marker_common->load(config);
 }
 
-void Detection3DDisplay::processMessage(
-  vision_msgs::msg::Detection3D::ConstSharedPtr msg)
+void Detection3DArrayDisplay::processMessage(
+  ausim_msg::msg::Detection3DArray::ConstSharedPtr msg)
 {
   latest_msg = msg;
   if (!only_edge_) {
@@ -84,19 +84,19 @@ void Detection3DDisplay::processMessage(
   }
 }
 
-void Detection3DDisplay::update(float wall_dt, float ros_dt)
+void Detection3DArrayDisplay::update(float wall_dt, float ros_dt)
 {
   m_marker_common->update(wall_dt, ros_dt);
 }
 
-void Detection3DDisplay::reset()
+void Detection3DArrayDisplay::reset()
 {
   RosTopicDisplay::reset();
   m_marker_common->clearMarkers();
   edges_.clear();
 }
 
-void Detection3DDisplay::updateEdge()
+void Detection3DArrayDisplay::updateEdge()
 {
   only_edge_ = only_edge_property_->getBool();
   if (only_edge_) {
@@ -114,7 +114,7 @@ void Detection3DDisplay::updateEdge()
   }
 }
 
-void Detection3DDisplay::updateLineWidth()
+void Detection3DArrayDisplay::updateLineWidth()
 {
   line_width = line_width_property_->getFloat();
   if (latest_msg) {
@@ -122,15 +122,7 @@ void Detection3DDisplay::updateLineWidth()
   }
 }
 
-void Detection3DDisplay::updateAlpha()
-{
-  alpha = alpha_property_->getFloat();
-  if (latest_msg) {
-    processMessage(latest_msg);
-  }
-}
-
-void Detection3DDisplay::updateLifetime()
+void Detection3DArrayDisplay::updateLifetime()
 {
   lifetime = lifetime_property_->getInt();
   if (latest_msg) {
@@ -138,7 +130,15 @@ void Detection3DDisplay::updateLifetime()
   }
 }
 
-void Detection3DDisplay::updateShowScores()
+void Detection3DArrayDisplay::updateAlpha()
+{
+  alpha = alpha_property_->getFloat();
+  if (latest_msg) {
+    processMessage(latest_msg);
+  }
+}
+
+void Detection3DArrayDisplay::updateShowScores()
 {
   show_score_ = show_score_property_->getBool();
   if (latest_msg) {
@@ -146,7 +146,7 @@ void Detection3DDisplay::updateShowScores()
   }
 }
 
-void Detection3DDisplay::updateColorConfigs()
+void Detection3DArrayDisplay::updateColorConfigs()
 {
   this->updateColorConfig();
 }
@@ -155,4 +155,4 @@ void Detection3DDisplay::updateColorConfigs()
 
 // Export the plugin
 #include <pluginlib/class_list_macros.hpp>  // NOLINT
-PLUGINLIB_EXPORT_CLASS(rviz_plugins::Detection3DDisplay, rviz_common::Display)
+PLUGINLIB_EXPORT_CLASS(rviz_plugins::Detection3DArrayDisplay, rviz_common::Display)

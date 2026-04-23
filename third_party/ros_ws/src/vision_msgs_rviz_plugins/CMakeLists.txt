@@ -30,7 +30,7 @@ find_package(pluginlib REQUIRED)
 find_package(rviz_common REQUIRED)
 find_package(rviz_default_plugins REQUIRED)
 find_package(rviz_rendering REQUIRED)
-find_package(vision_msgs REQUIRED)
+find_package(ausim_msg REQUIRED)
 
 
 ## This setting causes Qt's "MOC" generation to happen automatically, which is required for
@@ -86,7 +86,7 @@ ament_target_dependencies(${PROJECT_NAME}
   PUBLIC
   rcpputils
   rclcpp
-  vision_msgs
+  ausim_msg
   rviz_common
   rviz_rendering
   rviz_default_plugins
@@ -105,7 +105,7 @@ ament_export_targets(${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(
   rcpputils
   rclcpp
-  vision_msgs
+  ausim_msg
   rviz_common
   rviz_rendering
 )

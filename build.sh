@@ -28,6 +28,11 @@ ROS_CHECK_PACKAGES=(
   ros-humble-std-srvs
   ros-humble-tf2
   ros-humble-tf2-ros
+  ros-humble-rviz2
+  ros-humble-rviz-common
+  ros-humble-rviz-default-plugins
+  ros-humble-rviz-rendering
+  ros-humble-pluginlib
 )
 
 log() {
@@ -141,7 +146,8 @@ run_ros_interface_build() {
 
   COLCON_LOG_PATH="${ROS_WORKSPACE_DIR}/log" \
   colcon build \
-    --paths "${SCRIPT_DIR}/third_party/ausim_msg" \
+    --paths "${SCRIPT_DIR}/third_party/ros_ws/src/ausim_msg" \
+             "${SCRIPT_DIR}/third_party/ros_ws/src/vision_msgs_rviz_plugins" \
     --build-base "${ROS_WORKSPACE_BUILD_DIR}" \
     --install-base "${ROS_WORKSPACE_INSTALL_DIR}" \
     --merge-install

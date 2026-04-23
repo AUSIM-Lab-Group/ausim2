@@ -36,13 +36,13 @@ namespace rviz_plugins
 {
 
 class BoundingBox3DDisplay
-  : public BoundingBox3DCommon<vision_msgs::msg::BoundingBox3D>
+  : public BoundingBox3DCommon<ausim_msg::msg::BoundingBox3D>
 {
   Q_OBJECT
 
 public:
   using Marker = visualization_msgs::msg::Marker;
-  using BoundingBox3D = vision_msgs::msg::BoundingBox3D;
+  using BoundingBox3D = ausim_msg::msg::BoundingBox3D;
 
   BOUNDING_BOX_3D_DISPLAY_HPP_PUBLIC
   BoundingBox3DDisplay();
