@@ -111,7 +111,7 @@ std::vector<int> ParseButtonsText(QString text) {
 class AxisBarWidget final : public QWidget {
  public:
   explicit AxisBarWidget(QWidget* parent = nullptr) : QWidget(parent) {
-    setMinimumSize(24, 86);
+    setMinimumSize(24, 62);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   }
 
@@ -126,7 +126,7 @@ class AxisBarWidget final : public QWidget {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
 
-    const QRect bar = rect().adjusted(6, 4, -6, -4);
+    const QRect bar = rect().adjusted(4, 3, -4, -3);
     painter.setPen(QPen(QColor(120, 120, 120)));
     painter.setBrush(QColor(245, 245, 245));
     painter.drawRoundedRect(bar, 3, 3);
@@ -151,7 +151,7 @@ class AxisBarWidget final : public QWidget {
 
 class ButtonDotWidget final : public QWidget {
  public:
-  explicit ButtonDotWidget(QWidget* parent = nullptr) : QWidget(parent) { setFixedSize(18, 18); }
+  explicit ButtonDotWidget(QWidget* parent = nullptr) : QWidget(parent) { setFixedSize(20, 20); }
 
   void SetPressed(bool pressed) {
     pressed_ = pressed;
@@ -493,12 +493,10 @@ class RemoteControlGuiWindow final : public QWidget {
     joystick_state_group_->setMinimumHeight(220);
     joystick_state_group_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     auto* group_layout = new QVBoxLayout(joystick_state_group_);
-    group_layout->setContentsMargins(8, 8, 8, 8);
-    group_layout->setSpacing(4);
+    group_layout->setContentsMargins(8, 6, 8, 6);
+    group_layout->setSpacing(2);
 
     joystick_waiting_label_ = new QLabel(this);
-    axes_header_label_ = new QLabel(this);
-    buttons_header_label_ = new QLabel(this);
 
     auto* state_body = new QWidget(joystick_state_group_);
     auto* state_layout = new QHBoxLayout(state_body);
@@ -511,8 +509,8 @@ class RemoteControlGuiWindow final : public QWidget {
     auto* buttons_panel_layout = new QVBoxLayout(buttons_panel_widget_);
     axes_panel_layout->setContentsMargins(0, 0, 0, 0);
     buttons_panel_layout->setContentsMargins(0, 0, 0, 0);
-    axes_panel_layout->setSpacing(3);
-    buttons_panel_layout->setSpacing(3);
+    axes_panel_layout->setSpacing(0);
+    buttons_panel_layout->setSpacing(0);
 
     const JoystickStateLayoutMetrics metrics = DefaultJoystickStateLayoutMetrics();
     axes_panel_widget_->setMinimumWidth(metrics.axis_card_min_width * 2);
@@ -523,13 +521,11 @@ class RemoteControlGuiWindow final : public QWidget {
     axes_layout_ = new QGridLayout();
     buttons_layout_ = new QGridLayout();
     axes_layout_->setHorizontalSpacing(6);
-    axes_layout_->setVerticalSpacing(5);
+    axes_layout_->setVerticalSpacing(3);
     buttons_layout_->setHorizontalSpacing(5);
-    buttons_layout_->setVerticalSpacing(4);
+    buttons_layout_->setVerticalSpacing(3);
 
-    axes_panel_layout->addWidget(axes_header_label_);
     axes_panel_layout->addLayout(axes_layout_, 1);
-    buttons_panel_layout->addWidget(buttons_header_label_);
     buttons_panel_layout->addLayout(buttons_layout_, 1);
     state_layout->addWidget(axes_panel_widget_, 3);
     state_layout->addWidget(buttons_panel_widget_, 2);
@@ -595,7 +591,7 @@ class RemoteControlGuiWindow final : public QWidget {
         row.value_label = new QLabel(row.container);
         row.container->setMinimumSize(metrics.axis_card_min_width, metrics.axis_card_min_height);
         row.container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        row_layout->setContentsMargins(1, 0, 1, 0);
+        row_layout->setContentsMargins(1, 1, 1, 1);
         row_layout->setSpacing(2);
         row.name_label->setAlignment(Qt::AlignCenter);
         row.value_label->setAlignment(Qt::AlignCenter);
@@ -618,15 +614,18 @@ class RemoteControlGuiWindow final : public QWidget {
       for (std::size_t index = 0; index < snapshot.buttons.size(); ++index) {
         ButtonStateWidgets button;
         button.container = new QWidget(this);
-        auto* cell_layout = new QHBoxLayout(button.container);
+        auto* cell_layout = new QVBoxLayout(button.container);
         button.dot = new ButtonDotWidget(button.container);
         button.name_label = new QLabel(button.container);
         button.container->setMinimumSize(metrics.button_cell_min_width, metrics.button_cell_min_height);
         button.container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        cell_layout->setContentsMargins(0, 0, 0, 0);
-        cell_layout->setSpacing(3);
-        cell_layout->addWidget(button.dot);
-        cell_layout->addWidget(button.name_label, 1);
+        cell_layout->setContentsMargins(1, 1, 1, 1);
+        cell_layout->setSpacing(2);
+        button.name_label->setAlignment(Qt::AlignCenter);
+        cell_layout->addWidget(button.name_label);
+        cell_layout->addStretch(1);
+        cell_layout->addWidget(button.dot, 0, Qt::AlignHCenter);
+        cell_layout->addStretch(1);
         button_widgets_.push_back(button);
       }
     }
@@ -941,8 +940,6 @@ class RemoteControlGuiWindow final : public QWidget {
                             "Focus this window for keyboard control. WASD move, R/F up-down, J/L yaw, Space stop."));
 
     joystick_state_group_->setTitle(Tr("手柄输入状态", "Joystick Input State"));
-    axes_header_label_->setText(Tr("轴", "Axes"));
-    buttons_header_label_->setText(Tr("按钮", "Buttons"));
     if (!have_joy_) {
       joystick_waiting_label_->setText(Tr("等待 /joy 手柄输入", "Waiting for /joy joystick input"));
     }
@@ -1174,8 +1171,6 @@ class RemoteControlGuiWindow final : public QWidget {
   QScrollArea* joystick_state_scroll_ = nullptr;
   QWidget* axes_panel_widget_ = nullptr;
   QWidget* buttons_panel_widget_ = nullptr;
-  QLabel* axes_header_label_ = nullptr;
-  QLabel* buttons_header_label_ = nullptr;
   QGridLayout* axes_layout_ = nullptr;
   QGridLayout* buttons_layout_ = nullptr;
   std::size_t axis_layout_column_count_ = 0;

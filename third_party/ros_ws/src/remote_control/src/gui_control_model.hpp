@@ -48,10 +48,10 @@ struct ActionEditorColumnWidths {
 };
 
 struct JoystickStateLayoutMetrics {
-  int axis_card_min_width = 84;
-  int axis_card_min_height = 124;
-  int button_cell_min_width = 54;
-  int button_cell_min_height = 24;
+  int axis_card_min_width = 120;
+  int axis_card_min_height = 104;
+  int button_cell_min_width = 52;
+  int button_cell_min_height = 104;
 };
 
 JoyStateSnapshot BuildJoyStateSnapshot(const std::vector<double>& axes, const std::vector<int>& buttons);

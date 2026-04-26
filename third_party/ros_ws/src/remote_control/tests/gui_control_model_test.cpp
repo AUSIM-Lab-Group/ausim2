@@ -110,23 +110,25 @@ void TestJoySnapshotFollowsLatestMessageShape() {
 void TestAxisGridColumnsAdaptToAvailableWidth() {
   Expect(remote_control::AxisGridColumnsForWidth(0, 420) == 1, "empty axis grid should still expose one layout column");
   Expect(remote_control::AxisGridColumnsForWidth(6, 900) == 6, "wide axis panel should show common joystick axes in one row");
-  Expect(remote_control::AxisGridColumnsForWidth(6, 260) == 3, "narrow axis panel should wrap vertical bars instead of clipping");
-  Expect(remote_control::AxisGridColumnsForWidth(12, 260) == 3, "many axes should still use readable vertical bar columns");
+  Expect(remote_control::AxisGridColumnsForWidth(8, 500) == 4, "minimum-width GUI should lay out eight axes as four over four");
+  Expect(remote_control::AxisGridColumnsForWidth(6, 260) == 2, "very narrow axis panel should wrap vertical bars instead of clipping");
 }
 
 void TestButtonGridColumnsAdaptToAvailableWidth() {
   Expect(remote_control::ButtonGridColumnsForWidth(0, 260) == 1, "empty button grid should still expose one layout column");
   Expect(remote_control::ButtonGridColumnsForWidth(8, 600) == 8, "wide button panel should fit eight buttons in one row");
-  Expect(remote_control::ButtonGridColumnsForWidth(16, 260) == 4, "narrow button panel should wrap buttons into compact rows");
-  Expect(remote_control::ButtonGridColumnsForWidth(16, 120) == 2, "very narrow button panel should keep cells readable");
+  Expect(remote_control::ButtonGridColumnsForWidth(16, 260) == 5, "button cells should stay compact while preserving numeric labels");
+  Expect(remote_control::ButtonGridColumnsForWidth(16, 120) == 2, "very narrow button panel should keep labels readable");
 }
 
 void TestJoystickStateLayoutUsesCompactVerticalMetrics() {
   const remote_control::JoystickStateLayoutMetrics metrics = remote_control::DefaultJoystickStateLayoutMetrics();
-  Expect(metrics.axis_card_min_width >= 64, "vertical axis cards should keep readable labels and bars");
-  Expect(metrics.axis_card_min_height >= 112, "vertical axis cards should be tall enough for a centered zero mark");
-  Expect(metrics.button_cell_min_width >= 48, "button cells should fit a dot and a two-digit label");
-  Expect(metrics.button_cell_min_height <= 28, "button cells should remain compact");
+  Expect(metrics.axis_card_min_width >= 112, "axis cards should keep eight axes at four columns in the minimum-width GUI");
+  Expect(metrics.axis_card_min_height >= 96, "axis cards should be large enough for index, vertical bar, and value");
+  Expect(metrics.axis_card_min_height <= 112, "axis cards should stay compact enough for the input panel");
+  Expect(metrics.button_cell_min_width >= 48, "button cells should fit a dot and numeric label");
+  Expect(metrics.button_cell_min_width <= 64, "button cells should remain compact");
+  Expect(metrics.button_cell_min_height == metrics.axis_card_min_height, "button cells should exactly match the axis status cell height");
 }
 
 void TestActionEditorColumnsUseResponsiveMinimums() {
