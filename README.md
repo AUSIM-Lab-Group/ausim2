@@ -92,7 +92,7 @@ source build/ros_ws/install/setup.bash
 ./run_remote_control.sh
 ```
 
-该脚本会自动 source ROS2 与仓内 overlay，默认启动 Qt5 图形遥控窗口并尝试启动 `joy_node`；有手柄时优先手柄，无 `/joy` 输入时回退窗口键盘。GUI 在手柄状态区上排显示全部轴、下排用一到两排红/绿圆点显示全部按钮，并可在线调整保存 `cmd_vel` 最大输出、中英界面语言和 6 个手柄 action 映射槽。
+该脚本会自动 source ROS2 与仓内 overlay，默认启动 Qt5 图形遥控窗口并尝试启动 `joy_node`；有手柄时优先手柄，无 `/joy` 输入时回退窗口键盘。GUI 在手柄状态区用单列宽横条竖直显示全部轴、下排用一到两排红/绿圆点显示全部按钮，并可在线调整保存 `cmd_vel` 最大输出、中英界面语言和 6 个手柄 action 映射槽。
 如需禁用 `joy_node`：
 
 ```bash

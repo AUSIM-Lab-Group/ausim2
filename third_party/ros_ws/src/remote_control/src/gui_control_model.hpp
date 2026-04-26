@@ -40,9 +40,25 @@ struct JoyStateSnapshot {
   std::vector<JoyButtonState> buttons;
 };
 
+struct ActionEditorColumnWidths {
+  int service_min_width = 320;
+  int buttons_min_width = 180;
+  int keyboard_width = 56;
+  int small_button_width = 52;
+};
+
+struct JoystickStateLayoutMetrics {
+  int axis_card_min_width = 84;
+  int axis_card_min_height = 124;
+  int button_cell_min_width = 54;
+  int button_cell_min_height = 24;
+};
+
 JoyStateSnapshot BuildJoyStateSnapshot(const std::vector<double>& axes, const std::vector<int>& buttons);
-std::size_t ButtonGridColumnsForCount(std::size_t button_count);
-int AxisCardWidthForCount(std::size_t axis_count, int available_width);
+std::size_t AxisGridColumnsForWidth(std::size_t axis_count, int available_width);
+std::size_t ButtonGridColumnsForWidth(std::size_t button_count, int available_width);
+ActionEditorColumnWidths DefaultActionEditorColumnWidths();
+JoystickStateLayoutMetrics DefaultJoystickStateLayoutMetrics();
 
 class GuiControlModel {
  public:

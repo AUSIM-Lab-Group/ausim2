@@ -6,6 +6,20 @@
 #include <utility>
 
 namespace remote_control {
+namespace {
+
+std::size_t GridColumnsForWidth(std::size_t item_count, int available_width, int min_cell_width) {
+  if (item_count == 0) {
+    return 1;
+  }
+  if (available_width <= 0 || min_cell_width <= 0) {
+    return 1;
+  }
+  const auto columns = static_cast<std::size_t>(std::max(1, available_width / min_cell_width));
+  return std::min(item_count, columns);
+}
+
+}  // namespace
 
 JoyStateSnapshot BuildJoyStateSnapshot(const std::vector<double>& axes, const std::vector<int>& buttons) {
   JoyStateSnapshot snapshot;
@@ -21,27 +35,17 @@ JoyStateSnapshot BuildJoyStateSnapshot(const std::vector<double>& axes, const st
   return snapshot;
 }
 
-std::size_t ButtonGridColumnsForCount(std::size_t button_count) {
-  if (button_count == 0) {
-    return 1;
-  }
-  if (button_count <= 8) {
-    return button_count;
-  }
-  return (button_count + 1) / 2;
+std::size_t AxisGridColumnsForWidth(std::size_t axis_count, int available_width) {
+  return GridColumnsForWidth(axis_count, available_width, DefaultJoystickStateLayoutMetrics().axis_card_min_width);
 }
 
-int AxisCardWidthForCount(std::size_t axis_count, int available_width) {
-  constexpr int kMinCardWidth = 72;
-  constexpr int kComfortableCardWidth = 104;
-  constexpr int kCompactCardWidth = 96;
-  if (axis_count == 0 || available_width <= 0) {
-    return kMinCardWidth;
-  }
-  const int max_card_width = axis_count <= 8 ? kComfortableCardWidth : kCompactCardWidth;
-  const int per_axis_width = available_width / static_cast<int>(axis_count);
-  return std::clamp(per_axis_width, kMinCardWidth, max_card_width);
+std::size_t ButtonGridColumnsForWidth(std::size_t button_count, int available_width) {
+  return GridColumnsForWidth(button_count, available_width, DefaultJoystickStateLayoutMetrics().button_cell_min_width);
 }
+
+ActionEditorColumnWidths DefaultActionEditorColumnWidths() { return ActionEditorColumnWidths{}; }
+
+JoystickStateLayoutMetrics DefaultJoystickStateLayoutMetrics() { return JoystickStateLayoutMetrics{}; }
 
 GuiControlModel::GuiControlModel(std::size_t max_action_history) : max_action_history_(max_action_history == 0 ? 1 : max_action_history) {}
 

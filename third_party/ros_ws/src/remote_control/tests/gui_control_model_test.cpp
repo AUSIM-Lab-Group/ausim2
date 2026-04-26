@@ -107,21 +107,34 @@ void TestJoySnapshotFollowsLatestMessageShape() {
   Expect(large.buttons[2].pressed, "latest button state should be preserved");
 }
 
-void TestButtonGridUsesAtMostTwoRows() {
-  Expect(remote_control::ButtonGridColumnsForCount(0) == 1, "empty button grid should still have one column");
-  Expect(remote_control::ButtonGridColumnsForCount(1) == 1, "one button should use one column");
-  Expect(remote_control::ButtonGridColumnsForCount(4) == 4, "four buttons should fit on one row");
-  Expect(remote_control::ButtonGridColumnsForCount(8) == 8, "eight buttons should fit on one row");
-  Expect(remote_control::ButtonGridColumnsForCount(9) == 5, "nine buttons should wrap to two compact rows");
-  Expect(remote_control::ButtonGridColumnsForCount(16) == 8, "sixteen buttons should use two rows of eight");
+void TestAxisGridColumnsAdaptToAvailableWidth() {
+  Expect(remote_control::AxisGridColumnsForWidth(0, 420) == 1, "empty axis grid should still expose one layout column");
+  Expect(remote_control::AxisGridColumnsForWidth(6, 900) == 6, "wide axis panel should show common joystick axes in one row");
+  Expect(remote_control::AxisGridColumnsForWidth(6, 260) == 3, "narrow axis panel should wrap vertical bars instead of clipping");
+  Expect(remote_control::AxisGridColumnsForWidth(12, 260) == 3, "many axes should still use readable vertical bar columns");
 }
 
-void TestAxisCardWidthFitsCommonJoystickCounts() {
-  Expect(remote_control::AxisCardWidthForCount(0, 1040) == 72, "empty axis card width should use compact minimum");
-  Expect(remote_control::AxisCardWidthForCount(6, 1040) == 104, "six axes should use comfortable card width");
-  Expect(remote_control::AxisCardWidthForCount(8, 1040) == 104, "eight axes should use comfortable card width");
-  Expect(remote_control::AxisCardWidthForCount(10, 1040) <= 96, "ten axes should shrink enough to fit one row");
-  Expect(remote_control::AxisCardWidthForCount(12, 1040) >= 72, "many axes should not shrink below readable width");
+void TestButtonGridColumnsAdaptToAvailableWidth() {
+  Expect(remote_control::ButtonGridColumnsForWidth(0, 260) == 1, "empty button grid should still expose one layout column");
+  Expect(remote_control::ButtonGridColumnsForWidth(8, 600) == 8, "wide button panel should fit eight buttons in one row");
+  Expect(remote_control::ButtonGridColumnsForWidth(16, 260) == 4, "narrow button panel should wrap buttons into compact rows");
+  Expect(remote_control::ButtonGridColumnsForWidth(16, 120) == 2, "very narrow button panel should keep cells readable");
+}
+
+void TestJoystickStateLayoutUsesCompactVerticalMetrics() {
+  const remote_control::JoystickStateLayoutMetrics metrics = remote_control::DefaultJoystickStateLayoutMetrics();
+  Expect(metrics.axis_card_min_width >= 64, "vertical axis cards should keep readable labels and bars");
+  Expect(metrics.axis_card_min_height >= 112, "vertical axis cards should be tall enough for a centered zero mark");
+  Expect(metrics.button_cell_min_width >= 48, "button cells should fit a dot and a two-digit label");
+  Expect(metrics.button_cell_min_height <= 28, "button cells should remain compact");
+}
+
+void TestActionEditorColumnsUseResponsiveMinimums() {
+  const remote_control::ActionEditorColumnWidths widths = remote_control::DefaultActionEditorColumnWidths();
+  Expect(widths.service_min_width >= 320, "service editor should have enough minimum width for readable service names");
+  Expect(widths.buttons_min_width >= 180, "button combo editor should have enough minimum width for combinations");
+  Expect(widths.keyboard_width >= 56, "keyboard key editor should remain readable");
+  Expect(widths.small_button_width >= 52, "capture and clear buttons should remain readable");
 }
 
 }  // namespace
@@ -133,7 +146,9 @@ int main() {
   TestActionHistoryKeepsNewestEntries();
   TestJoySnapshotIncludesEveryAxisAndButton();
   TestJoySnapshotFollowsLatestMessageShape();
-  TestButtonGridUsesAtMostTwoRows();
-  TestAxisCardWidthFitsCommonJoystickCounts();
+  TestAxisGridColumnsAdaptToAvailableWidth();
+  TestButtonGridColumnsAdaptToAvailableWidth();
+  TestJoystickStateLayoutUsesCompactVerticalMetrics();
+  TestActionEditorColumnsUseResponsiveMinimums();
   return 0;
 }
