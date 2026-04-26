@@ -14,7 +14,7 @@ scout (仿真 + 差速驱动)  <──IPC──>  ausim_ros_bridge (ROS2 I/O)
 
 与四旋翼一致地交换两个 DataBoard 槽位：
 
-- `runtime.velocity_command`：bridge → sim，来自 `/cmd_vel`
+- `runtime.velocity_command`：bridge → sim，默认来自 `/joy/cmd_vel`
 - `runtime.telemetry_snapshot`：sim → bridge，驱动所有 publisher
 
 ## 分层职责
@@ -85,7 +85,7 @@ ground_vehicle:
   icr_coefficient: 1.5
 
 interfaces:
-  cmd_vel_topic:       cmd_vel
+  cmd_vel_topic:       /joy/cmd_vel
   joy_cmd_vel_topic:   /joy/cmd_vel
   odom_topic:          odom
   imu_topic:           imu/data
@@ -107,7 +107,6 @@ mode_machine: ../teleop/scout_default.yaml
 
 | 方向 | 话题 | 类型 |
 |------|------|------|
-| 订阅 | `/scout1/cmd_vel`         | `geometry_msgs/Twist` |
 | 订阅 | `/joy/cmd_vel`            | `geometry_msgs/Twist` |
 | 发布 | `/scout1/odom`            | `nav_msgs/Odometry` |
 | 发布 | `/scout1/imu/data`        | `sensor_msgs/Imu` |
@@ -129,7 +128,7 @@ mode_machine: ../teleop/scout_default.yaml
 | `manual_drive` | `MANUAL_ACTIVE` | true  |
 | `estop`        | `FAULT`         | false |
 
-地面车不需要 takeoff——`stopped` 是初始状态，`condition: motion_active` 即把状态推到 `manual_drive`，`cmd_vel` 再被接受。连续 `command_timeout` 秒无 `/cmd_vel` 则自动退回 `stopped`。
+地面车不需要 takeoff——`stopped` 是初始状态，`condition: motion_active` 即把状态推到 `manual_drive`，`/joy/cmd_vel` 再被接受。连续 `command_timeout` 秒无 `/joy/cmd_vel` 则自动退回 `stopped`。
 
 ### 默认转移
 
@@ -145,7 +144,7 @@ manual_drive --condition:motion_inactive-> stopped
 |------|------|
 | 动作 service | `ros2 service call /joy/action3 std_srvs/srv/Trigger "{}"` |
 | 动作 service | `ros2 service call /joy/action4 std_srvs/srv/Trigger "{}"` |
-| 速度指令 | `ros2 topic pub /scout1/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angular: {z: 0.2}}" -r 10` |
+| 速度指令 | `ros2 topic pub /joy/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angular: {z: 0.2}}" -r 10` |
 | RC 输入 | `third_party/remote_control`，默认把手柄 / 键盘转换到 `/joy/cmd_vel` 与 `/joy/actionN` |
 
 ### 自定义

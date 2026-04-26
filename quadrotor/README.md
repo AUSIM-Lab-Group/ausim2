@@ -15,7 +15,7 @@ quadrotor (仿真 + 控制)  <──IPC──>  quadrotor_ros_bridge (ROS2 I/O)
 ```
 
 交换的两个数据槽：
-- `runtime.velocity_command`：bridge → sim，来自 `/cmd_vel`
+- `runtime.velocity_command`：bridge → sim，默认来自 `/joy/cmd_vel`
 - `runtime.telemetry_snapshot`：sim → bridge，驱动所有发布者
 
 ## 分层职责
@@ -114,7 +114,7 @@ mode_machine: ../teleop/quadrotor_default.yaml
 - 模型 `+x`：飞机右侧，模型 `+y`：飞机机头，故为 `[0.0, 1.0, 0.0]`
 - 影响速度模式下的"当前 heading"计算和姿态保持时的机头朝向约束
 
-`control_mode: 1` 下，`/cmd_vel` 的语义：
+`control_mode: 1` 下，默认 `/joy/cmd_vel` 的语义：
 - 无新命令时：锁定当前位置与当前朝向，进入悬停保持
 - `linear.x / linear.y`：无人机当前局部水平坐标系的前 / 左方向速度（与地面平行）
 - `linear.z`：竖直速度
@@ -130,7 +130,6 @@ mode_machine: ../teleop/quadrotor_default.yaml
 
 | 方向 | 话题 | 类型 |
 |------|------|------|
-| 订阅 | `/uav1/cmd_vel` | `geometry_msgs/Twist` |
 | 订阅 | `/joy/cmd_vel` | `geometry_msgs/Twist` |
 | 发布 | `/uav1/odom` | `nav_msgs/Odometry` |
 | 发布 | `/uav1/imu/data` | `sensor_msgs/Imu` |
@@ -166,7 +165,7 @@ mode_machine: ../teleop/quadrotor_default.yaml
 | `velocity_control` | `MANUAL_ACTIVE` | true  |
 | `estop`            | `FAULT`         | false |
 
-`accepts_motion: false` 的子状态会**过滤掉** `/cmd_vel`——这也是"必须先调 takeoff 才能飞"的实现方式。
+`accepts_motion: false` 的子状态会**过滤掉** `/joy/cmd_vel`——这也是"必须先调 takeoff 才能飞"的实现方式。
 
 ### 转移触发器
 
@@ -175,7 +174,7 @@ mode_machine: ../teleop/quadrotor_default.yaml
 | 触发 | YAML 字段 | 语义 |
 |------|-----------|------|
 | 事件 | `event: <name>` | 任意字符串（`takeoff` / `land` / `estop` / 自定义），由 `/joy/actionN` service 或其他离散命令入口产生 |
-| 条件 | `condition: motion_active` / `motion_inactive` | 由 `/cmd_vel` 活跃/超时驱动 |
+| 条件 | `condition: motion_active` / `motion_inactive` | 由 `/joy/cmd_vel` 活跃/超时驱动 |
 | 超时 | `timeout: <sec>` | 进入 `from` 后无转移经过 N 秒自动触发 |
 
 Event-driven 转移**忽略** `condition`；加载时会对同时设置两者的条目打 warning。
@@ -219,11 +218,11 @@ ros2 service call /joy/action4 std_srvs/srv/Trigger "{}"  # estop
 **速度指令**：
 
 ```bash
-ros2 topic pub /uav1/cmd_vel geometry_msgs/msg/Twist \
+ros2 topic pub /joy/cmd_vel geometry_msgs/msg/Twist \
   "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {z: 0.3}}" --once
 ```
 
-注意：初始态 `on_ground.accepts_motion=false` 会过滤 `/cmd_vel`，需先调 `/joy/action1` 让状态机进入 `hover`。
+注意：初始态 `on_ground.accepts_motion=false` 会过滤 `/joy/cmd_vel`，需先调 `/joy/action1` 让状态机进入 `hover`。
 
 ### 自定义机型状态机
 

@@ -80,7 +80,7 @@ controller:
   torque_scale: 0.001
 
 interfaces:
-  cmd_vel_topic: cmd_vel
+  cmd_vel_topic: /joy/cmd_vel
   joy_cmd_vel_topic: /joy/cmd_vel
   odom_topic: odom
   imu_topic: imu/data

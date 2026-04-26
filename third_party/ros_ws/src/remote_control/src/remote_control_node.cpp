@@ -2,14 +2,16 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <memory>
 #include <stdexcept>
-#include <termios.h>
 
-#include <sys/select.h>
+#include <fcntl.h>
+#include <poll.h>
 #include <unistd.h>
 
 namespace remote_control {
@@ -29,29 +31,150 @@ char NormalizeKey(char key) { return static_cast<char>(std::tolower(static_cast<
 
 }  // namespace
 
-TerminalKeyboard::TerminalKeyboard(bool enabled, double key_timeout_seconds)
-    : key_timeout_(std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(key_timeout_seconds))),
-      original_termios_(new termios{}) {
+TerminalKeyState::TerminalKeyState(std::chrono::steady_clock::duration key_timeout) : key_timeout_(key_timeout) {}
+
+void TerminalKeyState::RegisterEventKey(char key, std::string event_name) {
+  if (key == '\0') {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(mutex_);
+  event_keys_[NormalizeKey(key)] = std::move(event_name);
+}
+
+void TerminalKeyState::ClearEventKeys() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  event_keys_.clear();
+}
+
+void TerminalKeyState::HandleKey(char key, std::chrono::steady_clock::time_point now) {
+  const char normalized = NormalizeKey(key);
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  switch (normalized) {
+    case 'w':
+      forward_until_ = now + key_timeout_;
+      return;
+    case 's':
+      backward_until_ = now + key_timeout_;
+      return;
+    case 'a':
+      left_until_ = now + key_timeout_;
+      return;
+    case 'd':
+      right_until_ = now + key_timeout_;
+      return;
+    case 'r':
+      up_until_ = now + key_timeout_;
+      return;
+    case 'f':
+      down_until_ = now + key_timeout_;
+      return;
+    case 'j':
+      yaw_left_until_ = now + key_timeout_;
+      return;
+    case 'l':
+      yaw_right_until_ = now + key_timeout_;
+      return;
+    case ' ':
+      ClearMovementLocked();
+      return;
+    default:
+      break;
+  }
+
+  const auto it = event_keys_.find(normalized);
+  if (it != event_keys_.end()) {
+    pending_events_.push_back(it->second);
+  }
+}
+
+geometry_msgs::msg::Twist TerminalKeyState::BuildTwist(double linear_x_scale, double linear_y_scale, double linear_z_scale,
+                                                       double angular_yaw_scale) const {
+  return BuildTwist(std::chrono::steady_clock::now(), linear_x_scale, linear_y_scale, linear_z_scale, angular_yaw_scale);
+}
+
+geometry_msgs::msg::Twist TerminalKeyState::BuildTwist(std::chrono::steady_clock::time_point now, double linear_x_scale, double linear_y_scale,
+                                                       double linear_z_scale, double angular_yaw_scale) const {
+  geometry_msgs::msg::Twist command;
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  const double forward = IsActive(forward_until_, now) ? 1.0 : 0.0;
+  const double backward = IsActive(backward_until_, now) ? 1.0 : 0.0;
+  const double left = IsActive(left_until_, now) ? 1.0 : 0.0;
+  const double right = IsActive(right_until_, now) ? 1.0 : 0.0;
+  const double up = IsActive(up_until_, now) ? 1.0 : 0.0;
+  const double down = IsActive(down_until_, now) ? 1.0 : 0.0;
+  const double yaw_left = IsActive(yaw_left_until_, now) ? 1.0 : 0.0;
+  const double yaw_right = IsActive(yaw_right_until_, now) ? 1.0 : 0.0;
+
+  command.linear.x = (forward - backward) * linear_x_scale;
+  command.linear.y = (left - right) * linear_y_scale;
+  command.linear.z = (up - down) * linear_z_scale;
+  command.angular.z = (yaw_left - yaw_right) * angular_yaw_scale;
+  return command;
+}
+
+std::optional<std::string> TerminalKeyState::ConsumeEvent() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (pending_events_.empty()) {
+    return std::nullopt;
+  }
+  std::string event_name = std::move(pending_events_.front());
+  pending_events_.pop_front();
+  return event_name;
+}
+
+bool TerminalKeyState::IsActive(std::chrono::steady_clock::time_point active_until, std::chrono::steady_clock::time_point now) const {
+  return active_until.time_since_epoch().count() != 0 && now <= active_until;
+}
+
+void TerminalKeyState::ClearMovementLocked() {
+  forward_until_ = {};
+  backward_until_ = {};
+  left_until_ = {};
+  right_until_ = {};
+  up_until_ = {};
+  down_until_ = {};
+  yaw_left_until_ = {};
+  yaw_right_until_ = {};
+}
+
+TerminalKeyboard::TerminalKeyboard(bool enabled, std::chrono::steady_clock::duration key_timeout, rclcpp::Logger logger)
+    : logger_(logger), fd_(STDIN_FILENO), state_(key_timeout) {
   if (!enabled) {
     return;
   }
-  if (!isatty(STDIN_FILENO)) {
-    return;
-  }
-  if (tcgetattr(STDIN_FILENO, original_termios_) != 0) {
+
+  if (!::isatty(fd_)) {
+    RCLCPP_WARN(logger_,
+                "terminal keyboard not available: stdin is not a TTY; run remote_control_node "
+                "in a foreground terminal with ros2 run for keyboard teleop");
     return;
   }
 
-  termios raw = *original_termios_;
-  raw.c_lflag &= static_cast<unsigned int>(~(ICANON | ECHO));
+  if (::tcgetattr(fd_, &original_termios_) < 0) {
+    RCLCPP_WARN(logger_, "terminal keyboard not available: tcgetattr failed: %s", std::strerror(errno));
+    return;
+  }
+
+  termios raw = original_termios_;
+  raw.c_lflag &= static_cast<tcflag_t>(~(ICANON | ECHO));
+  raw.c_lflag |= ISIG;
   raw.c_cc[VMIN] = 0;
   raw.c_cc[VTIME] = 0;
-  if (tcsetattr(STDIN_FILENO, TCSANOW, &raw) != 0) {
+  if (::tcsetattr(fd_, TCSANOW, &raw) < 0) {
+    RCLCPP_WARN(logger_, "terminal keyboard not available: tcsetattr failed: %s", std::strerror(errno));
     return;
   }
-
-  had_termios_ = true;
   terminal_configured_ = true;
+
+  const int flags = ::fcntl(fd_, F_GETFL, 0);
+  if (flags >= 0) {
+    original_fd_flags_ = flags;
+    (void)::fcntl(fd_, F_SETFL, flags | O_NONBLOCK);
+  }
+
+  RCLCPP_INFO(logger_, "terminal keyboard enabled on stdin; Ctrl+C remains available");
   available_.store(true);
   running_.store(true);
   reader_thread_ = std::thread(&TerminalKeyboard::ReaderLoop, this);
@@ -62,144 +185,81 @@ TerminalKeyboard::~TerminalKeyboard() {
   if (reader_thread_.joinable()) {
     reader_thread_.join();
   }
-  if (terminal_configured_ && had_termios_ && original_termios_ != nullptr) {
-    tcsetattr(STDIN_FILENO, TCSANOW, original_termios_);
+  if (terminal_configured_) {
+    if (original_fd_flags_ >= 0) {
+      (void)::fcntl(fd_, F_SETFL, original_fd_flags_);
+      original_fd_flags_ = -1;
+    }
+    (void)::tcsetattr(fd_, TCSANOW, &original_termios_);
+    terminal_configured_ = false;
   }
-  delete original_termios_;
 }
 
-void TerminalKeyboard::RegisterEventKey(char key, std::string event_name) {
-  if (key == '\0') {
-    return;
-  }
-  std::lock_guard<std::mutex> lock(mutex_);
-  event_keys_[NormalizeKey(key)] = std::move(event_name);
-}
+void TerminalKeyboard::RegisterEventKey(char key, std::string event_name) { state_.RegisterEventKey(key, std::move(event_name)); }
 
-void TerminalKeyboard::ClearEventKeys() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  event_keys_.clear();
-}
+void TerminalKeyboard::ClearEventKeys() { state_.ClearEventKeys(); }
 
 geometry_msgs::msg::Twist TerminalKeyboard::BuildTwist(double linear_x_scale, double linear_y_scale, double linear_z_scale,
                                                        double angular_yaw_scale) const {
-  geometry_msgs::msg::Twist command;
-  const TimePoint now = std::chrono::steady_clock::now();
-  std::lock_guard<std::mutex> lock(mutex_);
-
-  const double forward = key_state_.forward_until > now ? 1.0 : 0.0;
-  const double backward = key_state_.backward_until > now ? 1.0 : 0.0;
-  const double left = key_state_.left_until > now ? 1.0 : 0.0;
-  const double right = key_state_.right_until > now ? 1.0 : 0.0;
-  const double up = key_state_.up_until > now ? 1.0 : 0.0;
-  const double down = key_state_.down_until > now ? 1.0 : 0.0;
-  const double yaw_left = key_state_.yaw_left_until > now ? 1.0 : 0.0;
-  const double yaw_right = key_state_.yaw_right_until > now ? 1.0 : 0.0;
-
-  command.linear.x = (forward - backward) * linear_x_scale;
-  command.linear.y = (left - right) * linear_y_scale;
-  command.linear.z = (up - down) * linear_z_scale;
-  command.angular.z = (yaw_left - yaw_right) * angular_yaw_scale;
-  return command;
+  return state_.BuildTwist(linear_x_scale, linear_y_scale, linear_z_scale, angular_yaw_scale);
 }
 
-std::optional<std::string> TerminalKeyboard::ConsumeEvent() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (pending_events_.empty()) {
-    return std::nullopt;
-  }
-  std::string event_name = std::move(pending_events_.front());
-  pending_events_.pop_front();
-  return event_name;
-}
+std::optional<std::string> TerminalKeyboard::ConsumeEvent() { return state_.ConsumeEvent(); }
 
 void TerminalKeyboard::ReaderLoop() {
   while (running_.load()) {
-    fd_set read_fds;
-    FD_ZERO(&read_fds);
-    FD_SET(STDIN_FILENO, &read_fds);
-
-    timeval timeout{};
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 100000;
-    const int ready = select(STDIN_FILENO + 1, &read_fds, nullptr, nullptr, &timeout);
-    if (ready <= 0 || !FD_ISSET(STDIN_FILENO, &read_fds)) {
+    pollfd keyboard_poll{};
+    keyboard_poll.fd = fd_;
+    keyboard_poll.events = POLLIN;
+    const int ready = ::poll(&keyboard_poll, 1, 100);
+    if (ready < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      RCLCPP_WARN(logger_, "terminal keyboard poll failed: %s; keyboard disabled", std::strerror(errno));
+      available_.store(false);
+      break;
+    }
+    if ((keyboard_poll.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+      RCLCPP_WARN(logger_, "terminal keyboard stdin closed; keyboard disabled");
+      available_.store(false);
+      break;
+    }
+    if (ready == 0 || (keyboard_poll.revents & POLLIN) == 0) {
       continue;
     }
 
-    char value = '\0';
-    const ssize_t bytes = read(STDIN_FILENO, &value, 1);
-    if (bytes == 1) {
-      HandleChar(value);
+    char buffer[64];
+    const ssize_t bytes = ::read(fd_, buffer, sizeof(buffer));
+    if (bytes < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+        continue;
+      }
+      RCLCPP_WARN(logger_, "terminal keyboard read failed: %s; keyboard disabled", std::strerror(errno));
+      available_.store(false);
+      break;
+    }
+    if (bytes == 0) {
+      RCLCPP_WARN(logger_, "terminal keyboard stdin reached EOF; keyboard disabled");
+      available_.store(false);
+      break;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+    for (ssize_t i = 0; i < bytes; ++i) {
+      state_.HandleKey(buffer[i], now);
     }
   }
-}
-
-void TerminalKeyboard::HandleChar(char value) {
-  const TimePoint until = std::chrono::steady_clock::now() + key_timeout_;
-  std::lock_guard<std::mutex> lock(mutex_);
-  switch (NormalizeKey(value)) {
-    case 'w':
-      key_state_.forward_until = until;
-      return;
-    case 's':
-      key_state_.backward_until = until;
-      return;
-    case 'a':
-      key_state_.left_until = until;
-      return;
-    case 'd':
-      key_state_.right_until = until;
-      return;
-    case 'r':
-      key_state_.up_until = until;
-      return;
-    case 'f':
-      key_state_.down_until = until;
-      return;
-    case 'j':
-      key_state_.yaw_left_until = until;
-      return;
-    case 'l':
-      key_state_.yaw_right_until = until;
-      return;
-    case ' ':
-      ClearMovementLocked();
-      return;
-    default:
-      break;
-  }
-
-  // Non-movement keys: look up the user-configured event map.
-  const auto it = event_keys_.find(NormalizeKey(value));
-  if (it != event_keys_.end()) {
-    pending_events_.push_back(it->second);
-  }
-}
-
-void TerminalKeyboard::ClearMovementLocked() {
-  const TimePoint zero{};
-  key_state_.forward_until = zero;
-  key_state_.backward_until = zero;
-  key_state_.left_until = zero;
-  key_state_.right_until = zero;
-  key_state_.up_until = zero;
-  key_state_.down_until = zero;
-  key_state_.yaw_left_until = zero;
-  key_state_.yaw_right_until = zero;
 }
 
 RemoteControlNode::RemoteControlNode() : Node("remote_control_node") {
   LoadParameters();
   LoadActionBindings();
   cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_, 10);
-  joy_subscription_ = create_subscription<sensor_msgs::msg::Joy>(
-      joy_topic_, rclcpp::SensorDataQoS(), std::bind(&RemoteControlNode::OnJoy, this, std::placeholders::_1));
+  joy_subscription_ = create_subscription<sensor_msgs::msg::Joy>(joy_topic_, rclcpp::SensorDataQoS(),
+                                                                 std::bind(&RemoteControlNode::OnJoy, this, std::placeholders::_1));
 
-  keyboard_ = std::make_unique<TerminalKeyboard>(keyboard_enabled_, keyboard_key_timeout_seconds_);
-  if (keyboard_enabled_ && !keyboard_->available()) {
-    RCLCPP_WARN(get_logger(), "keyboard fallback requested but stdin is not a TTY; keyboard control is disabled");
-  }
+  keyboard_ = std::make_unique<TerminalKeyboard>(keyboard_enabled_, keyboard_key_timeout_, get_logger());
   for (const auto& [action_name, binding] : action_bindings_) {
     if (binding.keyboard_key != '\0') {
       keyboard_->RegisterEventKey(binding.keyboard_key, action_name);
@@ -231,7 +291,8 @@ void RemoteControlNode::LoadParameters() {
 
   command_cooldown_seconds_ = declare_parameter<double>("command_cooldown", 0.5);
   keyboard_enabled_ = declare_parameter<bool>("keyboard.enabled", true);
-  keyboard_key_timeout_seconds_ = declare_parameter<double>("keyboard.key_timeout", 0.25);
+  keyboard_key_timeout_ = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+      std::chrono::duration<double>(declare_parameter<double>("keyboard.key_timeout", 0.5)));
   keyboard_scale_linear_x_ = declare_parameter<double>("keyboard.scale.linear.x", 0.6);
   keyboard_scale_linear_y_ = declare_parameter<double>("keyboard.scale.linear.y", 0.6);
   keyboard_scale_linear_z_ = declare_parameter<double>("keyboard.scale.linear.z", 0.5);
@@ -244,6 +305,9 @@ void RemoteControlNode::LoadParameters() {
   }
   if (joy_timeout_seconds_ < 0.0) {
     throw std::runtime_error("joy_timeout must be non-negative");
+  }
+  if (keyboard_key_timeout_ <= std::chrono::steady_clock::duration::zero()) {
+    throw std::runtime_error("keyboard.key_timeout must be positive");
   }
 }
 
@@ -272,13 +336,11 @@ void RemoteControlNode::LoadActionBindings() {
     const std::string keyboard_param = "actions." + name + ".keyboard";
     const std::string service_name = declare_parameter<std::string>(service_param, def.service_name);
     std::vector<std::int64_t> buttons = declare_parameter<std::vector<std::int64_t>>(buttons_param, def.buttons);
-    std::string keyboard_str =
-        declare_parameter<std::string>(keyboard_param, def.keyboard_key == '\0' ? "" : std::string(1, def.keyboard_key));
+    std::string keyboard_str = declare_parameter<std::string>(keyboard_param, def.keyboard_key == '\0' ? "" : std::string(1, def.keyboard_key));
 
     ActionBinding binding;
     binding.service_name = service_name;
     binding.buttons = ToIntVector(buttons);
-    // `-1` remains the config sentinel for "no joystick binding".
     binding.buttons.erase(std::remove(binding.buttons.begin(), binding.buttons.end(), -1), binding.buttons.end());
     binding.keyboard_key = keyboard_str.empty() ? '\0' : keyboard_str.front();
     if (binding.service_name.empty()) {
@@ -327,7 +389,8 @@ void RemoteControlNode::OnPublishTimer() {
 
   if (std::chrono::steady_clock::now() < suppress_motion_until_) {
     command = geometry_msgs::msg::Twist();
-    UpdateInputMode(joystick_active ? InputMode::kJoystick : (keyboard_ != nullptr && keyboard_->available() ? InputMode::kKeyboard : InputMode::kNone));
+    UpdateInputMode(joystick_active ? InputMode::kJoystick
+                                    : (keyboard_ != nullptr && keyboard_->available() ? InputMode::kKeyboard : InputMode::kNone));
   } else if (joystick_active) {
     command = BuildJoyTwist(latest_joy_message_);
     UpdateInputMode(InputMode::kJoystick);
@@ -372,25 +435,22 @@ void RemoteControlNode::TriggerAction(const std::string& action_name, const char
   }
 
   auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
-  client->async_send_request(
-      request, [this, action_name, service_name](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
-        try {
-          const auto response = future.get();
-          if (!response) {
-            RCLCPP_WARN(get_logger(), "action slot %s (%s) returned no response", action_name.c_str(), service_name.c_str());
-            return;
-          }
-          if (response->success) {
-            RCLCPP_INFO(get_logger(), "action slot %s (%s) succeeded: %s", action_name.c_str(), service_name.c_str(),
-                        response->message.c_str());
-            return;
-          }
-          RCLCPP_WARN(get_logger(), "action slot %s (%s) failed: %s", action_name.c_str(), service_name.c_str(),
-                      response->message.c_str());
-        } catch (const std::exception& error) {
-          RCLCPP_WARN(get_logger(), "action slot %s (%s) call threw: %s", action_name.c_str(), service_name.c_str(), error.what());
-        }
-      });
+  client->async_send_request(request, [this, action_name, service_name](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+    try {
+      const auto response = future.get();
+      if (!response) {
+        RCLCPP_WARN(get_logger(), "action slot %s (%s) returned no response", action_name.c_str(), service_name.c_str());
+        return;
+      }
+      if (response->success) {
+        RCLCPP_INFO(get_logger(), "action slot %s (%s) succeeded: %s", action_name.c_str(), service_name.c_str(), response->message.c_str());
+        return;
+      }
+      RCLCPP_WARN(get_logger(), "action slot %s (%s) failed: %s", action_name.c_str(), service_name.c_str(), response->message.c_str());
+    } catch (const std::exception& error) {
+      RCLCPP_WARN(get_logger(), "action slot %s (%s) call threw: %s", action_name.c_str(), service_name.c_str(), error.what());
+    }
+  });
 }
 
 void RemoteControlNode::PublishZeroCommand() { cmd_vel_publisher_->publish(geometry_msgs::msg::Twist()); }
@@ -406,14 +466,10 @@ void RemoteControlNode::UpdateInputMode(InputMode mode) {
       RCLCPP_INFO(get_logger(), "using joystick control");
       break;
     case InputMode::kKeyboard:
-      RCLCPP_INFO(get_logger(),
-                  "no fresh joystick input on %s, switching to keyboard fallback; ensure joy_node is running and autorepeat_rate is enabled",
-                  joy_topic_.c_str());
+      RCLCPP_INFO(get_logger(), "no fresh joystick input on %s, using keyboard (WASD move / RF up-down / JL yaw / space stop)", joy_topic_.c_str());
       break;
     case InputMode::kNone:
-      RCLCPP_INFO(get_logger(),
-                  "no fresh joystick input on %s and no keyboard TTY, publishing zero cmd_vel; ensure joy_node is running and autorepeat_rate is enabled",
-                  joy_topic_.c_str());
+      RCLCPP_INFO(get_logger(), "no fresh joystick on %s and no terminal keyboard; publishing zero cmd_vel", joy_topic_.c_str());
       break;
   }
 }
@@ -439,9 +495,8 @@ bool RemoteControlNode::ButtonsPressed(const sensor_msgs::msg::Joy& message, con
   if (button_indices.empty()) {
     return false;
   }
-  return std::all_of(button_indices.begin(), button_indices.end(), [this, &message](int button_index) {
-    return ButtonPressed(message, button_index);
-  });
+  return std::all_of(button_indices.begin(), button_indices.end(),
+                     [this, &message](int button_index) { return ButtonPressed(message, button_index); });
 }
 
 double RemoteControlNode::AxisValue(const sensor_msgs::msg::Joy& message, int axis_index, double scale) const {

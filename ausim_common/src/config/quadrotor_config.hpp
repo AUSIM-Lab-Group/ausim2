@@ -113,7 +113,7 @@ struct JoyActionServiceConfig {
 };
 
 struct RosInterfaceConfig {
-  std::string cmd_vel_topic = "cmd_vel";
+  std::string cmd_vel_topic = "/joy/cmd_vel";
   std::string joy_cmd_vel_topic = "/joy/cmd_vel";
   std::string odom_topic = "odom";
   std::string imu_topic = "imu/data";

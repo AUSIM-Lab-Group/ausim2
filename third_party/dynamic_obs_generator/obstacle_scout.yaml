@@ -57,7 +57,7 @@ parallel_threshold: 16
 publish:
   enabled: true
   topic: /dyn_obstacle
-  frame_id: world
+  frame_id: scout1/odom
   rate_hz: 20.0
 
 # ---------------------------------------------------------------------------

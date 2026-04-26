@@ -86,6 +86,25 @@ source build/ros_ws/install/setup.bash
 
 像 `/dyn_obstacle` 这类使用 `ausim_msg/msg/BoundingBox3DArray` 的自定义消息话题，若未 source `build/ros_ws/install/setup.bash`，`ros2 topic echo` 无法正确解析消息类型。
 
+遥控端可直接使用根目录一键脚本：
+
+```bash
+./run_remote_control.sh
+```
+
+该脚本会自动 source ROS2 与仓内 overlay，默认启动 Qt5 图形遥控窗口并尝试启动 `joy_node`；有手柄时优先手柄，无 `/joy` 输入时回退窗口键盘。GUI 在手柄状态区上排显示全部轴、下排用一到两排红/绿圆点显示全部按钮，并可在线调整保存 `cmd_vel` 最大输出、中英界面语言和 6 个手柄 action 映射槽。
+如需禁用 `joy_node`：
+
+```bash
+./run_remote_control.sh --use-joy false
+```
+
+如需保留最低限度非 GUI 终端模式：
+
+```bash
+./run_remote_control.sh --headless
+```
+
 ## 4. 模块文档
 
 - [quadrotor/README.md](quadrotor/README.md)：四旋翼分层结构、配置、状态机（teleop）、传感器扩展

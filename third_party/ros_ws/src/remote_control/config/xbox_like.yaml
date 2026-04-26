@@ -1,0 +1,71 @@
+remote_control_node:
+  ros__parameters:
+    topics:
+      joy: /joy
+      cmd_vel: /joy/cmd_vel
+    publish_rate_hz: 30.0
+    joy_timeout: 0.25
+    deadzone: 0.5
+    require_enable_button: false
+    enable_button: 4
+    axes:
+      linear:
+        x: 4
+        y: 3
+        z: 1
+      angular:
+        yaw: 0
+    scale:
+      linear:
+        x: 1.0
+        y: 1.0
+        z: 0.5
+      angular:
+        yaw: 2.0
+    gui:
+      language: zh
+    actions:
+      action1:
+        service: /joy/action1
+        buttons:
+          - -1
+        keyboard: t
+      action2:
+        service: /joy/action2
+        buttons:
+          - 5
+          - 0
+        keyboard: g
+      action3:
+        service: /joy/action3
+        buttons:
+          - 6
+          - 7
+        keyboard: x
+      action4:
+        service: /joy/action4
+        buttons:
+          - -1
+        keyboard: q
+      action5:
+        service: /joy/action5
+        buttons:
+          - -1
+        keyboard: b
+      action6:
+        service: /joy/action6
+        buttons:
+          - -1
+        keyboard: ""
+    command_cooldown: 0.5
+    motion_suppress_after_command: 0.3
+    keyboard:
+      enabled: true
+      key_timeout: 0.2
+      scale:
+        linear:
+          x: 1.0
+          y: 1.0
+          z: 0.5
+        angular:
+          yaw: 2.0

@@ -20,6 +20,19 @@ void Expect(bool condition, const std::string& message) {
 int main() {
   namespace fs = std::filesystem;
 
+  const fs::path default_config_path = fs::temp_directory_path() / "joy_interface_default_config_test.yaml";
+  std::ofstream default_output(default_config_path);
+  default_output << R"yaml(
+identity:
+  namespace: /uav1
+)yaml";
+  default_output.close();
+
+  const ausim::QuadrotorConfig default_config = ausim::LoadConfigFromYaml(default_config_path.string());
+  Expect(default_config.interfaces.cmd_vel_topic == "/joy/cmd_vel", "expected default cmd_vel_topic to use /joy/cmd_vel");
+  Expect(default_config.interfaces.joy_cmd_vel_topic == "/joy/cmd_vel", "expected default joy_cmd_vel_topic to use /joy/cmd_vel");
+  fs::remove(default_config_path);
+
   const fs::path config_path = fs::temp_directory_path() / "joy_interface_config_test.yaml";
   std::ofstream output(config_path);
   output << R"yaml(

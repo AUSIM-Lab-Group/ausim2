@@ -25,13 +25,46 @@ namespace remote_control {
 // service endpoint plus optional joystick/keyboard triggers.
 struct ActionBinding {
   std::string service_name;
-  std::vector<int> buttons;    // all buttons must be held; empty = no joystick binding
-  char keyboard_key = '\0';    // single ASCII key; '\0' = no keyboard binding
+  std::vector<int> buttons;  // all buttons must be held; empty = no joystick binding
+  char keyboard_key = '\0';  // single ASCII key; '\0' = no keyboard binding
 };
 
+class TerminalKeyState {
+ public:
+  explicit TerminalKeyState(std::chrono::steady_clock::duration key_timeout);
+
+  void RegisterEventKey(char key, std::string action_name);
+  void ClearEventKeys();
+
+  void HandleKey(char key, std::chrono::steady_clock::time_point now);
+  geometry_msgs::msg::Twist BuildTwist(double linear_x_scale, double linear_y_scale, double linear_z_scale, double angular_yaw_scale) const;
+  geometry_msgs::msg::Twist BuildTwist(std::chrono::steady_clock::time_point now, double linear_x_scale, double linear_y_scale, double linear_z_scale,
+                                       double angular_yaw_scale) const;
+  std::optional<std::string> ConsumeEvent();
+
+ private:
+  bool IsActive(std::chrono::steady_clock::time_point active_until, std::chrono::steady_clock::time_point now) const;
+  void ClearMovementLocked();
+
+  mutable std::mutex mutex_;
+  std::chrono::steady_clock::duration key_timeout_;
+  std::chrono::steady_clock::time_point forward_until_{};
+  std::chrono::steady_clock::time_point backward_until_{};
+  std::chrono::steady_clock::time_point left_until_{};
+  std::chrono::steady_clock::time_point right_until_{};
+  std::chrono::steady_clock::time_point up_until_{};
+  std::chrono::steady_clock::time_point down_until_{};
+  std::chrono::steady_clock::time_point yaw_left_until_{};
+  std::chrono::steady_clock::time_point yaw_right_until_{};
+  std::deque<std::string> pending_events_;
+  std::unordered_map<char, std::string> event_keys_;
+};
+
+// Terminal stdin-based keyboard reader. It only receives keystrokes while the
+// launching terminal has focus and preserves ISIG so Ctrl+C still exits.
 class TerminalKeyboard {
  public:
-  explicit TerminalKeyboard(bool enabled, double key_timeout_seconds);
+  TerminalKeyboard(bool enabled, std::chrono::steady_clock::duration key_timeout, rclcpp::Logger logger);
   ~TerminalKeyboard();
 
   TerminalKeyboard(const TerminalKeyboard&) = delete;
@@ -39,43 +72,25 @@ class TerminalKeyboard {
 
   bool available() const { return available_.load(); }
 
-  // Registers a keyboard->action mapping. Case-insensitive; '\0' is ignored.
   void RegisterEventKey(char key, std::string action_name);
-  // Clears any previously-registered action key bindings.
   void ClearEventKeys();
 
   geometry_msgs::msg::Twist BuildTwist(double linear_x_scale, double linear_y_scale, double linear_z_scale, double angular_yaw_scale) const;
   std::optional<std::string> ConsumeEvent();
 
  private:
-  using TimePoint = std::chrono::steady_clock::time_point;
-
   void ReaderLoop();
-  void HandleChar(char value);
-  void ClearMovementLocked();
 
-  struct KeyState {
-    TimePoint forward_until{};
-    TimePoint backward_until{};
-    TimePoint left_until{};
-    TimePoint right_until{};
-    TimePoint up_until{};
-    TimePoint down_until{};
-    TimePoint yaw_left_until{};
-    TimePoint yaw_right_until{};
-  };
+  rclcpp::Logger logger_;
+  int fd_ = -1;
+  TerminalKeyState state_;
 
-  std::chrono::steady_clock::duration key_timeout_{};
-  mutable std::mutex mutex_;
-  std::deque<std::string> pending_events_;
-  std::unordered_map<char, std::string> event_keys_;
-  KeyState key_state_;
   std::thread reader_thread_;
   std::atomic_bool running_{false};
   std::atomic_bool available_{false};
   bool terminal_configured_ = false;
-  bool had_termios_ = false;
-  struct termios* original_termios_ = nullptr;
+  int original_fd_flags_ = -1;
+  termios original_termios_{};
 };
 
 class RemoteControlNode : public rclcpp::Node {
@@ -125,14 +140,12 @@ class RemoteControlNode : public rclcpp::Node {
   double scale_linear_z_ = 0.5;
   double scale_angular_yaw_ = -1.0;
 
-  // Action slot name -> (service endpoint + joystick combo + keyboard key).
-  // Populated from YAML under the `actions:` namespace.
   std::unordered_map<std::string, ActionBinding> action_bindings_;
   std::unordered_map<std::string, bool> action_combo_active_;
 
   double command_cooldown_seconds_ = 0.5;
-  double keyboard_key_timeout_seconds_ = 0.25;
   bool keyboard_enabled_ = true;
+  std::chrono::steady_clock::duration keyboard_key_timeout_{std::chrono::milliseconds(500)};
   double keyboard_scale_linear_x_ = 0.6;
   double keyboard_scale_linear_y_ = 0.6;
   double keyboard_scale_linear_z_ = 0.5;

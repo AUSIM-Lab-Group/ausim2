@@ -14,6 +14,7 @@ APT_BUILD_PACKAGES=(
   libeigen3-dev
   libyaml-cpp-dev
   libglfw3-dev
+  qtbase5-dev
 )
 
 ROS_CHECK_PACKAGES=(
@@ -145,9 +146,10 @@ run_ros_interface_build() {
   mkdir -p "${ROS_WORKSPACE_DIR}"
 
   COLCON_LOG_PATH="${ROS_WORKSPACE_DIR}/log" \
-  colcon build \
+  colcon --log-base "${ROS_WORKSPACE_DIR}/log" build \
     --paths "${SCRIPT_DIR}/third_party/ros_ws/src/ausim_msg" \
              "${SCRIPT_DIR}/third_party/ros_ws/src/vision_msgs_rviz_plugins" \
+             "${SCRIPT_DIR}/third_party/ros_ws/src/remote_control" \
     --build-base "${ROS_WORKSPACE_BUILD_DIR}" \
     --install-base "${ROS_WORKSPACE_INSTALL_DIR}" \
     --merge-install
