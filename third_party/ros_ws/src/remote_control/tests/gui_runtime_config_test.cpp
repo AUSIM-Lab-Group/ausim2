@@ -28,9 +28,7 @@ void ExpectNear(double actual, double expected, const std::string& message) {
   }
 }
 
-std::filesystem::path TempPath(const std::string& name) {
-  return std::filesystem::temp_directory_path() / name;
-}
+std::filesystem::path TempPath(const std::string& name) { return std::filesystem::temp_directory_path() / name; }
 
 void WriteFile(const std::filesystem::path& path, const std::string& content) {
   std::ofstream out(path);
@@ -50,6 +48,13 @@ std::string BaseConfig() {
   return R"yaml(
 remote_control_node:
   ros__parameters:
+    axes:
+      linear:
+        x: 4
+        y: 3
+        z: 1
+      angular:
+        yaw: 0
     scale:
       linear:
         x: -0.6
@@ -106,6 +111,10 @@ void TestLoadEditableSettingsReadsRemoteControlNodeYaml() {
   const remote_control::EditableGuiSettings settings = remote_control::LoadEditableGuiSettingsFromYaml(path.string());
 
   Expect(settings.language == "en", "language should be loaded from gui.language");
+  Expect(settings.axis_mapping.linear_x == 4, "linear.x axis mapping should load");
+  Expect(settings.axis_mapping.linear_y == 3, "linear.y axis mapping should load");
+  Expect(settings.axis_mapping.linear_z == 1, "linear.z axis mapping should load");
+  Expect(settings.axis_mapping.angular_yaw == 0, "angular.yaw axis mapping should load");
   ExpectNear(settings.joystick_scale.linear_x, -0.6, "joystick linear x scale should load");
   ExpectNear(settings.keyboard_scale.linear_y, -0.4, "keyboard linear y scale should load");
   Expect(settings.action_slots.size() == 6, "GUI should expose exactly six editable action slots");
@@ -167,6 +176,10 @@ void TestSaveEditableSettingsWritesScalesLanguageAndSixActionSlots() {
 
   const YAML::Node root = YAML::LoadFile(path.string());
   const YAML::Node params = root["remote_control_node"]["ros__parameters"];
+  Expect(params["axes"]["linear"]["x"].as<int>() == 4, "saved linear.x axis mapping should be preserved");
+  Expect(params["axes"]["linear"]["y"].as<int>() == 3, "saved linear.y axis mapping should be preserved");
+  Expect(params["axes"]["linear"]["z"].as<int>() == 1, "saved linear.z axis mapping should be preserved");
+  Expect(params["axes"]["angular"]["yaw"].as<int>() == 0, "saved angular.yaw axis mapping should be preserved");
   ExpectNear(params["scale"]["linear"]["x"].as<double>(), -1.2, "saved joystick x scale should preserve sign");
   ExpectNear(params["keyboard"]["scale"]["linear"]["y"].as<double>(), -1.3, "saved keyboard y scale should preserve sign");
   ExpectNear(params["scale"]["angular"]["yaw"].as<double>(), -2.1, "saved joystick yaw scale should preserve sign");
@@ -177,6 +190,26 @@ void TestSaveEditableSettingsWritesScalesLanguageAndSixActionSlots() {
   Expect(params["actions"]["action5"]["keyboard"].as<std::string>() == "h", "action5 keyboard should save");
   Expect(params["actions"]["action6"]["buttons"][0].as<int>() == -1, "empty action6 buttons should save as [-1]");
   Expect(params["actions"]["action7"]["service"].as<std::string>() == "/joy/action7", "action7 should be preserved but not edited");
+}
+
+void TestSaveEditableSettingsWritesAxisMappings() {
+  const std::filesystem::path path = TempPath("remote_control_gui_runtime_axes_save.yaml");
+  WriteFile(path, BaseConfig());
+
+  remote_control::EditableGuiSettings settings = remote_control::LoadEditableGuiSettingsFromYaml(path.string());
+  settings.axis_mapping.linear_x = 2;
+  settings.axis_mapping.linear_y = 5;
+  settings.axis_mapping.linear_z = -1;
+  settings.axis_mapping.angular_yaw = 6;
+
+  remote_control::SaveEditableGuiSettingsToYaml(path.string(), settings);
+
+  const YAML::Node root = YAML::LoadFile(path.string());
+  const YAML::Node axes = root["remote_control_node"]["ros__parameters"]["axes"];
+  Expect(axes["linear"]["x"].as<int>() == 2, "saved linear.x axis mapping should update");
+  Expect(axes["linear"]["y"].as<int>() == 5, "saved linear.y axis mapping should update");
+  Expect(axes["linear"]["z"].as<int>() == -1, "saved linear.z axis mapping should allow disabled axis");
+  Expect(axes["angular"]["yaw"].as<int>() == 6, "saved angular.yaw axis mapping should update");
 }
 
 void TestSaveEditableSettingsWritesWholeNumberScalesAsFloatLiterals() {
@@ -211,6 +244,10 @@ remote_control_node:
   const remote_control::EditableGuiSettings settings = remote_control::LoadEditableGuiSettingsFromYaml(path.string());
 
   Expect(settings.language == "zh", "missing gui.language should default to zh");
+  Expect(settings.axis_mapping.linear_x == 4, "missing axes.linear.x should keep default axis mapping");
+  Expect(settings.axis_mapping.linear_y == 0, "missing axes.linear.y should keep default axis mapping");
+  Expect(settings.axis_mapping.linear_z == 1, "missing axes.linear.z should keep default axis mapping");
+  Expect(settings.axis_mapping.angular_yaw == 3, "missing axes.angular.yaw should keep default axis mapping");
   ExpectNear(settings.joystick_scale.linear_x, 0.6, "missing scale should keep default joystick x");
   ExpectNear(settings.keyboard_scale.angular_yaw, 1.0, "missing keyboard scale should keep default keyboard yaw");
   Expect(settings.action_slots.size() == 6, "missing actions should keep six default action slots");
@@ -222,6 +259,7 @@ int main() {
   TestLoadEditableSettingsReadsRemoteControlNodeYaml();
   TestApplyMaxVelocityPreservesDirectionSigns();
   TestSaveEditableSettingsWritesScalesLanguageAndSixActionSlots();
+  TestSaveEditableSettingsWritesAxisMappings();
   TestSaveEditableSettingsWritesWholeNumberScalesAsFloatLiterals();
   TestLoadEditableSettingsToleratesMissingOptionalBlocks();
   return 0;

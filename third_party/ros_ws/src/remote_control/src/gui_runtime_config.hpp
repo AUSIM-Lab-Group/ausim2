@@ -17,7 +17,15 @@ struct GuiActionSlotConfig {
   std::string keyboard_key;
 };
 
+struct JoystickAxisMapping {
+  int linear_x = 4;
+  int linear_y = 0;
+  int linear_z = 1;
+  int angular_yaw = 3;
+};
+
 struct EditableGuiSettings {
+  JoystickAxisMapping axis_mapping;
   MotionScale joystick_scale;
   MotionScale keyboard_scale;
   std::string language = "zh";

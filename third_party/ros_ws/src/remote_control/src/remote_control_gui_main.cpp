@@ -35,6 +35,7 @@
 #include <QResizeEvent>
 #include <QScrollArea>
 #include <QSizePolicy>
+#include <QSpinBox>
 #include <QStringList>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -407,6 +408,10 @@ class RemoteControlGuiWindow final : public QWidget {
 
   EditableGuiSettings BuildEditableSettingsFromRuntime() const {
     EditableGuiSettings settings;
+    settings.axis_mapping.linear_x = config_.axes.linear_x;
+    settings.axis_mapping.linear_y = config_.axes.linear_y;
+    settings.axis_mapping.linear_z = config_.axes.linear_z;
+    settings.axis_mapping.angular_yaw = config_.axes.angular_yaw;
     settings.joystick_scale = config_.joystick_scale;
     settings.keyboard_scale = config_.keyboard_scale;
     settings.language = config_.language;
@@ -426,6 +431,10 @@ class RemoteControlGuiWindow final : public QWidget {
   }
 
   void ApplyEditableSettingsToRuntime(const EditableGuiSettings& settings) {
+    config_.axes.linear_x = settings.axis_mapping.linear_x;
+    config_.axes.linear_y = settings.axis_mapping.linear_y;
+    config_.axes.linear_z = settings.axis_mapping.linear_z;
+    config_.axes.angular_yaw = settings.axis_mapping.angular_yaw;
     config_.joystick_scale = settings.joystick_scale;
     config_.keyboard_scale = settings.keyboard_scale;
     config_.language = settings.language == "en" ? "en" : "zh";
@@ -446,7 +455,7 @@ class RemoteControlGuiWindow final : public QWidget {
 
   void BuildUi() {
     setWindowTitle("AUSIM Remote Control");
-    resize(1180, 760);
+    resize(920, 760);
     setMinimumSize(920, 640);
 
     auto* root = new QVBoxLayout(this);
@@ -454,6 +463,8 @@ class RemoteControlGuiWindow final : public QWidget {
 
     mode_label_ = new QLabel(this);
     hint_label_ = new QLabel(this);
+    hint_label_->setWordWrap(true);
+    hint_label_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
     history_list_ = new QListWidget(this);
     history_list_->setMaximumHeight(96);
 
@@ -490,7 +501,8 @@ class RemoteControlGuiWindow final : public QWidget {
 
   void BuildJoystickStatePanel(QVBoxLayout* root) {
     joystick_state_group_ = new QGroupBox(this);
-    joystick_state_group_->setMinimumHeight(220);
+    joystick_state_group_->setTitle("");
+    joystick_state_group_->setMinimumHeight(0);
     joystick_state_group_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     auto* group_layout = new QVBoxLayout(joystick_state_group_);
     group_layout->setContentsMargins(8, 6, 8, 6);
@@ -539,7 +551,7 @@ class RemoteControlGuiWindow final : public QWidget {
 
     group_layout->addWidget(joystick_waiting_label_);
     group_layout->addWidget(joystick_state_scroll_, 1);
-    root->addWidget(joystick_state_group_, 2);
+    root->addWidget(joystick_state_group_, 1);
   }
 
   JoyStateSnapshot CurrentJoySnapshot() const {
@@ -687,31 +699,52 @@ class RemoteControlGuiWindow final : public QWidget {
     velocity_group_ = new QGroupBox(this);
     auto* layout = new QGridLayout(velocity_group_);
     layout->setContentsMargins(6, 8, 6, 6);
-    layout->setVerticalSpacing(2);
-    velocity_group_->setMaximumHeight(118);
+    layout->setHorizontalSpacing(8);
+    layout->setVerticalSpacing(3);
+    velocity_group_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
 
+    axis_header_label_ = new QLabel(this);
+    max_output_header_label_ = new QLabel(this);
     linear_x_label_ = new QLabel(this);
     linear_y_label_ = new QLabel(this);
     linear_z_label_ = new QLabel(this);
     angular_yaw_label_ = new QLabel(this);
+    linear_x_axis_spin_ = MakeAxisSpinBox();
+    linear_y_axis_spin_ = MakeAxisSpinBox();
+    linear_z_axis_spin_ = MakeAxisSpinBox();
+    angular_yaw_axis_spin_ = MakeAxisSpinBox();
     linear_x_spin_ = MakeVelocitySpinBox(" m/s");
     linear_y_spin_ = MakeVelocitySpinBox(" m/s");
     linear_z_spin_ = MakeVelocitySpinBox(" m/s");
     angular_yaw_spin_ = MakeVelocitySpinBox(" rad/s");
 
-    layout->addWidget(linear_x_label_, 0, 0);
-    layout->addWidget(linear_x_spin_, 0, 1);
-    layout->addWidget(linear_y_label_, 0, 2);
-    layout->addWidget(linear_y_spin_, 0, 3);
-    layout->addWidget(linear_z_label_, 1, 0);
-    layout->addWidget(linear_z_spin_, 1, 1);
-    layout->addWidget(angular_yaw_label_, 1, 2);
-    layout->addWidget(angular_yaw_spin_, 1, 3);
+    layout->addWidget(axis_header_label_, 0, 1);
+    layout->addWidget(max_output_header_label_, 0, 2);
+    layout->addWidget(linear_x_label_, 1, 0);
+    layout->addWidget(linear_x_axis_spin_, 1, 1);
+    layout->addWidget(linear_x_spin_, 1, 2);
+    layout->addWidget(linear_y_label_, 2, 0);
+    layout->addWidget(linear_y_axis_spin_, 2, 1);
+    layout->addWidget(linear_y_spin_, 2, 2);
+    layout->addWidget(linear_z_label_, 3, 0);
+    layout->addWidget(linear_z_axis_spin_, 3, 1);
+    layout->addWidget(linear_z_spin_, 3, 2);
+    layout->addWidget(angular_yaw_label_, 4, 0);
+    layout->addWidget(angular_yaw_axis_spin_, 4, 1);
+    layout->addWidget(angular_yaw_spin_, 4, 2);
+    layout->setColumnStretch(2, 1);
     root->addWidget(velocity_group_, 0);
 
+    const auto connect_axis_spin = [this](QSpinBox* spin) {
+      connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { ApplyAxisMappingFromUi(); });
+    };
     const auto connect_spin = [this](QDoubleSpinBox* spin) {
       connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](double) { ApplyVelocityLimitsFromUi(); });
     };
+    connect_axis_spin(linear_x_axis_spin_);
+    connect_axis_spin(linear_y_axis_spin_);
+    connect_axis_spin(linear_z_axis_spin_);
+    connect_axis_spin(angular_yaw_axis_spin_);
     connect_spin(linear_x_spin_);
     connect_spin(linear_y_spin_);
     connect_spin(linear_z_spin_);
@@ -724,6 +757,14 @@ class RemoteControlGuiWindow final : public QWidget {
     spin->setDecimals(3);
     spin->setSingleStep(0.05);
     spin->setSuffix(suffix);
+    return spin;
+  }
+
+  QSpinBox* MakeAxisSpinBox() {
+    auto* spin = new QSpinBox(this);
+    spin->setRange(-1, 63);
+    spin->setSingleStep(1);
+    spin->setMinimumWidth(72);
     return spin;
   }
 
@@ -803,6 +844,19 @@ class RemoteControlGuiWindow final : public QWidget {
   }
 
   void PopulateEditableControls() {
+    linear_x_axis_spin_->blockSignals(true);
+    linear_y_axis_spin_->blockSignals(true);
+    linear_z_axis_spin_->blockSignals(true);
+    angular_yaw_axis_spin_->blockSignals(true);
+    linear_x_axis_spin_->setValue(editable_settings_.axis_mapping.linear_x);
+    linear_y_axis_spin_->setValue(editable_settings_.axis_mapping.linear_y);
+    linear_z_axis_spin_->setValue(editable_settings_.axis_mapping.linear_z);
+    angular_yaw_axis_spin_->setValue(editable_settings_.axis_mapping.angular_yaw);
+    linear_x_axis_spin_->blockSignals(false);
+    linear_y_axis_spin_->blockSignals(false);
+    linear_z_axis_spin_->blockSignals(false);
+    angular_yaw_axis_spin_->blockSignals(false);
+
     const MotionScale limits = CurrentMaxVelocityLimits(editable_settings_);
     linear_x_spin_->blockSignals(true);
     linear_y_spin_->blockSignals(true);
@@ -836,6 +890,24 @@ class RemoteControlGuiWindow final : public QWidget {
     return limits;
   }
 
+  JoystickAxisMapping AxisMappingFromUi() const {
+    JoystickAxisMapping mapping;
+    mapping.linear_x = linear_x_axis_spin_->value();
+    mapping.linear_y = linear_y_axis_spin_->value();
+    mapping.linear_z = linear_z_axis_spin_->value();
+    mapping.angular_yaw = angular_yaw_axis_spin_->value();
+    return mapping;
+  }
+
+  void ApplyAxisMappingFromUi() {
+    const JoystickAxisMapping mapping = AxisMappingFromUi();
+    config_.axes.linear_x = mapping.linear_x;
+    config_.axes.linear_y = mapping.linear_y;
+    config_.axes.linear_z = mapping.linear_z;
+    config_.axes.angular_yaw = mapping.angular_yaw;
+    SetStatus(Tr("轴映射已应用，尚未保存", "Axis mapping applied, not saved"));
+  }
+
   void ApplyVelocityLimitsFromUi() {
     EditableGuiSettings settings = editable_settings_;
     ApplyMaxVelocityLimits(VelocityLimitsFromUi(), &settings);
@@ -847,6 +919,7 @@ class RemoteControlGuiWindow final : public QWidget {
   EditableGuiSettings CollectEditableSettingsFromUi() const {
     EditableGuiSettings settings = editable_settings_;
     settings.language = language_;
+    settings.axis_mapping = AxisMappingFromUi();
     ApplyMaxVelocityLimits(VelocityLimitsFromUi(), &settings);
     for (std::size_t index = 0; index < action_rows_.size() && index < settings.action_slots.size(); ++index) {
       const ActionRowWidgets& row = action_rows_[index];
@@ -939,12 +1012,14 @@ class RemoteControlGuiWindow final : public QWidget {
     hint_label_->setText(Tr("聚焦此窗口后可用键盘控制：WASD 平移，R/F 升降，J/L 偏航，空格停止。",
                             "Focus this window for keyboard control. WASD move, R/F up-down, J/L yaw, Space stop."));
 
-    joystick_state_group_->setTitle(Tr("手柄输入状态", "Joystick Input State"));
+    joystick_state_group_->setTitle("");
     if (!have_joy_) {
       joystick_waiting_label_->setText(Tr("等待 /joy 手柄输入", "Waiting for /joy joystick input"));
     }
 
-    velocity_group_->setTitle(Tr("cmd_vel 最大输出（手柄/键盘同步）", "cmd_vel Max Output (Joystick/Keyboard)"));
+    velocity_group_->setTitle(Tr("cmd_vel 轴映射与最大输出", "cmd_vel Axis Mapping and Max Output"));
+    axis_header_label_->setText(Tr("手柄轴", "Axis"));
+    max_output_header_label_->setText(Tr("最大输出", "Max Output"));
     linear_x_label_->setText("linear.x");
     linear_y_label_->setText("linear.y");
     linear_z_label_->setText("linear.z");
@@ -1178,10 +1253,16 @@ class RemoteControlGuiWindow final : public QWidget {
   std::vector<AxisStateWidgets> axis_widgets_;
   std::vector<ButtonStateWidgets> button_widgets_;
   QGroupBox* velocity_group_ = nullptr;
+  QLabel* axis_header_label_ = nullptr;
+  QLabel* max_output_header_label_ = nullptr;
   QLabel* linear_x_label_ = nullptr;
   QLabel* linear_y_label_ = nullptr;
   QLabel* linear_z_label_ = nullptr;
   QLabel* angular_yaw_label_ = nullptr;
+  QSpinBox* linear_x_axis_spin_ = nullptr;
+  QSpinBox* linear_y_axis_spin_ = nullptr;
+  QSpinBox* linear_z_axis_spin_ = nullptr;
+  QSpinBox* angular_yaw_axis_spin_ = nullptr;
   QDoubleSpinBox* linear_x_spin_ = nullptr;
   QDoubleSpinBox* linear_y_spin_ = nullptr;
   QDoubleSpinBox* linear_z_spin_ = nullptr;

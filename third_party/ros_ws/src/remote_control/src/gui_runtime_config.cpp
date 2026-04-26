@@ -1,8 +1,8 @@
 #include "gui_runtime_config.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cctype>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -85,6 +85,17 @@ double ReadDouble(const YAML::Node& node, double fallback) {
   }
 }
 
+int ReadInt(const YAML::Node& node, int fallback) {
+  if (!node || !node.IsScalar()) {
+    return fallback;
+  }
+  try {
+    return node.as<int>();
+  } catch (const YAML::Exception&) {
+    return fallback;
+  }
+}
+
 std::string ReadString(const YAML::Node& node, const std::string& fallback) {
   if (!node || !node.IsScalar()) {
     return fallback;
@@ -96,6 +107,16 @@ std::string ReadString(const YAML::Node& node, const std::string& fallback) {
   }
 }
 
+JoystickAxisMapping ReadAxisMapping(const YAML::Node& node, JoystickAxisMapping fallback) {
+  const YAML::Node linear = Child(node, "linear");
+  const YAML::Node angular = Child(node, "angular");
+  fallback.linear_x = ReadInt(Child(linear, "x"), fallback.linear_x);
+  fallback.linear_y = ReadInt(Child(linear, "y"), fallback.linear_y);
+  fallback.linear_z = ReadInt(Child(linear, "z"), fallback.linear_z);
+  fallback.angular_yaw = ReadInt(Child(angular, "yaw"), fallback.angular_yaw);
+  return fallback;
+}
+
 MotionScale ReadMotionScale(const YAML::Node& node, MotionScale fallback) {
   const YAML::Node linear = Child(node, "linear");
   const YAML::Node angular = Child(node, "angular");
@@ -104,6 +125,13 @@ MotionScale ReadMotionScale(const YAML::Node& node, MotionScale fallback) {
   fallback.linear_z = ReadDouble(Child(linear, "z"), fallback.linear_z);
   fallback.angular_yaw = ReadDouble(Child(angular, "yaw"), fallback.angular_yaw);
   return fallback;
+}
+
+void WriteAxisMapping(YAML::Node node, const JoystickAxisMapping& mapping) {
+  node["linear"]["x"] = mapping.linear_x;
+  node["linear"]["y"] = mapping.linear_y;
+  node["linear"]["z"] = mapping.linear_z;
+  node["angular"]["yaw"] = mapping.angular_yaw;
 }
 
 std::string FloatLiteral(double value) {
@@ -124,8 +152,7 @@ void WriteMotionScale(YAML::Node node, const MotionScale& scale) {
 }
 
 std::string NormalizeLanguage(std::string language) {
-  std::transform(language.begin(), language.end(), language.begin(),
-                 [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
+  std::transform(language.begin(), language.end(), language.begin(), [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
   return language == "en" ? "en" : "zh";
 }
 
@@ -222,6 +249,7 @@ EditableGuiSettings LoadEditableGuiSettingsFromYaml(const std::string& config_pa
     return settings;
   }
 
+  settings.axis_mapping = ReadAxisMapping(Child(params, "axes"), settings.axis_mapping);
   settings.joystick_scale = ReadMotionScale(Child(params, "scale"), settings.joystick_scale);
   settings.keyboard_scale = ReadMotionScale(Child(Child(params, "keyboard"), "scale"), settings.keyboard_scale);
   settings.language = NormalizeLanguage(ReadString(Child(Child(params, "gui"), "language"), settings.language));
@@ -246,6 +274,7 @@ void SaveEditableGuiSettingsToYaml(const std::string& config_path, const Editabl
   YAML::Node root = LoadYamlFileOrEmpty(config_path);
   YAML::Node params = MutableParameterRoot(&root);
 
+  WriteAxisMapping(params["axes"], settings.axis_mapping);
   WriteMotionScale(params["scale"], settings.joystick_scale);
   WriteMotionScale(params["keyboard"]["scale"], settings.keyboard_scale);
   params["gui"]["language"] = NormalizeLanguage(settings.language);
