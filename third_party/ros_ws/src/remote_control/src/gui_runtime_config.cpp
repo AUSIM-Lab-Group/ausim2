@@ -96,6 +96,17 @@ int ReadInt(const YAML::Node& node, int fallback) {
   }
 }
 
+bool ReadBool(const YAML::Node& node, bool fallback) {
+  if (!node || !node.IsScalar()) {
+    return fallback;
+  }
+  try {
+    return node.as<bool>();
+  } catch (const YAML::Exception&) {
+    return fallback;
+  }
+}
+
 std::string ReadString(const YAML::Node& node, const std::string& fallback) {
   if (!node || !node.IsScalar()) {
     return fallback;
@@ -105,6 +116,12 @@ std::string ReadString(const YAML::Node& node, const std::string& fallback) {
   } catch (const YAML::Exception&) {
     return fallback;
   }
+}
+
+GuiSectionSettings ReadSectionSettings(const YAML::Node& node, GuiSectionSettings fallback) {
+  fallback.cmd_vel_mapping_expanded = ReadBool(Child(node, "cmd_vel_mapping_expanded"), fallback.cmd_vel_mapping_expanded);
+  fallback.action_mapping_expanded = ReadBool(Child(node, "action_mapping_expanded"), fallback.action_mapping_expanded);
+  return fallback;
 }
 
 JoystickAxisMapping ReadAxisMapping(const YAML::Node& node, JoystickAxisMapping fallback) {
@@ -143,6 +160,11 @@ void WriteAxisMapping(YAML::Node node, const JoystickAxisMapping& mapping) {
 void WriteWindowSettings(YAML::Node node, const GuiWindowSettings& window) {
   node["width"] = std::max(920, window.width);
   node["height"] = std::max(640, window.height);
+}
+
+void WriteSectionSettings(YAML::Node node, const GuiSectionSettings& sections) {
+  node["cmd_vel_mapping_expanded"] = sections.cmd_vel_mapping_expanded;
+  node["action_mapping_expanded"] = sections.action_mapping_expanded;
 }
 
 std::string FloatLiteral(double value) {
@@ -265,6 +287,7 @@ EditableGuiSettings LoadEditableGuiSettingsFromYaml(const std::string& config_pa
   settings.keyboard_scale = ReadMotionScale(Child(Child(params, "keyboard"), "scale"), settings.keyboard_scale);
   settings.language = NormalizeLanguage(ReadString(Child(Child(params, "gui"), "language"), settings.language));
   settings.window = ReadWindowSettings(Child(Child(params, "gui"), "window"), settings.window);
+  settings.sections = ReadSectionSettings(Child(Child(params, "gui"), "sections"), settings.sections);
 
   const YAML::Node actions = Child(params, "actions");
   if (actions && actions.IsMap()) {
@@ -291,6 +314,7 @@ void SaveEditableGuiSettingsToYaml(const std::string& config_path, const Editabl
   WriteMotionScale(params["keyboard"]["scale"], settings.keyboard_scale);
   params["gui"]["language"] = NormalizeLanguage(settings.language);
   WriteWindowSettings(params["gui"]["window"], settings.window);
+  WriteSectionSettings(params["gui"]["sections"], settings.sections);
 
   const std::vector<GuiActionSlotConfig> defaults = DefaultEditableActionSlots();
   const std::size_t count = std::min(defaults.size(), settings.action_slots.size());

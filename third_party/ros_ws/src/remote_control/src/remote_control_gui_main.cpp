@@ -39,6 +39,7 @@
 #include <QSpinBox>
 #include <QStringList>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -191,6 +192,11 @@ struct ActionRowWidgets {
   QLineEdit* keyboard_edit = nullptr;
   QPushButton* capture_button = nullptr;
   QPushButton* clear_button = nullptr;
+};
+
+struct CollapsibleSectionWidgets {
+  QToolButton* header_button = nullptr;
+  QWidget* body = nullptr;
 };
 
 struct AxisStateWidgets {
@@ -696,8 +702,38 @@ class RemoteControlGuiWindow final : public QWidget {
     }
   }
 
+  CollapsibleSectionWidgets BuildCollapsibleSection(QVBoxLayout* root, bool expanded) {
+    CollapsibleSectionWidgets section;
+    section.header_button = new QToolButton(this);
+    section.header_button->setCheckable(true);
+    section.header_button->setChecked(expanded);
+    section.header_button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    section.header_button->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
+    section.header_button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    section.header_button->setMinimumHeight(26);
+    section.header_button->setStyleSheet("QToolButton { text-align: left; padding: 4px 6px; }");
+
+    section.body = new QWidget(this);
+    section.body->setVisible(expanded);
+    section.body->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+    connect(section.header_button, &QToolButton::toggled, section.body, [button = section.header_button, body = section.body](bool checked) {
+      button->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
+      body->setVisible(checked);
+    });
+
+    root->addWidget(section.header_button, 0);
+    root->addWidget(section.body, 0);
+    return section;
+  }
+
   void BuildVelocityEditor(QVBoxLayout* root) {
-    velocity_group_ = new QGroupBox(this);
+    cmd_vel_mapping_section_ = BuildCollapsibleSection(root, editable_settings_.sections.cmd_vel_mapping_expanded);
+    auto* body_layout = new QVBoxLayout(cmd_vel_mapping_section_.body);
+    body_layout->setContentsMargins(0, 0, 0, 0);
+    body_layout->setSpacing(0);
+
+    velocity_group_ = new QGroupBox(cmd_vel_mapping_section_.body);
     auto* layout = new QGridLayout(velocity_group_);
     layout->setContentsMargins(6, 8, 6, 6);
     layout->setHorizontalSpacing(8);
@@ -744,7 +780,7 @@ class RemoteControlGuiWindow final : public QWidget {
     layout->addWidget(angular_yaw_axis_spin_, 4, 2);
     layout->addWidget(angular_yaw_spin_, 4, 3);
     layout->setColumnStretch(3, 1);
-    root->addWidget(velocity_group_, 0);
+    body_layout->addWidget(velocity_group_, 0);
 
     const auto connect_reverse_check = [this](QCheckBox* checkbox) {
       connect(checkbox, &QCheckBox::stateChanged, this, [this](int) { ApplyAxisReverseFromUi(); });
@@ -787,7 +823,12 @@ class RemoteControlGuiWindow final : public QWidget {
   }
 
   void BuildActionEditor(QVBoxLayout* root) {
-    action_group_ = new QGroupBox(this);
+    action_mapping_section_ = BuildCollapsibleSection(root, editable_settings_.sections.action_mapping_expanded);
+    auto* body_layout = new QVBoxLayout(action_mapping_section_.body);
+    body_layout->setContentsMargins(0, 0, 0, 0);
+    body_layout->setSpacing(0);
+
+    action_group_ = new QGroupBox(action_mapping_section_.body);
     action_group_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
     auto* layout = new QGridLayout(action_group_);
     layout->setContentsMargins(5, 6, 5, 5);
@@ -858,7 +899,7 @@ class RemoteControlGuiWindow final : public QWidget {
       action_rows_.push_back(row);
     }
 
-    root->addWidget(action_group_, 0);
+    body_layout->addWidget(action_group_, 0);
   }
 
   void PopulateEditableControls() {
@@ -970,6 +1011,10 @@ class RemoteControlGuiWindow final : public QWidget {
     settings.language = language_;
     settings.window.width = width();
     settings.window.height = height();
+    settings.sections.cmd_vel_mapping_expanded =
+        cmd_vel_mapping_section_.header_button == nullptr ? true : cmd_vel_mapping_section_.header_button->isChecked();
+    settings.sections.action_mapping_expanded =
+        action_mapping_section_.header_button == nullptr ? true : action_mapping_section_.header_button->isChecked();
     settings.axis_mapping = AxisMappingFromUi();
     ApplyMaxVelocityLimits(VelocityLimitsFromUi(), &settings);
     ApplyReverseChecksToJoystickScale(&settings.joystick_scale);
@@ -1069,6 +1114,7 @@ class RemoteControlGuiWindow final : public QWidget {
       joystick_waiting_label_->setText(Tr("等待 /joy 手柄输入", "Waiting for /joy joystick input"));
     }
 
+    cmd_vel_mapping_section_.header_button->setText(Tr("手柄到cmd_vel映射", "Joystick to cmd_vel Mapping"));
     velocity_group_->setTitle("");
     reverse_header_label_->setText(Tr("反向", "Rev"));
     axis_header_label_->setText(Tr("手柄轴", "Axis"));
@@ -1078,7 +1124,8 @@ class RemoteControlGuiWindow final : public QWidget {
     linear_z_label_->setText("linear.z");
     angular_yaw_label_->setText("angular.z");
 
-    action_group_->setTitle(Tr("手柄到 Action 映射", "Joystick to Action Mapping"));
+    action_mapping_section_.header_button->setText(Tr("手柄到action映射", "Joystick to Action Mapping"));
+    action_group_->setTitle("");
     action_slot_header_label_->setText(Tr("槽位", "Slot"));
     action_service_header_label_->setText("service");
     action_buttons_header_label_->setText(Tr("手柄按钮", "Buttons"));
@@ -1305,6 +1352,7 @@ class RemoteControlGuiWindow final : public QWidget {
   std::size_t button_layout_column_count_ = 0;
   std::vector<AxisStateWidgets> axis_widgets_;
   std::vector<ButtonStateWidgets> button_widgets_;
+  CollapsibleSectionWidgets cmd_vel_mapping_section_;
   QGroupBox* velocity_group_ = nullptr;
   QLabel* reverse_header_label_ = nullptr;
   QLabel* axis_header_label_ = nullptr;
@@ -1325,6 +1373,7 @@ class RemoteControlGuiWindow final : public QWidget {
   QDoubleSpinBox* linear_y_spin_ = nullptr;
   QDoubleSpinBox* linear_z_spin_ = nullptr;
   QDoubleSpinBox* angular_yaw_spin_ = nullptr;
+  CollapsibleSectionWidgets action_mapping_section_;
   QGroupBox* action_group_ = nullptr;
   QLabel* action_slot_header_label_ = nullptr;
   QLabel* action_service_header_label_ = nullptr;

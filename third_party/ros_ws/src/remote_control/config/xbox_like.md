@@ -92,6 +92,11 @@ Qt5 GUI 的“cmd_vel 最大输出”会同步写回 `scale.*` 与 `keyboard.sca
   - GUI 界面提示语言
   - 支持 `zh` 和 `en`
   - GUI 中点击 `English` / `中文` 可即时切换，并通过“应用并保存”写回配置
+- `gui.window`
+  - GUI 默认窗口宽高，由“应用并保存”写回当前窗口尺寸
+- `gui.sections`
+  - `cmd_vel_mapping_expanded` 和 `action_mapping_expanded` 控制两个映射区启动时是否展开
+  - GUI 中折叠/展开映射区后点击“应用并保存”会写回当前状态
 
 ### `actions`
 

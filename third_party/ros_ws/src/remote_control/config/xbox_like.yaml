@@ -27,6 +27,9 @@ remote_control_node:
       window:
         width: 920
         height: 1526
+      sections:
+        cmd_vel_mapping_expanded: false
+        action_mapping_expanded: false
     actions:
       action1:
         service: /joy/action1

@@ -29,8 +29,14 @@ struct GuiWindowSettings {
   int height = 760;
 };
 
+struct GuiSectionSettings {
+  bool cmd_vel_mapping_expanded = true;
+  bool action_mapping_expanded = true;
+};
+
 struct EditableGuiSettings {
   GuiWindowSettings window;
+  GuiSectionSettings sections;
   JoystickAxisMapping axis_mapping;
   MotionScale joystick_scale;
   MotionScale keyboard_scale;
