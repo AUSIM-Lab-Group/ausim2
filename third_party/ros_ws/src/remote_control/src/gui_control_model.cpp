@@ -112,6 +112,14 @@ std::vector<std::string> GuiControlModel::ActionHistoryText() const {
   return result;
 }
 
+std::string GuiControlModel::LatestActionStatusText() const {
+  if (action_history_.empty()) {
+    return "";
+  }
+  const ActionLogEntry& entry = action_history_.back();
+  return entry.action_name + " : " + entry.result;
+}
+
 char GuiControlModel::NormalizeKey(char key) {
   if (key == ' ') {
     return key;

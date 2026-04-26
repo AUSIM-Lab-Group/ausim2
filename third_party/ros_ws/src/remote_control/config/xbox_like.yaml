@@ -28,8 +28,10 @@ remote_control_node:
         width: 920
         height: 1526
       sections:
-        cmd_vel_mapping_expanded: false
+        joystick_state_expanded: true
+        cmd_vel_mapping_expanded: true
         action_mapping_expanded: false
+        action_history_expanded: false
     actions:
       action1:
         service: /joy/action1

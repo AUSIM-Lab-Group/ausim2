@@ -53,6 +53,8 @@ namespace {
 
 constexpr char kDefaultJoyTopic[] = "/joy";
 constexpr char kDefaultCmdVelTopic[] = "/joy/cmd_vel";
+constexpr int kFooterButtonWidth = 240;
+constexpr int kFooterButtonHeight = 32;
 
 double ApplyDeadzone(double value, double deadzone) {
   if (std::abs(value) < deadzone) {
@@ -466,48 +468,70 @@ class RemoteControlGuiWindow final : public QWidget {
     resize(editable_settings_.window.width, editable_settings_.window.height);
 
     auto* root = new QVBoxLayout(this);
-    auto* grid = new QGridLayout();
-
-    mode_label_ = new QLabel(this);
-    hint_label_ = new QLabel(this);
-    hint_label_->setWordWrap(true);
-    hint_label_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
-    history_list_ = new QListWidget(this);
-    history_list_->setMaximumHeight(96);
-
-    mode_title_label_ = new QLabel(this);
-    grid->addWidget(mode_title_label_, 0, 0);
-    grid->addWidget(mode_label_, 0, 1);
-
-    root->addLayout(grid);
-    root->addWidget(hint_label_);
+    BuildInputStatusPane(root);
 
     BuildJoystickStatePanel(root);
     BuildVelocityEditor(root);
     BuildActionEditor(root);
-
-    auto* button_row = new QHBoxLayout();
-    language_button_ = new QPushButton(this);
-    save_button_ = new QPushButton(this);
-    save_status_label_ = new QLabel(this);
-    button_row->addWidget(language_button_);
-    button_row->addWidget(save_button_);
-    button_row->addWidget(save_status_label_, 1);
-    root->addLayout(button_row);
-
-    action_history_title_label_ = new QLabel(this);
-    root->addWidget(action_history_title_label_);
-    root->addWidget(history_list_, 0);
-
-    connect(language_button_, &QPushButton::clicked, this, [this]() { ToggleLanguage(); });
-    connect(save_button_, &QPushButton::clicked, this, [this]() { SaveEditableSettingsFromUi(); });
+    BuildActionHistoryPanel(root);
+    root->addStretch(1);
+    BuildFooterControls(root);
 
     PopulateEditableControls();
     ApplyLanguageText();
   }
 
+  void BuildFooterControls(QVBoxLayout* root) {
+    auto* button_row = new QHBoxLayout();
+    button_row->setContentsMargins(0, 0, 0, 0);
+    button_row->setSpacing(6);
+
+    language_button_ = new QPushButton(this);
+    save_button_ = new QPushButton(this);
+    save_status_label_ = new QLabel(this);
+    language_button_->setFixedSize(kFooterButtonWidth, kFooterButtonHeight);
+    save_button_->setFixedSize(kFooterButtonWidth, kFooterButtonHeight);
+
+    button_row->addWidget(language_button_, 0, Qt::AlignLeft);
+    button_row->addWidget(save_button_, 0, Qt::AlignLeft);
+    button_row->addWidget(save_status_label_, 1);
+    root->addLayout(button_row);
+
+    connect(language_button_, &QPushButton::clicked, this, [this]() { ToggleLanguage(); });
+    connect(save_button_, &QPushButton::clicked, this, [this]() { SaveEditableSettingsFromUi(); });
+  }
+
+  void BuildInputStatusPane(QVBoxLayout* root) {
+    input_status_frame_ = new QFrame(this);
+    input_status_frame_->setFrameShape(QFrame::StyledPanel);
+    input_status_frame_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    auto* frame_layout = new QVBoxLayout(input_status_frame_);
+    frame_layout->setContentsMargins(8, 6, 8, 6);
+    frame_layout->setSpacing(4);
+
+    auto* grid = new QGridLayout();
+    mode_label_ = new QLabel(input_status_frame_);
+    hint_label_ = new QLabel(input_status_frame_);
+    hint_label_->setWordWrap(true);
+    hint_label_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+    mode_title_label_ = new QLabel(input_status_frame_);
+    grid->addWidget(mode_title_label_, 0, 0);
+    grid->addWidget(mode_label_, 0, 1);
+    grid->setColumnStretch(1, 1);
+
+    frame_layout->addLayout(grid);
+    frame_layout->addWidget(hint_label_);
+    root->addWidget(input_status_frame_, 0);
+  }
+
   void BuildJoystickStatePanel(QVBoxLayout* root) {
-    joystick_state_group_ = new QGroupBox(this);
+    joystick_state_section_ = BuildCollapsibleSection(root, editable_settings_.sections.joystick_state_expanded, 1);
+    auto* section_layout = new QVBoxLayout(joystick_state_section_.body);
+    section_layout->setContentsMargins(0, 0, 0, 0);
+    section_layout->setSpacing(0);
+
+    joystick_state_group_ = new QGroupBox(joystick_state_section_.body);
     joystick_state_group_->setTitle("");
     joystick_state_group_->setMinimumHeight(0);
     joystick_state_group_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -558,7 +582,7 @@ class RemoteControlGuiWindow final : public QWidget {
 
     group_layout->addWidget(joystick_waiting_label_);
     group_layout->addWidget(joystick_state_scroll_, 1);
-    root->addWidget(joystick_state_group_, 1);
+    section_layout->addWidget(joystick_state_group_, 1);
   }
 
   JoyStateSnapshot CurrentJoySnapshot() const {
@@ -702,7 +726,7 @@ class RemoteControlGuiWindow final : public QWidget {
     }
   }
 
-  CollapsibleSectionWidgets BuildCollapsibleSection(QVBoxLayout* root, bool expanded) {
+  CollapsibleSectionWidgets BuildCollapsibleSection(QVBoxLayout* root, bool expanded, int body_stretch = 0) {
     CollapsibleSectionWidgets section;
     section.header_button = new QToolButton(this);
     section.header_button->setCheckable(true);
@@ -723,7 +747,7 @@ class RemoteControlGuiWindow final : public QWidget {
     });
 
     root->addWidget(section.header_button, 0);
-    root->addWidget(section.body, 0);
+    root->addWidget(section.body, body_stretch);
     return section;
   }
 
@@ -902,6 +926,19 @@ class RemoteControlGuiWindow final : public QWidget {
     body_layout->addWidget(action_group_, 0);
   }
 
+  void BuildActionHistoryPanel(QVBoxLayout* root) {
+    action_history_section_ = BuildCollapsibleSection(root, editable_settings_.sections.action_history_expanded);
+    auto* body_layout = new QVBoxLayout(action_history_section_.body);
+    body_layout->setContentsMargins(0, 0, 0, 0);
+    body_layout->setSpacing(0);
+
+    history_list_ = new QListWidget(action_history_section_.body);
+    history_list_->setMaximumHeight(96);
+    body_layout->addWidget(history_list_, 0);
+
+    connect(action_history_section_.header_button, &QToolButton::toggled, this, [this](bool) { RefreshActionHistory(); });
+  }
+
   void PopulateEditableControls() {
     linear_x_reverse_check_->blockSignals(true);
     linear_y_reverse_check_->blockSignals(true);
@@ -1011,10 +1048,14 @@ class RemoteControlGuiWindow final : public QWidget {
     settings.language = language_;
     settings.window.width = width();
     settings.window.height = height();
+    settings.sections.joystick_state_expanded =
+        joystick_state_section_.header_button == nullptr ? true : joystick_state_section_.header_button->isChecked();
     settings.sections.cmd_vel_mapping_expanded =
         cmd_vel_mapping_section_.header_button == nullptr ? true : cmd_vel_mapping_section_.header_button->isChecked();
     settings.sections.action_mapping_expanded =
         action_mapping_section_.header_button == nullptr ? true : action_mapping_section_.header_button->isChecked();
+    settings.sections.action_history_expanded =
+        action_history_section_.header_button == nullptr ? true : action_history_section_.header_button->isChecked();
     settings.axis_mapping = AxisMappingFromUi();
     ApplyMaxVelocityLimits(VelocityLimitsFromUi(), &settings);
     ApplyReverseChecksToJoystickScale(&settings.joystick_scale);
@@ -1109,12 +1150,13 @@ class RemoteControlGuiWindow final : public QWidget {
     hint_label_->setText(Tr("聚焦此窗口后可用键盘控制：WASD 平移，R/F 升降，J/L 偏航，空格停止。",
                             "Focus this window for keyboard control. WASD move, R/F up-down, J/L yaw, Space stop."));
 
+    joystick_state_section_.header_button->setText(Tr("手柄状态显示", "Joystick State Display"));
     joystick_state_group_->setTitle("");
     if (!have_joy_) {
       joystick_waiting_label_->setText(Tr("等待 /joy 手柄输入", "Waiting for /joy joystick input"));
     }
 
-    cmd_vel_mapping_section_.header_button->setText(Tr("手柄到cmd_vel映射", "Joystick to cmd_vel Mapping"));
+    UpdateCmdVelMappingTitle();
     velocity_group_->setTitle("");
     reverse_header_label_->setText(Tr("反向", "Rev"));
     axis_header_label_->setText(Tr("手柄轴", "Axis"));
@@ -1124,7 +1166,7 @@ class RemoteControlGuiWindow final : public QWidget {
     linear_z_label_->setText("linear.z");
     angular_yaw_label_->setText("angular.z");
 
-    action_mapping_section_.header_button->setText(Tr("手柄到action映射", "Joystick to Action Mapping"));
+    action_mapping_section_.header_button->setText(Tr("action映射", "Action Mapping"));
     action_group_->setTitle("");
     action_slot_header_label_->setText(Tr("槽位", "Slot"));
     action_service_header_label_->setText("service");
@@ -1137,7 +1179,7 @@ class RemoteControlGuiWindow final : public QWidget {
 
     language_button_->setText(language_ == "en" ? "中文" : "English");
     save_button_->setText(Tr("应用并保存", "Apply && Save"));
-    action_history_title_label_->setText(Tr("Action 历史", "Action History"));
+    RefreshActionHistory();
   }
 
   void SetupRosInterfaces() {
@@ -1251,6 +1293,7 @@ class RemoteControlGuiWindow final : public QWidget {
   void PublishZeroCommand() {
     latest_command_ = geometry_msgs::msg::Twist();
     cmd_vel_publisher_->publish(latest_command_);
+    UpdateCmdVelMappingTitle();
   }
 
   std::optional<std::string> KeyboardActionForKey(char key) const {
@@ -1312,12 +1355,29 @@ class RemoteControlGuiWindow final : public QWidget {
 
   void RefreshUi(const std::string& mode) {
     mode_label_->setText(ModeText(mode));
+    UpdateCmdVelMappingTitle();
     RefreshJoystickStatePanel();
     RefreshActionHistory();
   }
 
+  void UpdateCmdVelMappingTitle() {
+    if (cmd_vel_mapping_section_.header_button == nullptr) {
+      return;
+    }
+    const QString title = QString("%1 - x:%2 y:%3 z:%4 yaw:%5")
+                              .arg(Tr("手柄cmd_vel映射", "Joystick to cmd_vel Mapping"))
+                              .arg(latest_command_.linear.x, 0, 'f', 2)
+                              .arg(latest_command_.linear.y, 0, 'f', 2)
+                              .arg(latest_command_.linear.z, 0, 'f', 2)
+                              .arg(latest_command_.angular.z, 0, 'f', 2);
+    cmd_vel_mapping_section_.header_button->setText(title);
+  }
+
   void RefreshActionHistory() {
     const std::vector<std::string> entries = model_.ActionHistoryText();
+    if (history_list_ == nullptr) {
+      return;
+    }
     history_list_->clear();
     for (const std::string& entry : entries) {
       history_list_->addItem(QString::fromStdString(entry));
@@ -1325,6 +1385,21 @@ class RemoteControlGuiWindow final : public QWidget {
     if (history_list_->count() > 0) {
       history_list_->scrollToBottom();
     }
+    UpdateActionHistoryTitle();
+  }
+
+  void UpdateActionHistoryTitle() {
+    if (action_history_section_.header_button == nullptr) {
+      return;
+    }
+    QString title = Tr("Action 历史", "Action History");
+    if (!action_history_section_.header_button->isChecked()) {
+      const std::string summary = model_.LatestActionStatusText();
+      if (!summary.empty()) {
+        title += " - " + QString::fromStdString(summary);
+      }
+    }
+    action_history_section_.header_button->setText(title);
   }
 
   std::shared_ptr<rclcpp::Node> node_;
@@ -1338,6 +1413,7 @@ class RemoteControlGuiWindow final : public QWidget {
   std::unordered_map<std::string, bool> action_combo_active_;
 
   QTimer* publish_timer_ = nullptr;
+  QFrame* input_status_frame_ = nullptr;
   QLabel* mode_label_ = nullptr;
   QLabel* mode_title_label_ = nullptr;
   QLabel* hint_label_ = nullptr;
@@ -1352,6 +1428,7 @@ class RemoteControlGuiWindow final : public QWidget {
   std::size_t button_layout_column_count_ = 0;
   std::vector<AxisStateWidgets> axis_widgets_;
   std::vector<ButtonStateWidgets> button_widgets_;
+  CollapsibleSectionWidgets joystick_state_section_;
   CollapsibleSectionWidgets cmd_vel_mapping_section_;
   QGroupBox* velocity_group_ = nullptr;
   QLabel* reverse_header_label_ = nullptr;
@@ -1383,7 +1460,7 @@ class RemoteControlGuiWindow final : public QWidget {
   QPushButton* language_button_ = nullptr;
   QPushButton* save_button_ = nullptr;
   QLabel* save_status_label_ = nullptr;
-  QLabel* action_history_title_label_ = nullptr;
+  CollapsibleSectionWidgets action_history_section_;
   QListWidget* history_list_ = nullptr;
   std::string language_ = "zh";
 

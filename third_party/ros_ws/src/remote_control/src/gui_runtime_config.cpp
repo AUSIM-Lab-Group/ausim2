@@ -119,8 +119,10 @@ std::string ReadString(const YAML::Node& node, const std::string& fallback) {
 }
 
 GuiSectionSettings ReadSectionSettings(const YAML::Node& node, GuiSectionSettings fallback) {
+  fallback.joystick_state_expanded = ReadBool(Child(node, "joystick_state_expanded"), fallback.joystick_state_expanded);
   fallback.cmd_vel_mapping_expanded = ReadBool(Child(node, "cmd_vel_mapping_expanded"), fallback.cmd_vel_mapping_expanded);
   fallback.action_mapping_expanded = ReadBool(Child(node, "action_mapping_expanded"), fallback.action_mapping_expanded);
+  fallback.action_history_expanded = ReadBool(Child(node, "action_history_expanded"), fallback.action_history_expanded);
   return fallback;
 }
 
@@ -163,8 +165,10 @@ void WriteWindowSettings(YAML::Node node, const GuiWindowSettings& window) {
 }
 
 void WriteSectionSettings(YAML::Node node, const GuiSectionSettings& sections) {
+  node["joystick_state_expanded"] = sections.joystick_state_expanded;
   node["cmd_vel_mapping_expanded"] = sections.cmd_vel_mapping_expanded;
   node["action_mapping_expanded"] = sections.action_mapping_expanded;
+  node["action_history_expanded"] = sections.action_history_expanded;
 }
 
 std::string FloatLiteral(double value) {

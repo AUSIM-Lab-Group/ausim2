@@ -30,8 +30,10 @@ struct GuiWindowSettings {
 };
 
 struct GuiSectionSettings {
+  bool joystick_state_expanded = true;
   bool cmd_vel_mapping_expanded = true;
   bool action_mapping_expanded = true;
+  bool action_history_expanded = true;
 };
 
 struct EditableGuiSettings {

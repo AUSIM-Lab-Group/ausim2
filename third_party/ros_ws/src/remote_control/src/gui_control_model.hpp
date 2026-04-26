@@ -74,6 +74,7 @@ class GuiControlModel {
 
   void RecordAction(std::string timestamp, std::string source, std::string action_name, std::string service_name, std::string result);
   std::vector<std::string> ActionHistoryText() const;
+  std::string LatestActionStatusText() const;
 
  private:
   static char NormalizeKey(char key);

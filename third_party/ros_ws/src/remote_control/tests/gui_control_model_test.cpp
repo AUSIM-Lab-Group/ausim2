@@ -79,6 +79,18 @@ void TestActionHistoryKeepsNewestEntries() {
   Expect(history[1].find("action3") != std::string::npos, "newest retained entry should be action3");
 }
 
+void TestActionHistorySummaryShowsNewestActionWithoutTimestamp() {
+  remote_control::GuiControlModel model(3);
+  model.RecordAction("12:00:00", "keyboard", "action1", "/joy/action1", "sent");
+  model.RecordAction("12:00:01", "joystick", "action2", "/joy/action2", "success: accepted");
+
+  const std::string summary = model.LatestActionStatusText();
+  Expect(summary == "action2 : success: accepted", "latest action summary should show action name and receive status");
+  Expect(summary.find("12:00:01") == std::string::npos, "latest action summary should not include timestamp");
+  Expect(summary.find("joystick") == std::string::npos, "latest action summary should not include input source");
+  Expect(summary.find("/joy/action2") == std::string::npos, "latest action summary should not include service name");
+}
+
 void TestJoySnapshotIncludesEveryAxisAndButton() {
   std::vector<double> axes = {-1.0, -0.25, 0.0, 0.25, 1.0};
   std::vector<int> buttons = {0, 1, 0, 1};
@@ -146,6 +158,7 @@ int main() {
   TestReleaseOnlyClearsReleasedKey();
   TestFocusLossClearsKeyboardState();
   TestActionHistoryKeepsNewestEntries();
+  TestActionHistorySummaryShowsNewestActionWithoutTimestamp();
   TestJoySnapshotIncludesEveryAxisAndButton();
   TestJoySnapshotFollowsLatestMessageShape();
   TestAxisGridColumnsAdaptToAvailableWidth();

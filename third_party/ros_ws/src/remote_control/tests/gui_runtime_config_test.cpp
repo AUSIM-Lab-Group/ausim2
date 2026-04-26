@@ -76,8 +76,10 @@ remote_control_node:
         width: 1120
         height: 720
       sections:
+        joystick_state_expanded: false
         cmd_vel_mapping_expanded: false
         action_mapping_expanded: true
+        action_history_expanded: false
     actions:
       action1:
         service: /joy/action1
@@ -119,8 +121,10 @@ void TestLoadEditableSettingsReadsRemoteControlNodeYaml() {
   Expect(settings.language == "en", "language should be loaded from gui.language");
   Expect(settings.window.width == 1120, "window width should load from gui.window.width");
   Expect(settings.window.height == 720, "window height should load from gui.window.height");
+  Expect(!settings.sections.joystick_state_expanded, "joystick state expanded state should load");
   Expect(!settings.sections.cmd_vel_mapping_expanded, "cmd_vel mapping expanded state should load");
   Expect(settings.sections.action_mapping_expanded, "action mapping expanded state should load");
+  Expect(!settings.sections.action_history_expanded, "action history expanded state should load");
   Expect(settings.axis_mapping.linear_x == 4, "linear.x axis mapping should load");
   Expect(settings.axis_mapping.linear_y == 3, "linear.y axis mapping should load");
   Expect(settings.axis_mapping.linear_z == 1, "linear.z axis mapping should load");
@@ -177,8 +181,10 @@ void TestSaveEditableSettingsWritesScalesLanguageAndSixActionSlots() {
   settings.language = "zh";
   settings.window.width = 940;
   settings.window.height = 680;
+  settings.sections.joystick_state_expanded = false;
   settings.sections.cmd_vel_mapping_expanded = true;
   settings.sections.action_mapping_expanded = false;
+  settings.sections.action_history_expanded = true;
   settings.action_slots[4].service_name = "/joy/action5";
   settings.action_slots[4].buttons = {2, 3};
   settings.action_slots[4].keyboard_key = "h";
@@ -200,8 +206,10 @@ void TestSaveEditableSettingsWritesScalesLanguageAndSixActionSlots() {
   Expect(params["gui"]["language"].as<std::string>() == "zh", "saved language should be zh");
   Expect(params["gui"]["window"]["width"].as<int>() == 940, "saved window width should update");
   Expect(params["gui"]["window"]["height"].as<int>() == 680, "saved window height should update");
+  Expect(!params["gui"]["sections"]["joystick_state_expanded"].as<bool>(), "saved joystick state expanded state should update");
   Expect(params["gui"]["sections"]["cmd_vel_mapping_expanded"].as<bool>(), "saved cmd_vel mapping expanded state should update");
   Expect(!params["gui"]["sections"]["action_mapping_expanded"].as<bool>(), "saved action mapping expanded state should update");
+  Expect(params["gui"]["sections"]["action_history_expanded"].as<bool>(), "saved action history expanded state should update");
   Expect(params["actions"]["action5"]["service"].as<std::string>() == "/joy/action5", "action5 service should save");
   Expect(params["actions"]["action5"]["buttons"][0].as<int>() == 2, "action5 first button should save");
   Expect(params["actions"]["action5"]["buttons"][1].as<int>() == 3, "action5 second button should save");
@@ -264,8 +272,10 @@ remote_control_node:
   Expect(settings.language == "zh", "missing gui.language should default to zh");
   Expect(settings.window.width == 920, "missing gui.window.width should use default width");
   Expect(settings.window.height == 760, "missing gui.window.height should use default height");
+  Expect(settings.sections.joystick_state_expanded, "missing joystick state expanded state should default to expanded");
   Expect(settings.sections.cmd_vel_mapping_expanded, "missing cmd_vel mapping expanded state should default to expanded");
   Expect(settings.sections.action_mapping_expanded, "missing action mapping expanded state should default to expanded");
+  Expect(settings.sections.action_history_expanded, "missing action history expanded state should default to expanded");
   Expect(settings.axis_mapping.linear_x == 4, "missing axes.linear.x should keep default axis mapping");
   Expect(settings.axis_mapping.linear_y == 0, "missing axes.linear.y should keep default axis mapping");
   Expect(settings.axis_mapping.linear_z == 1, "missing axes.linear.z should keep default axis mapping");
