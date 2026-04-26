@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QDateTime>
 #include <QDoubleSpinBox>
 #include <QFocusEvent>
@@ -455,8 +456,8 @@ class RemoteControlGuiWindow final : public QWidget {
 
   void BuildUi() {
     setWindowTitle("AUSIM Remote Control");
-    resize(920, 760);
     setMinimumSize(920, 640);
+    resize(editable_settings_.window.width, editable_settings_.window.height);
 
     auto* root = new QVBoxLayout(this);
     auto* grid = new QGridLayout();
@@ -703,12 +704,17 @@ class RemoteControlGuiWindow final : public QWidget {
     layout->setVerticalSpacing(3);
     velocity_group_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
 
+    reverse_header_label_ = new QLabel(this);
     axis_header_label_ = new QLabel(this);
     max_output_header_label_ = new QLabel(this);
     linear_x_label_ = new QLabel(this);
     linear_y_label_ = new QLabel(this);
     linear_z_label_ = new QLabel(this);
     angular_yaw_label_ = new QLabel(this);
+    linear_x_reverse_check_ = new QCheckBox(this);
+    linear_y_reverse_check_ = new QCheckBox(this);
+    linear_z_reverse_check_ = new QCheckBox(this);
+    angular_yaw_reverse_check_ = new QCheckBox(this);
     linear_x_axis_spin_ = MakeAxisSpinBox();
     linear_y_axis_spin_ = MakeAxisSpinBox();
     linear_z_axis_spin_ = MakeAxisSpinBox();
@@ -718,29 +724,41 @@ class RemoteControlGuiWindow final : public QWidget {
     linear_z_spin_ = MakeVelocitySpinBox(" m/s");
     angular_yaw_spin_ = MakeVelocitySpinBox(" rad/s");
 
-    layout->addWidget(axis_header_label_, 0, 1);
-    layout->addWidget(max_output_header_label_, 0, 2);
+    layout->addWidget(reverse_header_label_, 0, 1);
+    layout->addWidget(axis_header_label_, 0, 2);
+    layout->addWidget(max_output_header_label_, 0, 3);
     layout->addWidget(linear_x_label_, 1, 0);
-    layout->addWidget(linear_x_axis_spin_, 1, 1);
-    layout->addWidget(linear_x_spin_, 1, 2);
+    layout->addWidget(linear_x_reverse_check_, 1, 1, Qt::AlignHCenter);
+    layout->addWidget(linear_x_axis_spin_, 1, 2);
+    layout->addWidget(linear_x_spin_, 1, 3);
     layout->addWidget(linear_y_label_, 2, 0);
-    layout->addWidget(linear_y_axis_spin_, 2, 1);
-    layout->addWidget(linear_y_spin_, 2, 2);
+    layout->addWidget(linear_y_reverse_check_, 2, 1, Qt::AlignHCenter);
+    layout->addWidget(linear_y_axis_spin_, 2, 2);
+    layout->addWidget(linear_y_spin_, 2, 3);
     layout->addWidget(linear_z_label_, 3, 0);
-    layout->addWidget(linear_z_axis_spin_, 3, 1);
-    layout->addWidget(linear_z_spin_, 3, 2);
+    layout->addWidget(linear_z_reverse_check_, 3, 1, Qt::AlignHCenter);
+    layout->addWidget(linear_z_axis_spin_, 3, 2);
+    layout->addWidget(linear_z_spin_, 3, 3);
     layout->addWidget(angular_yaw_label_, 4, 0);
-    layout->addWidget(angular_yaw_axis_spin_, 4, 1);
-    layout->addWidget(angular_yaw_spin_, 4, 2);
-    layout->setColumnStretch(2, 1);
+    layout->addWidget(angular_yaw_reverse_check_, 4, 1, Qt::AlignHCenter);
+    layout->addWidget(angular_yaw_axis_spin_, 4, 2);
+    layout->addWidget(angular_yaw_spin_, 4, 3);
+    layout->setColumnStretch(3, 1);
     root->addWidget(velocity_group_, 0);
 
+    const auto connect_reverse_check = [this](QCheckBox* checkbox) {
+      connect(checkbox, &QCheckBox::stateChanged, this, [this](int) { ApplyAxisReverseFromUi(); });
+    };
     const auto connect_axis_spin = [this](QSpinBox* spin) {
       connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { ApplyAxisMappingFromUi(); });
     };
     const auto connect_spin = [this](QDoubleSpinBox* spin) {
       connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](double) { ApplyVelocityLimitsFromUi(); });
     };
+    connect_reverse_check(linear_x_reverse_check_);
+    connect_reverse_check(linear_y_reverse_check_);
+    connect_reverse_check(linear_z_reverse_check_);
+    connect_reverse_check(angular_yaw_reverse_check_);
     connect_axis_spin(linear_x_axis_spin_);
     connect_axis_spin(linear_y_axis_spin_);
     connect_axis_spin(linear_z_axis_spin_);
@@ -844,6 +862,19 @@ class RemoteControlGuiWindow final : public QWidget {
   }
 
   void PopulateEditableControls() {
+    linear_x_reverse_check_->blockSignals(true);
+    linear_y_reverse_check_->blockSignals(true);
+    linear_z_reverse_check_->blockSignals(true);
+    angular_yaw_reverse_check_->blockSignals(true);
+    linear_x_reverse_check_->setChecked(editable_settings_.joystick_scale.linear_x < 0.0);
+    linear_y_reverse_check_->setChecked(editable_settings_.joystick_scale.linear_y < 0.0);
+    linear_z_reverse_check_->setChecked(editable_settings_.joystick_scale.linear_z < 0.0);
+    angular_yaw_reverse_check_->setChecked(editable_settings_.joystick_scale.angular_yaw < 0.0);
+    linear_x_reverse_check_->blockSignals(false);
+    linear_y_reverse_check_->blockSignals(false);
+    linear_z_reverse_check_->blockSignals(false);
+    angular_yaw_reverse_check_->blockSignals(false);
+
     linear_x_axis_spin_->blockSignals(true);
     linear_y_axis_spin_->blockSignals(true);
     linear_z_axis_spin_->blockSignals(true);
@@ -908,9 +939,27 @@ class RemoteControlGuiWindow final : public QWidget {
     SetStatus(Tr("轴映射已应用，尚未保存", "Axis mapping applied, not saved"));
   }
 
+  void ApplyReverseChecksToJoystickScale(MotionScale* scale) const {
+    if (scale == nullptr) {
+      return;
+    }
+    scale->linear_x = linear_x_reverse_check_->isChecked() ? -std::abs(scale->linear_x) : std::abs(scale->linear_x);
+    scale->linear_y = linear_y_reverse_check_->isChecked() ? -std::abs(scale->linear_y) : std::abs(scale->linear_y);
+    scale->linear_z = linear_z_reverse_check_->isChecked() ? -std::abs(scale->linear_z) : std::abs(scale->linear_z);
+    scale->angular_yaw = angular_yaw_reverse_check_->isChecked() ? -std::abs(scale->angular_yaw) : std::abs(scale->angular_yaw);
+  }
+
+  void ApplyAxisReverseFromUi() {
+    MotionScale scale = config_.joystick_scale;
+    ApplyReverseChecksToJoystickScale(&scale);
+    config_.joystick_scale = scale;
+    SetStatus(Tr("轴反向已应用，尚未保存", "Axis reverse applied, not saved"));
+  }
+
   void ApplyVelocityLimitsFromUi() {
     EditableGuiSettings settings = editable_settings_;
     ApplyMaxVelocityLimits(VelocityLimitsFromUi(), &settings);
+    ApplyReverseChecksToJoystickScale(&settings.joystick_scale);
     config_.joystick_scale = settings.joystick_scale;
     config_.keyboard_scale = settings.keyboard_scale;
     SetStatus(Tr("速度已应用，尚未保存", "Speed limits applied, not saved"));
@@ -919,8 +968,11 @@ class RemoteControlGuiWindow final : public QWidget {
   EditableGuiSettings CollectEditableSettingsFromUi() const {
     EditableGuiSettings settings = editable_settings_;
     settings.language = language_;
+    settings.window.width = width();
+    settings.window.height = height();
     settings.axis_mapping = AxisMappingFromUi();
     ApplyMaxVelocityLimits(VelocityLimitsFromUi(), &settings);
+    ApplyReverseChecksToJoystickScale(&settings.joystick_scale);
     for (std::size_t index = 0; index < action_rows_.size() && index < settings.action_slots.size(); ++index) {
       const ActionRowWidgets& row = action_rows_[index];
       settings.action_slots[index].service_name = row.service_edit->text().trimmed().toStdString();
@@ -1017,7 +1069,8 @@ class RemoteControlGuiWindow final : public QWidget {
       joystick_waiting_label_->setText(Tr("等待 /joy 手柄输入", "Waiting for /joy joystick input"));
     }
 
-    velocity_group_->setTitle(Tr("cmd_vel 轴映射与最大输出", "cmd_vel Axis Mapping and Max Output"));
+    velocity_group_->setTitle("");
+    reverse_header_label_->setText(Tr("反向", "Rev"));
     axis_header_label_->setText(Tr("手柄轴", "Axis"));
     max_output_header_label_->setText(Tr("最大输出", "Max Output"));
     linear_x_label_->setText("linear.x");
@@ -1025,7 +1078,7 @@ class RemoteControlGuiWindow final : public QWidget {
     linear_z_label_->setText("linear.z");
     angular_yaw_label_->setText("angular.z");
 
-    action_group_->setTitle(Tr("手柄到 Action 映射（默认 6 槽）", "Joystick to Action Mapping (6 Slots)"));
+    action_group_->setTitle(Tr("手柄到 Action 映射", "Joystick to Action Mapping"));
     action_slot_header_label_->setText(Tr("槽位", "Slot"));
     action_service_header_label_->setText("service");
     action_buttons_header_label_->setText(Tr("手柄按钮", "Buttons"));
@@ -1253,12 +1306,17 @@ class RemoteControlGuiWindow final : public QWidget {
   std::vector<AxisStateWidgets> axis_widgets_;
   std::vector<ButtonStateWidgets> button_widgets_;
   QGroupBox* velocity_group_ = nullptr;
+  QLabel* reverse_header_label_ = nullptr;
   QLabel* axis_header_label_ = nullptr;
   QLabel* max_output_header_label_ = nullptr;
   QLabel* linear_x_label_ = nullptr;
   QLabel* linear_y_label_ = nullptr;
   QLabel* linear_z_label_ = nullptr;
   QLabel* angular_yaw_label_ = nullptr;
+  QCheckBox* linear_x_reverse_check_ = nullptr;
+  QCheckBox* linear_y_reverse_check_ = nullptr;
+  QCheckBox* linear_z_reverse_check_ = nullptr;
+  QCheckBox* angular_yaw_reverse_check_ = nullptr;
   QSpinBox* linear_x_axis_spin_ = nullptr;
   QSpinBox* linear_y_axis_spin_ = nullptr;
   QSpinBox* linear_z_axis_spin_ = nullptr;

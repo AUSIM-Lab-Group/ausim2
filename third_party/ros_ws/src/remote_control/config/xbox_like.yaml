@@ -24,6 +24,9 @@ remote_control_node:
         yaw: 2.0
     gui:
       language: zh
+      window:
+        width: 920
+        height: 1526
     actions:
       action1:
         service: /joy/action1

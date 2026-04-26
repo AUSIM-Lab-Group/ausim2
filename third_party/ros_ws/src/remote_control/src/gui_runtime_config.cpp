@@ -117,6 +117,12 @@ JoystickAxisMapping ReadAxisMapping(const YAML::Node& node, JoystickAxisMapping 
   return fallback;
 }
 
+GuiWindowSettings ReadWindowSettings(const YAML::Node& node, GuiWindowSettings fallback) {
+  fallback.width = std::max(920, ReadInt(Child(node, "width"), fallback.width));
+  fallback.height = std::max(640, ReadInt(Child(node, "height"), fallback.height));
+  return fallback;
+}
+
 MotionScale ReadMotionScale(const YAML::Node& node, MotionScale fallback) {
   const YAML::Node linear = Child(node, "linear");
   const YAML::Node angular = Child(node, "angular");
@@ -132,6 +138,11 @@ void WriteAxisMapping(YAML::Node node, const JoystickAxisMapping& mapping) {
   node["linear"]["y"] = mapping.linear_y;
   node["linear"]["z"] = mapping.linear_z;
   node["angular"]["yaw"] = mapping.angular_yaw;
+}
+
+void WriteWindowSettings(YAML::Node node, const GuiWindowSettings& window) {
+  node["width"] = std::max(920, window.width);
+  node["height"] = std::max(640, window.height);
 }
 
 std::string FloatLiteral(double value) {
@@ -253,6 +264,7 @@ EditableGuiSettings LoadEditableGuiSettingsFromYaml(const std::string& config_pa
   settings.joystick_scale = ReadMotionScale(Child(params, "scale"), settings.joystick_scale);
   settings.keyboard_scale = ReadMotionScale(Child(Child(params, "keyboard"), "scale"), settings.keyboard_scale);
   settings.language = NormalizeLanguage(ReadString(Child(Child(params, "gui"), "language"), settings.language));
+  settings.window = ReadWindowSettings(Child(Child(params, "gui"), "window"), settings.window);
 
   const YAML::Node actions = Child(params, "actions");
   if (actions && actions.IsMap()) {
@@ -278,6 +290,7 @@ void SaveEditableGuiSettingsToYaml(const std::string& config_path, const Editabl
   WriteMotionScale(params["scale"], settings.joystick_scale);
   WriteMotionScale(params["keyboard"]["scale"], settings.keyboard_scale);
   params["gui"]["language"] = NormalizeLanguage(settings.language);
+  WriteWindowSettings(params["gui"]["window"], settings.window);
 
   const std::vector<GuiActionSlotConfig> defaults = DefaultEditableActionSlots();
   const std::size_t count = std::min(defaults.size(), settings.action_slots.size());

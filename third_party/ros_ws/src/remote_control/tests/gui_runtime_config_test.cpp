@@ -72,6 +72,9 @@ remote_control_node:
           yaw: 0.6
     gui:
       language: en
+      window:
+        width: 1120
+        height: 720
     actions:
       action1:
         service: /joy/action1
@@ -111,6 +114,8 @@ void TestLoadEditableSettingsReadsRemoteControlNodeYaml() {
   const remote_control::EditableGuiSettings settings = remote_control::LoadEditableGuiSettingsFromYaml(path.string());
 
   Expect(settings.language == "en", "language should be loaded from gui.language");
+  Expect(settings.window.width == 1120, "window width should load from gui.window.width");
+  Expect(settings.window.height == 720, "window height should load from gui.window.height");
   Expect(settings.axis_mapping.linear_x == 4, "linear.x axis mapping should load");
   Expect(settings.axis_mapping.linear_y == 3, "linear.y axis mapping should load");
   Expect(settings.axis_mapping.linear_z == 1, "linear.z axis mapping should load");
@@ -165,6 +170,8 @@ void TestSaveEditableSettingsWritesScalesLanguageAndSixActionSlots() {
   limits.angular_yaw = 2.1;
   remote_control::ApplyMaxVelocityLimits(limits, &settings);
   settings.language = "zh";
+  settings.window.width = 940;
+  settings.window.height = 680;
   settings.action_slots[4].service_name = "/joy/action5";
   settings.action_slots[4].buttons = {2, 3};
   settings.action_slots[4].keyboard_key = "h";
@@ -184,6 +191,8 @@ void TestSaveEditableSettingsWritesScalesLanguageAndSixActionSlots() {
   ExpectNear(params["keyboard"]["scale"]["linear"]["y"].as<double>(), -1.3, "saved keyboard y scale should preserve sign");
   ExpectNear(params["scale"]["angular"]["yaw"].as<double>(), -2.1, "saved joystick yaw scale should preserve sign");
   Expect(params["gui"]["language"].as<std::string>() == "zh", "saved language should be zh");
+  Expect(params["gui"]["window"]["width"].as<int>() == 940, "saved window width should update");
+  Expect(params["gui"]["window"]["height"].as<int>() == 680, "saved window height should update");
   Expect(params["actions"]["action5"]["service"].as<std::string>() == "/joy/action5", "action5 service should save");
   Expect(params["actions"]["action5"]["buttons"][0].as<int>() == 2, "action5 first button should save");
   Expect(params["actions"]["action5"]["buttons"][1].as<int>() == 3, "action5 second button should save");
@@ -244,6 +253,8 @@ remote_control_node:
   const remote_control::EditableGuiSettings settings = remote_control::LoadEditableGuiSettingsFromYaml(path.string());
 
   Expect(settings.language == "zh", "missing gui.language should default to zh");
+  Expect(settings.window.width == 920, "missing gui.window.width should use default width");
+  Expect(settings.window.height == 760, "missing gui.window.height should use default height");
   Expect(settings.axis_mapping.linear_x == 4, "missing axes.linear.x should keep default axis mapping");
   Expect(settings.axis_mapping.linear_y == 0, "missing axes.linear.y should keep default axis mapping");
   Expect(settings.axis_mapping.linear_z == 1, "missing axes.linear.z should keep default axis mapping");

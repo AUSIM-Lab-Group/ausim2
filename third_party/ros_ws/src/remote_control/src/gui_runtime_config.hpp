@@ -24,7 +24,13 @@ struct JoystickAxisMapping {
   int angular_yaw = 3;
 };
 
+struct GuiWindowSettings {
+  int width = 920;
+  int height = 760;
+};
+
 struct EditableGuiSettings {
+  GuiWindowSettings window;
   JoystickAxisMapping axis_mapping;
   MotionScale joystick_scale;
   MotionScale keyboard_scale;
