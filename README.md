@@ -137,8 +137,8 @@ source build/ros_ws/install/setup.bash
 
 ## 6. TODO（待更新）
 
-- [ ] TODO: 障碍物生成器ros话题发布
-- [ ] TODO: B2/G1机器人与对应链路
+- [ ] TODO: 障碍物生成器ros话题发布 完成
+- [ ] TODO: B2/G1机器人与对应链路 
 - [ ] TODO: 仿真器环境
 
 ## Designed by zdyukino
